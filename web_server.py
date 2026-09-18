@@ -65,6 +65,10 @@ register_agent_routes(app)
 from cloud_routes import register_cloud_routes
 register_cloud_routes(app)
 
+# ── Chat-Sessions einbinden ───────────────────────────────────
+from session_routes import register_session_routes
+register_session_routes(app, get_kernel, kernel_lock)
+
 # ── Log-Bereinigung beim Start ────────────────────────────────
 from log_cleanup import bereinige_logs
 bereinige_logs()

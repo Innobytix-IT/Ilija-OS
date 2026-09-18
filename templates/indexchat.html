@@ -91,6 +91,23 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
 .dms-link{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r2);color:var(--tx2);text-decoration:none;font-size:.8rem;transition:all .14s;border:1px solid var(--bdr2)}
 .dms-link:hover{background:var(--gd);color:var(--g);border-color:rgba(224,168,46,.18)}
 
+/* ── Session-Liste ────────────────────────────────────────── */
+.sb-sess-wrap{border-bottom:1px solid var(--bdr);flex-shrink:0}
+.sb-sess-hd{display:flex;align-items:center;padding:10px 10px 4px}
+.sb-sess-new{margin-left:auto;width:20px;height:20px;border-radius:50%;background:var(--s3);border:1px solid var(--bdr2);color:var(--tx2);font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:all .14s;flex-shrink:0}
+.sb-sess-new:hover{background:var(--g);color:var(--bg);border-color:var(--g)}
+.sb-sess-list{overflow-y:auto;max-height:220px;padding-bottom:4px}
+.sb-sess-item{display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:6px;margin:1px 4px;cursor:pointer;transition:background .13s}
+.sb-sess-item:hover{background:var(--s3)}
+.sb-sess-item.active{background:var(--gd);border:1px solid rgba(224,168,46,.12)}
+.sb-sess-title{font-size:.74rem;font-weight:500;color:var(--tx);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-sess-item.active .sb-sess-title{color:var(--g)}
+.sb-sess-date{font-size:.62rem;color:var(--tx3);flex-shrink:0}
+.sb-sess-del{opacity:0;background:none;border:none;cursor:pointer;color:var(--red);font-size:11px;padding:1px 3px;margin-left:2px;transition:opacity .13s;flex-shrink:0}
+.sb-sess-item:hover .sb-sess-del{opacity:.65}
+.sb-sess-del:hover{opacity:1!important}
+.sb-sess-empty{padding:10px 10px 8px;font-size:.72rem;color:var(--tx3);text-align:center}
+
 /* ── Chat ──────────────────────────────────────────────── */
 .chat-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 
@@ -270,6 +287,18 @@ body.mode-coworking .coding-bar{display:flex}
 
   <!-- Sidebar -->
   <aside class="sidebar">
+
+    <!-- Sessions -->
+    <div class="sb-sess-wrap">
+      <div class="sb-sess-hd">
+        <span class="sb-head" style="padding:0">Unterhaltungen</span>
+        <button class="sb-sess-new" onclick="newSession()" title="Neue Unterhaltung">＋</button>
+      </div>
+      <div class="sb-sess-list" id="sb-sess-list">
+        <div class="sb-sess-empty">Wird geladen …</div>
+      </div>
+    </div>
+
     <div class="sb-section">
       <div class="sb-head">Schnellbefehle</div>
 
@@ -410,6 +439,11 @@ let _codeRun=null,_codeLive=null;                // aktueller Coding-Lauf
 let _sid='default';                              // Sitzungs-ID (Verlauf pro Fenster)
 const CODING_LABEL={auto:'Auto',manuell:'Manuell',acceptEdits:'Bearbeitungen auto',plan:'Plan',bypass:'Berechtigungen umgehen'};
 
+// ── Session-Persistenz ────────────────────────────────────────
+let _sessId   = null;    // aktive Session-ID
+let _sessLog  = [];      // [{role, content}] Verlaufssicherung
+let _lastUser = '';      // letzte Nutzernachricht (für Auto-Save)
+
 // ── Init ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
   loadModelInfo();
@@ -422,6 +456,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }catch(e){ _sid='s'+Date.now(); }
   applyChatMode();
   applyCodingMode();
+  loadSessions();
   loadWorkspace();
   loadShell();
   document.getElementById('ta').focus();
@@ -442,6 +477,7 @@ function setChatMode(m){
   chatMode=m;
   try{localStorage.setItem('ilija_chat_mode',m);}catch(e){}
   applyChatMode();
+  loadSessions();
   document.getElementById('ta').focus();
 }
 function applyChatMode(){
@@ -557,6 +593,7 @@ async function doSend(){
 
 // ── Cowork-Agent (mehrstufig, nutzt Ilijas Skills) ────────────
 async function doSendCowork(msg){
+  _lastUser=msg;
   hideWelcome();
   appendMsg('user',msg);
   const ta=document.getElementById('ta'); ta.value='';ta.style.height='auto';
@@ -580,6 +617,7 @@ async function doSendCowork(msg){
 
 // ── Coding-Agent ──────────────────────────────────────────────
 async function doSendCoding(msg){
+  _lastUser=msg;
   hideWelcome();
   appendMsg('user',msg);
   const ta=document.getElementById('ta'); ta.value='';ta.style.height='auto';
@@ -614,6 +652,7 @@ async function pollRun(run_id, live){
     setLoading(false);
     if(d.provider)document.getElementById('mLabel').textContent=d.provider;
     scrollDown();
+    if(d.status==='done'&&d.answer) sessAutoSave(_lastUser, d.answer);
   }
 }
 
@@ -699,6 +738,99 @@ function fmt(s){
 function scrollDown(){const a=document.getElementById('msgs');a.scrollTop=a.scrollHeight}
 function setLoading(v){loading=v;document.getElementById('sendBtn').disabled=v}
 
+// ── Session-Persistenz ────────────────────────────────────────
+async function loadSessions(){
+  try{
+    const r=await fetch('/api/sessions?mode='+encodeURIComponent(chatMode));
+    renderSessList(await r.json());
+  }catch(e){
+    const el=document.getElementById('sb-sess-list');
+    if(el)el.innerHTML='<div class="sb-sess-empty">—</div>';
+  }
+}
+
+function renderSessList(sessions){
+  const el=document.getElementById('sb-sess-list');
+  if(!el)return;
+  if(!sessions||!sessions.length){
+    el.innerHTML='<div class="sb-sess-empty">Noch keine gespeicherten Unterhaltungen</div>';
+    return;
+  }
+  el.innerHTML=sessions.map(s=>{
+    const active=s.id===_sessId?' active':'';
+    const d=s.updated_at?new Date(s.updated_at).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}):'';
+    return `<div class="sb-sess-item${active}" onclick="openSession('${esc(s.id)}')">
+      <span class="sb-sess-title">${esc(s.title||'Unterhaltung')}</span>
+      <span class="sb-sess-date">${d}</span>
+      <button class="sb-sess-del" onclick="event.stopPropagation();deleteSession('${esc(s.id)}')" title="Löschen">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function sessAutoSave(userMsg, assistantMsg){
+  if(!userMsg||!assistantMsg)return;
+  _sessLog.push({role:'user',content:userMsg});
+  _sessLog.push({role:'assistant',content:assistantMsg});
+  const title=_sessLog[0]?.content?.slice(0,60)||'Unterhaltung';
+  try{
+    if(!_sessId){
+      const r=await fetch('/api/sessions',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({title,mode:chatMode,messages:_sessLog})});
+      const d=await r.json();
+      _sessId=d.id;
+    }else{
+      await fetch('/api/sessions/'+_sessId,{method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({messages:_sessLog})});
+    }
+    loadSessions();
+  }catch(e){}
+}
+
+async function openSession(id){
+  if(_sessId===id)return;
+  try{
+    const r=await fetch('/api/sessions/'+id);
+    const s=await r.json();
+    if(s.mode==='coworking')
+      await fetch('/api/sessions/'+id+'/load',{method:'POST'}).catch(()=>{});
+    _sessId=id;
+    _sessLog=s.messages||[];
+    _lastUser='';
+    const area=document.getElementById('msgs');
+    area.innerHTML='';
+    for(const m of _sessLog) appendMsg(m.role,m.content);
+    if(!_sessLog.length) area.innerHTML=`<div class="welcome" id="welcome">
+      <div class="w-avatar">I</div>
+      <h1 class="w-title">Hallo, ich bin <em>Ilija</em></h1>
+      <p class="w-sub">Dein persönlicher KI-Assistent für Kommunikation,<br>Organisation und Dokumentenverwaltung.</p>
+    </div>`;
+    loadSessions();
+    scrollDown();
+  }catch(e){console.error('Session laden:',e);}
+}
+
+function newSession(){
+  _sessId=null; _sessLog=[]; _lastUser='';
+  fetch('/api/clear',{method:'POST'}).catch(()=>{});
+  const area=document.getElementById('msgs');
+  area.innerHTML=`<div class="welcome" id="welcome">
+    <div class="w-avatar">I</div>
+    <h1 class="w-title">Hallo, ich bin <em>Ilija</em></h1>
+    <p class="w-sub">Dein persönlicher KI-Assistent für Kommunikation,<br>Organisation und Dokumentenverwaltung.</p>
+  </div>`;
+  loadSessions();
+  document.getElementById('ta').focus();
+}
+
+async function deleteSession(id){
+  if(!confirm('Unterhaltung endgültig löschen?'))return;
+  await fetch('/api/sessions/'+id,{method:'DELETE'}).catch(()=>{});
+  if(_sessId===id){_sessId=null;_sessLog=[];}
+  loadSessions();
+}
+
 // ── Actions ───────────────────────────────────────────────────
 async function reloadSkills(){
   try{
@@ -709,6 +841,8 @@ async function reloadSkills(){
 }
 
 function clearChat(){
+  _sessId=null; _sessLog=[]; _lastUser='';
+  loadSessions();
   fetch('/api/clear',{method:'POST'}).catch(()=>{});
   fetch('/api/agent/clear',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({session:_sid})}).catch(()=>{});
