@@ -421,7 +421,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
         <span class="nav-icon">⌕</span> Suche
       </button>
       <button class="sb-nav-item" id="nav-settings" onclick="showPage('settings')">
-        <span class="nav-icon">⚙</span> Einstellungen
+        <span class="nav-icon">⚙</span> DMS Einstellungen
       </button>
       <!-- NEUER KALENDER LINK -->
       <button class="sb-nav-item" onclick="location.href='/local_calendar'">
@@ -633,7 +633,7 @@ function showPage(n){
   document.querySelectorAll('.sb-nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+n).classList.add('active');
   document.getElementById('nav-'+n).classList.add('active');
-  const titles={archiv:'<em>Alle</em> <strong>Kategorien</strong>',import:'Import-<strong>Warteschlange</strong>',suche:'<strong>Suche</strong>',settings:'<strong>Einstellungen</strong>'};
+  const titles={archiv:'<em>Alle</em> <strong>Kategorien</strong>',import:'Import-<strong>Warteschlange</strong>',suche:'<strong>Suche</strong>',settings:'DMS <strong>Einstellungen</strong>'};
   document.getElementById('pageTitle').innerHTML = titles[n]||'';
   if(n==='import')  loadImportList();
   if(n==='settings'){ loadSettingsData(); }
