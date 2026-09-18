@@ -256,79 +256,36 @@ def _transkribiere_audio(audio_url, driver):
 def _hole_letzte_eingehende(driver):
     """
     Gibt (text, audio_url) der letzten eingehenden Nachricht zurück.
-    Erkennt Medientypen anhand von HTML-Elementen.
+    Nutzt JavaScript + Position (links = eingehend) statt veralteter CSS-Klassen.
     """
     import re
     try:
-        msgs = driver.find_elements(
-            By.XPATH, '//div[contains(@class, "message-in")]')
-        if not msgs:
-            return "", ""
-        letztes = msgs[-1]
-
-        # Bild erkennen
-        try:
-            letztes.find_element(By.XPATH,
-                './/img[contains(@src,"blob:") or contains(@class,"media")]'
-                ' | .//div[@data-testid="media-canvas"]'
-                ' | .//div[contains(@data-testid,"image")]')
-            return "[Bild]", ""
-        except Exception:
-            pass
-
-        # Video erkennen
-        try:
-            letztes.find_element(By.XPATH,
-                './/video | .//div[@data-testid="video-pip"]'
-                ' | .//span[@data-testid="video-play"]')
-            return "[Video]", ""
-        except Exception:
-            pass
-
-        # Sprachnachricht per Audio-Tag
-        try:
-            audio = letztes.find_element(By.TAG_NAME, "audio")
-            src = audio.get_attribute("src") or ""
-            return "[Sprachnachricht]", src if src else ""
-        except Exception:
-            pass
-
-        # Sprachnachricht per Icon
-        try:
-            letztes.find_element(By.XPATH,
-                './/span[@data-testid="audio-play"]'
-                ' | .//div[@data-testid="audio-player"]'
-                ' | .//button[contains(@class,"audio")]')
+        result = driver.execute_script(
+            "var containers = document.querySelectorAll('[data-testid=\"msg-container\"]');"
+            "if (!containers.length) return {text: '', audio: '', found: false};"
+            "var pw = window.innerWidth, lastIn = null;"
+            "for (var i = containers.length-1; i >= 0; i--) {"
+            "  var r = containers[i].getBoundingClientRect();"
+            "  if (r.left < pw/2) { lastIn = containers[i]; break; }"
+            "}"
+            "if (!lastIn) lastIn = containers[containers.length-1];"
+            "var ae = lastIn.querySelector('audio');"
+            "if (ae) return {text: '[Sprachnachricht]', audio: ae.src||'', found: true};"
+            "if (lastIn.querySelector('[data-testid=\"ptt-play\"],[data-testid=\"audio-play\"],[data-testid=\"audio-player\"]')) return {text:'[Sprachnachricht]',audio:'',found:true};"
+            "if (lastIn.querySelector('video,[data-testid=\"video-pip\"],[data-testid=\"video-play\"]')) return {text:'[Video]',audio:'',found:true};"
+            "if (lastIn.querySelector('[data-testid=\"media-canvas\"],[data-testid=\"image-thumb\"]')) return {text:'[Bild]',audio:'',found:true};"
+            "if (lastIn.querySelector('[data-testid=\"document-thumb\"],[data-testid=\"document\"]')) return {text:'[Dokument]',audio:'',found:true};"
+            "if (lastIn.querySelector('[data-testid=\"sticker\"]')) return {text:'[Sticker]',audio:'',found:true};"
+            "var te = lastIn.querySelector('[data-testid=\"selectable-text\"]');"
+            "var tx = te ? te.textContent.trim() : lastIn.textContent.split('\\n')[0].trim();"
+            "return {text: tx, audio: '', found: true};"
+        )
+        text = (result or {}).get('text', '')
+        audio = (result or {}).get('audio', '')
+        # Zeitformat "0:03" oder "1:23" → Sprachnachricht
+        if text and re.match(r'^\d+:\d{2}$', text):
             return "[Sprachnachricht]", ""
-        except Exception:
-            pass
-
-        # Dokument / Datei erkennen
-        try:
-            letztes.find_element(By.XPATH,
-                './/div[@data-testid="document-thumb"]'
-                ' | .//span[@data-testid="document"]'
-                ' | .//div[contains(@class,"document")]')
-            return "[Dokument]", ""
-        except Exception:
-            pass
-
-        # Sticker erkennen
-        try:
-            letztes.find_element(By.XPATH,
-                './/div[@data-testid="sticker"]'
-                ' | .//img[contains(@class,"sticker")]')
-            return "[Sticker]", ""
-        except Exception:
-            pass
-
-        text = letztes.text.split('\n')[0].strip()
-
-        # Zeitformat "0:03" oder "1:23" → Sprachnachricht-Dauer
-        if re.match(r'^\d+:\d{2}$', text):
-            return "[Sprachnachricht]", ""
-
-        return text, ""
+        return text, audio
     except Exception:
         return "", ""
 
