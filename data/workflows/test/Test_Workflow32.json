@@ -1,0 +1,86 @@
+{
+  "id": "wf_test32",
+  "name": "Note-Node Annotation Demo",
+  "nodes": [
+    {
+      "id": "n_t32_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 175,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t32_02",
+      "type": "note",
+      "x": 300,
+      "y": 50,
+      "name": "Workflow-Hinweis",
+      "config": {
+        "text": "Dieser Workflow demonstriert Note-Nodes als Dokumentationsanmerkungen im Canvas."
+      }
+    },
+    {
+      "id": "n_t32_03",
+      "type": "set",
+      "x": 300,
+      "y": 175,
+      "name": "Status setzen",
+      "config": {
+        "variable": "status",
+        "value": "Verarbeitung läuft"
+      }
+    },
+    {
+      "id": "n_t32_04",
+      "type": "note",
+      "x": 550,
+      "y": 50,
+      "name": "Verarbeitungs-Hinweis",
+      "config": {
+        "text": "Hier wird der Haupt-Prozess ausgeführt. Bei Fehlern siehe Dokumentation."
+      }
+    },
+    {
+      "id": "n_t32_05",
+      "type": "skill",
+      "x": 550,
+      "y": 175,
+      "name": "Uhrzeit abrufen",
+      "config": {
+        "skill": "uhrzeit_datum"
+      }
+    },
+    {
+      "id": "n_t32_06",
+      "type": "skill",
+      "x": 800,
+      "y": 175,
+      "name": "Ergebnis speichern",
+      "config": {
+        "skill": "notiz_speichern",
+        "text": "{{input}}",
+        "datei": "note_demo.txt"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t32_01",
+      "from": "n_t32_01",
+      "to": "n_t32_03"
+    },
+    {
+      "id": "c_t32_02",
+      "from": "n_t32_03",
+      "to": "n_t32_05"
+    },
+    {
+      "id": "c_t32_03",
+      "from": "n_t32_05",
+      "to": "n_t32_06"
+    }
+  ],
+  "updated": "2026-04-19T10:00:00",
+  "created": "2026-04-19T10:00:00"
+}

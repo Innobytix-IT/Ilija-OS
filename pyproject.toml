@@ -1,0 +1,14 @@
+[tool.pytest.ini_options]
+testpaths        = ["tests"]
+python_files     = ["test_*.py"]
+python_classes   = ["Test*"]
+python_functions = ["test_*"]
+addopts          = "-v --tb=short -p no:warnings"
+
+[tool.pytest.ini_options.markers]
+sicherheit  = "Sicherheitstests (Path-Traversal, Sandbox etc.)"
+api         = "API-Endpunkt-Tests"
+skills      = "Skill-Unit-Tests"
+workflow    = "Workflow-Engine-Tests"
+scheduler   = "Scheduler-Logik-Tests"
+dms         = "DMS-Tests"

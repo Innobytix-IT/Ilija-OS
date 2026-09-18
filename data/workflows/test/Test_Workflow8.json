@@ -1,0 +1,70 @@
+{
+  "id": "wf_test08",
+  "name": "RSS Tech-Feed Monitor",
+  "nodes": [
+    {
+      "id": "n_t08_01",
+      "type": "schedule_trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Täglich 08:00",
+      "config": {
+        "interval": "daily",
+        "time": "08:00",
+        "active": false
+      }
+    },
+    {
+      "id": "n_t08_02",
+      "type": "rss",
+      "x": 300,
+      "y": 100,
+      "name": "Heise RSS",
+      "config": {
+        "url": "https://www.heise.de/rss/heise-atom.xml",
+        "max_items": "10"
+      }
+    },
+    {
+      "id": "n_t08_03",
+      "type": "chat",
+      "x": 550,
+      "y": 100,
+      "name": "Relevante Artikel filtern",
+      "config": {
+        "message": "Welche Artikel sind für einen KI-Entwickler relevant? {{input}}"
+      }
+    },
+    {
+      "id": "n_t08_04",
+      "type": "email",
+      "x": 800,
+      "y": 100,
+      "name": "Tech-News versenden",
+      "config": {
+        "to": "user@example.com",
+        "subject": "Tech-News des Tages",
+        "body": "{{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t08_01",
+      "from": "n_t08_01",
+      "to": "n_t08_02"
+    },
+    {
+      "id": "c_t08_02",
+      "from": "n_t08_02",
+      "to": "n_t08_03"
+    },
+    {
+      "id": "c_t08_03",
+      "from": "n_t08_03",
+      "to": "n_t08_04"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

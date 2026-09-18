@@ -1,0 +1,69 @@
+{
+  "id": "wf_test04",
+  "name": "E-Mail Posteingang Monitor",
+  "nodes": [
+    {
+      "id": "n_t04_01",
+      "type": "schedule_trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Stündlich",
+      "config": {
+        "interval": "hourly",
+        "time": "00:00",
+        "active": false
+      }
+    },
+    {
+      "id": "n_t04_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "E-Mails lesen",
+      "config": {
+        "skill": "emails_lesen",
+        "anzahl": "5",
+        "nur_ungelesen": "true"
+      }
+    },
+    {
+      "id": "n_t04_03",
+      "type": "chat",
+      "x": 550,
+      "y": 100,
+      "name": "E-Mails priorisieren",
+      "config": {
+        "message": "Priorisiere diese E-Mails und schlage Antworten vor: {{input}}"
+      }
+    },
+    {
+      "id": "n_t04_04",
+      "type": "telegram",
+      "x": 800,
+      "y": 100,
+      "name": "Telegram-Benachrichtigung",
+      "config": {
+        "message": "{{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t04_01",
+      "from": "n_t04_01",
+      "to": "n_t04_02"
+    },
+    {
+      "id": "c_t04_02",
+      "from": "n_t04_02",
+      "to": "n_t04_03"
+    },
+    {
+      "id": "c_t04_03",
+      "from": "n_t04_03",
+      "to": "n_t04_04"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

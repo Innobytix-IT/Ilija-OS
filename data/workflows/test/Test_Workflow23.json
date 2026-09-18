@@ -1,0 +1,65 @@
+{
+  "id": "wf_test23",
+  "name": "Taschenrechner Assistent",
+  "nodes": [
+    {
+      "id": "n_t23_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t23_02",
+      "type": "chat",
+      "x": 300,
+      "y": 100,
+      "name": "MwSt-Aufgabe",
+      "config": {
+        "message": "Der Nutzer fragt: Berechne die Mehrwertsteuer für 5 verschiedene Preise: 100, 250, 499, 1200, 3500 Euro"
+      }
+    },
+    {
+      "id": "n_t23_03",
+      "type": "code",
+      "x": 550,
+      "y": 100,
+      "name": "MwSt berechnen",
+      "config": {
+        "code": "preise=[100,250,499,1200,3500]; output='\\n'.join([f'{p}€ + 19% MwSt = {p*1.19:.2f}€' for p in preise])"
+      }
+    },
+    {
+      "id": "n_t23_04",
+      "type": "skill",
+      "x": 800,
+      "y": 100,
+      "name": "Ergebnis speichern",
+      "config": {
+        "skill": "notiz_speichern",
+        "text": "{{input}}",
+        "datei": "mwst_berechnung.txt"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t23_01",
+      "from": "n_t23_01",
+      "to": "n_t23_02"
+    },
+    {
+      "id": "c_t23_02",
+      "from": "n_t23_02",
+      "to": "n_t23_03"
+    },
+    {
+      "id": "c_t23_03",
+      "from": "n_t23_03",
+      "to": "n_t23_04"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

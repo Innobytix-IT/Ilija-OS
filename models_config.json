@@ -1,0 +1,9 @@
+{
+  "default_provider": "auto",
+  "models": {
+    "claude": "claude-opus-4-6",
+    "openai": "gpt-4o",
+    "gemini": "gemini-2.5-flash",
+    "ollama": "qwen2.5:7b"
+  }
+}

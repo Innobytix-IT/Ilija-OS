@@ -1,0 +1,83 @@
+{
+  "id": "wf_test20",
+  "name": "Deep-Dive Recherche",
+  "nodes": [
+    {
+      "id": "n_t20_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t20_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "ML-Trends suchen",
+      "config": {
+        "skill": "internet_suche",
+        "suchanfrage": "Machine Learning Trends 2026",
+        "max_ergebnisse": "5"
+      }
+    },
+    {
+      "id": "n_t20_03",
+      "type": "skill",
+      "x": 550,
+      "y": 100,
+      "name": "Webseite lesen",
+      "config": {
+        "skill": "webseite_lesen",
+        "url": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t20_04",
+      "type": "chat",
+      "x": 800,
+      "y": 100,
+      "name": "Detailanalyse erstellen",
+      "config": {
+        "message": "Erstelle eine detaillierte Analyse: {{input}}"
+      }
+    },
+    {
+      "id": "n_t20_05",
+      "type": "google_docs",
+      "x": 1050,
+      "y": 100,
+      "name": "Analyse speichern",
+      "config": {
+        "operation": "Dokument erstellen",
+        "title": "Deep-Dive Analyse",
+        "content": "{{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t20_01",
+      "from": "n_t20_01",
+      "to": "n_t20_02"
+    },
+    {
+      "id": "c_t20_02",
+      "from": "n_t20_02",
+      "to": "n_t20_03"
+    },
+    {
+      "id": "c_t20_03",
+      "from": "n_t20_03",
+      "to": "n_t20_04"
+    },
+    {
+      "id": "c_t20_04",
+      "from": "n_t20_04",
+      "to": "n_t20_05"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

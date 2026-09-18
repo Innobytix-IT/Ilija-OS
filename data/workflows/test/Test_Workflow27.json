@@ -1,0 +1,114 @@
+{
+  "id": "wf_test27",
+  "name": "Wissens-Datenbank Aufbau",
+  "nodes": [
+    {
+      "id": "n_t27_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t27_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "Agentic AI suchen",
+      "config": {
+        "skill": "internet_suche",
+        "suchanfrage": "Agentic AI 2026"
+      }
+    },
+    {
+      "id": "n_t27_03",
+      "type": "skill",
+      "x": 550,
+      "y": 100,
+      "name": "KI-Trends speichern",
+      "config": {
+        "skill": "gedaechtnis_speichern",
+        "inhalt": "{{input}}",
+        "kategorie": "KI-Trends"
+      }
+    },
+    {
+      "id": "n_t27_04",
+      "type": "skill",
+      "x": 800,
+      "y": 100,
+      "name": "Multimodale KI suchen",
+      "config": {
+        "skill": "internet_suche",
+        "suchanfrage": "Multimodale KI Entwicklung"
+      }
+    },
+    {
+      "id": "n_t27_05",
+      "type": "skill",
+      "x": 1050,
+      "y": 100,
+      "name": "KI-Trends speichern 2",
+      "config": {
+        "skill": "gedaechtnis_speichern",
+        "inhalt": "{{input}}",
+        "kategorie": "KI-Trends"
+      }
+    },
+    {
+      "id": "n_t27_06",
+      "type": "skill",
+      "x": 1300,
+      "y": 100,
+      "name": "Gedächtnis-Anzahl",
+      "config": {
+        "skill": "gedaechtnis_anzahl"
+      }
+    },
+    {
+      "id": "n_t27_07",
+      "type": "chat",
+      "x": 1550,
+      "y": 100,
+      "name": "Bestätigung",
+      "config": {
+        "message": "Bestätige was in der Wissens-Datenbank gespeichert wurde: {{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t27_01",
+      "from": "n_t27_01",
+      "to": "n_t27_02"
+    },
+    {
+      "id": "c_t27_02",
+      "from": "n_t27_02",
+      "to": "n_t27_03"
+    },
+    {
+      "id": "c_t27_03",
+      "from": "n_t27_03",
+      "to": "n_t27_04"
+    },
+    {
+      "id": "c_t27_04",
+      "from": "n_t27_04",
+      "to": "n_t27_05"
+    },
+    {
+      "id": "c_t27_05",
+      "from": "n_t27_05",
+      "to": "n_t27_06"
+    },
+    {
+      "id": "c_t27_06",
+      "from": "n_t27_06",
+      "to": "n_t27_07"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

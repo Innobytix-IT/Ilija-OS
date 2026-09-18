@@ -1,0 +1,70 @@
+{
+  "id": "wf_test02",
+  "name": "Täglicher News-Digest",
+  "nodes": [
+    {
+      "id": "n_t02_01",
+      "type": "schedule_trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Täglich 07:00",
+      "config": {
+        "interval": "daily",
+        "time": "07:00",
+        "active": false
+      }
+    },
+    {
+      "id": "n_t02_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "News abrufen",
+      "config": {
+        "skill": "news_abrufen",
+        "thema": "Deutschland"
+      }
+    },
+    {
+      "id": "n_t02_03",
+      "type": "chat",
+      "x": 550,
+      "y": 100,
+      "name": "Nachrichten zusammenfassen",
+      "config": {
+        "message": "Fasse diese Nachrichten in 5 Bullet-Points zusammen: {{input}}"
+      }
+    },
+    {
+      "id": "n_t02_04",
+      "type": "google_docs",
+      "x": 800,
+      "y": 100,
+      "name": "News-Dokument erstellen",
+      "config": {
+        "operation": "Dokument erstellen",
+        "title": "News {{input}}",
+        "content": "{{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t02_01",
+      "from": "n_t02_01",
+      "to": "n_t02_02"
+    },
+    {
+      "id": "c_t02_02",
+      "from": "n_t02_02",
+      "to": "n_t02_03"
+    },
+    {
+      "id": "c_t02_03",
+      "from": "n_t02_03",
+      "to": "n_t02_04"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

@@ -1,0 +1,146 @@
+{
+  "id": "wf_test25",
+  "name": "Täglicher Komplett-Digest",
+  "nodes": [
+    {
+      "id": "n_t25_01",
+      "type": "schedule_trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Täglich 07:00",
+      "config": {
+        "interval": "daily",
+        "time": "07:00",
+        "active": false
+      }
+    },
+    {
+      "id": "n_t25_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "Uhrzeit & Datum",
+      "config": {
+        "skill": "uhrzeit_datum"
+      }
+    },
+    {
+      "id": "n_t25_03",
+      "type": "skill",
+      "x": 300,
+      "y": 250,
+      "name": "Wetter abrufen",
+      "config": {
+        "skill": "wetter_offenburg_abfragen"
+      }
+    },
+    {
+      "id": "n_t25_04",
+      "type": "skill",
+      "x": 300,
+      "y": 400,
+      "name": "News abrufen",
+      "config": {
+        "skill": "news_abrufen",
+        "thema": "Deutschland"
+      }
+    },
+    {
+      "id": "n_t25_05",
+      "type": "skill",
+      "x": 300,
+      "y": 550,
+      "name": "Kalender lesen",
+      "config": {
+        "skill": "outlook_kalender_lesen",
+        "tage": "1"
+      }
+    },
+    {
+      "id": "n_t25_06",
+      "type": "chat",
+      "x": 600,
+      "y": 325,
+      "name": "Tages-Briefing erstellen",
+      "config": {
+        "message": "Erstelle meinen persönlichen Tages-Briefing mit Datum, Wetter, News und Terminen: {{input}}"
+      }
+    },
+    {
+      "id": "n_t25_07",
+      "type": "telegram",
+      "x": 850,
+      "y": 325,
+      "name": "Telegram senden",
+      "config": {
+        "message": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t25_08",
+      "type": "google_docs",
+      "x": 1100,
+      "y": 325,
+      "name": "Google Docs speichern",
+      "config": {
+        "operation": "Dokument erstellen",
+        "title": "Tages-Briefing",
+        "content": "{{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t25_01",
+      "from": "n_t25_01",
+      "to": "n_t25_02"
+    },
+    {
+      "id": "c_t25_02",
+      "from": "n_t25_01",
+      "to": "n_t25_03"
+    },
+    {
+      "id": "c_t25_03",
+      "from": "n_t25_01",
+      "to": "n_t25_04"
+    },
+    {
+      "id": "c_t25_04",
+      "from": "n_t25_01",
+      "to": "n_t25_05"
+    },
+    {
+      "id": "c_t25_05",
+      "from": "n_t25_02",
+      "to": "n_t25_06"
+    },
+    {
+      "id": "c_t25_06",
+      "from": "n_t25_03",
+      "to": "n_t25_06"
+    },
+    {
+      "id": "c_t25_07",
+      "from": "n_t25_04",
+      "to": "n_t25_06"
+    },
+    {
+      "id": "c_t25_08",
+      "from": "n_t25_05",
+      "to": "n_t25_06"
+    },
+    {
+      "id": "c_t25_09",
+      "from": "n_t25_06",
+      "to": "n_t25_07"
+    },
+    {
+      "id": "c_t25_10",
+      "from": "n_t25_07",
+      "to": "n_t25_08"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

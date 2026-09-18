@@ -1,0 +1,78 @@
+{
+  "id": "wf_test21",
+  "name": "Verzögerter Alert",
+  "nodes": [
+    {
+      "id": "n_t21_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t21_02",
+      "type": "chat",
+      "x": 300,
+      "y": 100,
+      "name": "Vorbereitung",
+      "config": {
+        "message": "Vorbereitung abgeschlossen. Warte 10 Sekunden..."
+      }
+    },
+    {
+      "id": "n_t21_03",
+      "type": "wait",
+      "x": 550,
+      "y": 100,
+      "name": "10 Sekunden warten",
+      "config": {
+        "seconds": "10"
+      }
+    },
+    {
+      "id": "n_t21_04",
+      "type": "skill",
+      "x": 800,
+      "y": 100,
+      "name": "Uhrzeit abrufen",
+      "config": {
+        "skill": "uhrzeit_datum"
+      }
+    },
+    {
+      "id": "n_t21_05",
+      "type": "telegram",
+      "x": 1050,
+      "y": 100,
+      "name": "Alert senden",
+      "config": {
+        "message": "⏰ Alert ausgelöst um: {{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t21_01",
+      "from": "n_t21_01",
+      "to": "n_t21_02"
+    },
+    {
+      "id": "c_t21_02",
+      "from": "n_t21_02",
+      "to": "n_t21_03"
+    },
+    {
+      "id": "c_t21_03",
+      "from": "n_t21_03",
+      "to": "n_t21_04"
+    },
+    {
+      "id": "c_t21_04",
+      "from": "n_t21_04",
+      "to": "n_t21_05"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

@@ -1,0 +1,100 @@
+{
+  "id": "wf_test16",
+  "name": "Switch-Router nach Priorität",
+  "nodes": [
+    {
+      "id": "n_t16_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 175,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t16_02",
+      "type": "set",
+      "x": 300,
+      "y": 175,
+      "name": "Priorität setzen",
+      "config": {
+        "variable": "prioritaet",
+        "value": "hoch"
+      }
+    },
+    {
+      "id": "n_t16_03",
+      "type": "switch",
+      "x": 550,
+      "y": 175,
+      "name": "Priorität routen",
+      "config": {
+        "case1": "hoch",
+        "case2": "mittel",
+        "case3": "niedrig"
+      }
+    },
+    {
+      "id": "n_t16_04",
+      "type": "telegram",
+      "x": 800,
+      "y": 100,
+      "name": "Hoch-Priorität Alert",
+      "config": {
+        "message": "🔴 HOCH: {{input}}"
+      }
+    },
+    {
+      "id": "n_t16_05",
+      "type": "email",
+      "x": 800,
+      "y": 250,
+      "name": "Mittel-Priorität E-Mail",
+      "config": {
+        "to": "user@example.com",
+        "subject": "Mittel-Priorität",
+        "body": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t16_06",
+      "type": "skill",
+      "x": 800,
+      "y": 400,
+      "name": "Niedrig-Priorität speichern",
+      "config": {
+        "skill": "notiz_speichern",
+        "text": "{{input}}",
+        "datei": "niedrig_prioritaet.txt"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t16_01",
+      "from": "n_t16_01",
+      "to": "n_t16_02"
+    },
+    {
+      "id": "c_t16_02",
+      "from": "n_t16_02",
+      "to": "n_t16_03"
+    },
+    {
+      "id": "c_t16_03",
+      "from": "n_t16_03",
+      "to": "n_t16_04"
+    },
+    {
+      "id": "c_t16_04",
+      "from": "n_t16_03",
+      "to": "n_t16_05"
+    },
+    {
+      "id": "c_t16_05",
+      "from": "n_t16_03",
+      "to": "n_t16_06"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

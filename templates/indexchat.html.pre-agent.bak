@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ilija · Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090A;
+  --s1:#0D1215;--s2:#121820;--s3:#18212A;--s4:#1E2A35;
+  --bdr:rgba(255,255,255,.055);--bdr2:rgba(255,255,255,.1);
+  --g:#00D882;--g2:#00AF68;--gd:rgba(0,216,130,.07);--gg:rgba(0,216,130,.12);
+  --tx:#D8EEE4;--tx2:#6E9A87;--tx3:#354E44;
+  --red:#FF5C6A;
+  --f:'Inter',sans-serif;--m:'JetBrains Mono',monospace;
+  --r:9px;--r2:5px;
+}
+html{font-size:16px;color-scheme:dark}
+body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--s4);border-radius:2px}
+
+/* ── Topbar ─────────────────────────────────────────────── */
+.topbar{
+  display:flex;align-items:center;gap:0;
+  height:52px;padding:0 20px;
+  background:var(--s1);border-bottom:1px solid var(--bdr);
+  flex-shrink:0;position:relative;z-index:100;
+}
+.logo{display:flex;align-items:center;gap:9px;text-decoration:none}
+.logo-gem{width:30px;height:30px;background:var(--g);border-radius:7px;display:grid;place-items:center;font-family:var(--m);font-weight:500;font-size:14px;color:var(--bg);flex-shrink:0}
+.logo-name{font-size:.9rem;font-weight:500;color:var(--tx)}
+.logo-name em{font-style:italic;color:var(--g)}
+
+.tb-sep{width:1px;height:20px;background:var(--bdr2);margin:0 12px;flex-shrink:0}
+
+/* Nav pills */
+.tab-group{display:flex;gap:2px}
+.tab{padding:5px 12px;border-radius:var(--r2);font-size:.78rem;font-weight:500;cursor:pointer;transition:all .14s;color:var(--tx2);border:none;background:none;font-family:var(--f)}
+.tab:hover{background:var(--s3);color:var(--tx)}
+.tab.active{background:var(--gd);color:var(--g);border:1px solid rgba(0,216,130,.12)}
+
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+/* Model selector */
+.mwrap{position:relative}
+.mpill{display:flex;align-items:center;gap:6px;padding:5px 11px;background:var(--s2);border:1px solid var(--bdr2);border-radius:20px;cursor:pointer;transition:all .14s;font-family:var(--m);font-size:.7rem;color:var(--tx2)}
+.mpill:hover{border-color:var(--g);color:var(--tx)}
+.mp-dot{width:5px;height:5px;background:var(--g);border-radius:50%;flex-shrink:0;animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.mm{position:absolute;top:calc(100% + 5px);right:0;background:var(--s2);border:1px solid var(--bdr2);border-radius:var(--r);min-width:215px;z-index:500;box-shadow:0 12px 40px rgba(0,0,0,.55);display:none;overflow:hidden}
+.mm.open{display:block;animation:pop .13s ease}
+@keyframes pop{from{opacity:0;transform:scale(.97) translateY(-4px)}to{opacity:1;transform:none}}
+.mm-h{padding:7px 12px 4px;font-size:.6rem;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.09em;font-family:var(--m)}
+.mm-o{padding:8px 13px;cursor:pointer;font-size:.8rem;color:var(--tx2);transition:all .13s;display:flex;align-items:center;gap:8px}
+.mm-o:hover{background:var(--gd);color:var(--tx)}
+.mm-o.cur{color:var(--g)}
+.mm-o.off{opacity:.3;pointer-events:none}
+.mm-b{margin-left:auto;font-size:.6rem;font-family:var(--m);color:var(--tx3);background:var(--s4);padding:1px 5px;border-radius:3px}
+
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--r2);font-family:var(--f);font-size:.78rem;font-weight:500;cursor:pointer;transition:all .14s;border:none}
+.btn-g{background:transparent;color:var(--tx2);border:1px solid var(--bdr2)}
+.btn-g:hover{background:var(--s3);color:var(--tx)}
+
+/* ── Main area ─────────────────────────────────────────── */
+.app{display:flex;flex:1;overflow:hidden}
+
+/* Sidebar */
+.sidebar{
+  width:226px;flex-shrink:0;
+  background:var(--s1);border-right:1px solid var(--bdr);
+  display:flex;flex-direction:column;overflow-y:auto;
+}
+.sb-section{padding:10px 8px;border-bottom:1px solid var(--bdr)}
+.sb-head{font-size:.6rem;text-transform:uppercase;letter-spacing:.09em;color:var(--tx3);font-family:var(--m);padding:4px 6px 8px;font-weight:500}
+.sb-chip{
+  display:flex;align-items:flex-start;gap:8px;padding:8px 10px;
+  border-radius:var(--r2);cursor:pointer;transition:all .14s;
+  font-size:.78rem;color:var(--tx2);line-height:1.5;
+  border:none;background:none;width:100%;text-align:left;font-family:var(--f);
+}
+.sb-chip:hover{background:var(--s3);color:var(--tx)}
+.sb-chip .chip-icon{flex-shrink:0;margin-top:1px;font-size:13px}
+.sb-chip .chip-text{flex:1}
+.sb-chip .chip-sub{display:block;font-size:.66rem;color:var(--tx3);font-family:var(--m);margin-top:2px}
+
+.sb-bottom{padding:10px 8px;margin-top:auto;border-top:1px solid var(--bdr)}
+.dms-link{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r2);color:var(--tx2);text-decoration:none;font-size:.8rem;transition:all .14s;border:1px solid var(--bdr2)}
+.dms-link:hover{background:var(--gd);color:var(--g);border-color:rgba(0,216,130,.18)}
+
+/* ── Chat ──────────────────────────────────────────────── */
+.chat-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+.msgs{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:14px}
+
+/* Welcome */
+.welcome{
+  text-align:center;padding:44px 20px 30px;
+  max-width:500px;margin:auto;
+  animation:fadeUp .3s ease;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.w-avatar{
+  width:60px;height:60px;background:var(--g);border-radius:16px;
+  display:grid;place-items:center;margin:0 auto 18px;
+  font-family:var(--m);font-size:26px;font-weight:500;color:var(--bg);
+}
+.w-title{font-size:1.6rem;font-weight:700;margin-bottom:8px}
+.w-title em{font-style:italic;color:var(--g)}
+.w-sub{font-size:.82rem;color:var(--tx2);line-height:1.7;margin-bottom:4px}
+
+/* Messages */
+.msg{display:flex;gap:9px;animation:fadeUp .18s ease}
+.msg.user{flex-direction:row-reverse}
+.msg-av{
+  width:28px;height:28px;border-radius:50%;
+  display:grid;place-items:center;font-size:11px;
+  flex-shrink:0;align-self:flex-end;
+}
+.msg.assistant .msg-av{background:var(--g);color:var(--bg);font-family:var(--m);font-weight:500}
+.msg.user      .msg-av{background:var(--s3);border:1px solid var(--bdr2);color:var(--tx2)}
+.msg-body{max-width:75%}
+.msg-bubble{
+  padding:11px 15px;border-radius:11px;
+  font-size:.85rem;line-height:1.75;
+}
+.msg.assistant .msg-bubble{background:var(--s1);border:1px solid var(--bdr);border-bottom-left-radius:3px}
+.msg.user      .msg-bubble{background:var(--s3);border:1px solid var(--bdr2);border-bottom-right-radius:3px;color:var(--tx)}
+.msg-bubble code{font-family:var(--m);font-size:.75rem;background:var(--s4);padding:2px 5px;border-radius:3px;color:var(--g)}
+.msg-bubble strong{font-weight:700;color:var(--tx)}
+.msg-time{font-size:.62rem;color:var(--tx3);margin-top:3px;font-family:var(--m);padding:0 2px}
+.msg.user .msg-time{text-align:right}
+
+/* Typing */
+.typing{display:flex;gap:4px;padding:12px 15px;background:var(--s1);border:1px solid var(--bdr);border-radius:11px;border-bottom-left-radius:3px;width:fit-content}
+.typing span{width:5px;height:5px;background:var(--g);border-radius:50%;animation:blink 1.2s ease infinite}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+
+/* Input */
+.input-area{
+  padding:14px 20px;background:var(--s1);
+  border-top:1px solid var(--bdr);flex-shrink:0;
+}
+.input-row{
+  display:flex;align-items:flex-end;gap:8px;
+  background:var(--s2);border:1px solid var(--bdr2);
+  border-radius:11px;padding:8px 10px;transition:border-color .14s;
+}
+.input-row:focus-within{border-color:var(--g)}
+.input-row textarea{
+  flex:1;background:none;border:none;outline:none;
+  color:var(--tx);font-family:var(--f);font-size:.87rem;
+  resize:none;max-height:130px;min-height:22px;line-height:1.55;
+}
+.input-row textarea::placeholder{color:var(--tx3)}
+.input-btns{display:flex;gap:5px;align-items:center;flex-shrink:0}
+.ib{width:32px;height:32px;border-radius:7px;border:none;background:transparent;color:var(--tx3);cursor:pointer;display:grid;place-items:center;font-size:15px;transition:all .14s}
+.ib:hover{background:var(--s4);color:var(--tx)}
+.send{width:32px;height:32px;border-radius:7px;border:none;background:var(--g);color:var(--bg);cursor:pointer;display:grid;place-items:center;font-size:15px;font-weight:700;transition:all .14s}
+.send:hover{background:var(--g2);transform:scale(1.06)}
+.send:disabled{opacity:.3;cursor:not-allowed;transform:none}
+.input-hint{font-size:.65rem;color:var(--tx3);margin-top:6px;font-family:var(--m)}
+
+#fIn2{display:none}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="/" class="logo">
+    <div class="logo-gem">I</div>
+    <span class="logo-name">Ilija<em>PE</em></span>
+  </a>
+  <div class="tb-sep"></div>
+  <nav class="tab-group">
+    <button class="tab" onclick="location.href='/'">⚡ Workflow</button>
+    <button class="tab active">💬 Chat</button>
+    <button class="tab" onclick="location.href='/dms'">🗂 DMS</button>
+    <button class="tab" onclick="location.href='/local_calendar'">📅 Kalender</button>
+  </nav>
+  <div class="tb-right">
+    <!-- Model selector -->
+    <div class="mwrap" id="mwrap">
+      <div class="mpill" onclick="toggleMM()">
+        <span class="mp-dot"></span>
+        <span id="mLabel">auto</span>
+        <span style="font-size:9px;opacity:.4;margin-left:2px">▾</span>
+      </div>
+      <div class="mm" id="mm">
+        <div class="mm-h">KI-Provider</div>
+        <div class="mm-o" id="mo-auto"   onclick="setProvider('auto')">🔄 Auto (empfohlen)<span class="mm-b">auto</span></div>
+        <div class="mm-o" id="mo-claude" onclick="setProvider('claude')">✦ Claude<span class="mm-b">Anthropic</span></div>
+        <div class="mm-o" id="mo-openai" onclick="setProvider('openai')">◈ ChatGPT<span class="mm-b">OpenAI</span></div>
+        <div class="mm-o" id="mo-gemini" onclick="setProvider('gemini')">◎ Gemini<span class="mm-b">Google</span></div>
+        <div class="mm-o" id="mo-ollama" onclick="setProvider('ollama')">⬡ Ollama<span class="mm-b">lokal</span></div>
+      </div>
+    </div>
+    <button class="btn btn-g" onclick="clearChat()">↺ Neu</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-section">
+      <div class="sb-head">Schnellbefehle</div>
+
+      <button class="sb-chip" onclick="send('Was ist das aktuelle Datum und Uhrzeit?')">
+        <span class="chip-icon">📅</span>
+        <span class="chip-text">Datum & Uhrzeit<span class="chip-sub">Aktuelle Zeit abfragen</span></span>
+      </button>
+      <button class="sb-chip" onclick="send('Zeig mir meine Termine von heute')">
+        <span class="chip-icon">📅</span>
+        <span class="chip-text">Lokaler Kalender<span class="chip-sub">Heutige Termine</span></span>
+      </button>
+      <button class="sb-chip" onclick="send('Was weißt du über mich?')">
+        <span class="chip-icon">🧠</span>
+        <span class="chip-text">Gedächtnis<span class="chip-sub">Gespeichertes abrufen</span></span>
+      </button>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-head">Recherche</div>
+      <button class="sb-chip" onclick="openSearch()">
+        <span class="chip-icon">🔍</span>
+        <span class="chip-text">Internet-Suche<span class="chip-sub">DuckDuckGo, Wikipedia</span></span>
+      </button>
+      <button class="sb-chip" onclick="send('Notizen anzeigen')">
+        <span class="chip-icon">📝</span>
+        <span class="chip-text">Notizen<span class="chip-sub">Gespeicherte Notizen</span></span>
+      </button>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-head">System</div>
+      <button class="sb-chip" onclick="reloadSkills()">
+        <span class="chip-icon">↺</span>
+        <span class="chip-text">Skills neu laden<span class="chip-sub">Änderungen übernehmen</span></span>
+      </button>
+      <button class="sb-chip" onclick="clearChat()">
+        <span class="chip-icon">✕</span>
+        <span class="chip-text">Chat leeren<span class="chip-sub">Verlauf zurücksetzen</span></span>
+      </button>
+    </div>
+
+    <div class="sb-bottom">
+      <a href="/dms" class="dms-link">🗂 DMS öffnen</a>
+    </div>
+  </aside>
+
+  <!-- Chat -->
+  <div class="chat-main">
+    <div class="msgs" id="msgs">
+      <div class="welcome" id="welcome">
+        <div class="w-avatar">I</div>
+        <h1 class="w-title">Hallo, ich bin <em>Ilija</em></h1>
+        <p class="w-sub">Dein persönlicher KI-Assistent für Kommunikation,<br>Organisation und Dokumentenverwaltung.</p>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <textarea id="ta" placeholder="Schreib etwas…" rows="1"
+          onkeydown="onKey(event)" oninput="resize(this)"></textarea>
+        <div class="input-btns">
+          <button class="ib" onclick="document.getElementById('fIn2').click()" title="Datei hochladen">📎</button>
+          <button class="send" id="sendBtn" onclick="doSend()">↑</button>
+        </div>
+      </div>
+      <div class="input-hint">Enter zum Senden &nbsp;·&nbsp; Shift+Enter Zeilenumbruch &nbsp;·&nbsp; 📎 Datei in DMS-Import senden</div>
+      <input type="file" id="fIn2" multiple onchange="doUpload(this.files)">
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+let loading=false;
+
+// ── Init ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  loadModelInfo();
+  document.getElementById('ta').focus();
+  document.addEventListener('click',e=>{
+    if(!document.getElementById('mwrap').contains(e.target))
+      document.getElementById('mm').classList.remove('open');
+  });
+});
+
+// ── Input ─────────────────────────────────────────────────────
+function onKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend()}}
+function resize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,130)+'px'}
+
+// ── Send ──────────────────────────────────────────────────────
+function send(text){
+  document.getElementById('ta').value=text;
+  doSend();
+}
+
+function openSearch(){
+  const ta=document.getElementById('ta');
+  ta.value='Suche nach: ';
+  ta.focus();
+  ta.setSelectionRange(ta.value.length,ta.value.length);
+}
+
+async function doSend(){
+  const ta=document.getElementById('ta');
+  const msg=ta.value.trim();
+  if(!msg||loading)return;
+  hideWelcome();
+  appendMsg('user',msg);
+  ta.value='';ta.style.height='auto';
+  const typing=appendTyping();
+  setLoading(true);
+  try{
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+    const d=await r.json();
+    typing.remove();
+    appendMsg('assistant',d.response||d.error||'Keine Antwort');
+    if(d.provider)document.getElementById('mLabel').textContent=d.provider;
+  }catch(e){
+    typing.remove();
+    appendMsg('assistant','❌ Verbindungsfehler. Läuft der Server?');
+  }
+  setLoading(false);
+  scrollDown();
+}
+
+// ── DOM ───────────────────────────────────────────────────────
+function hideWelcome(){const w=document.getElementById('welcome');if(w)w.remove()}
+
+function appendMsg(role,text){
+  const area=document.getElementById('msgs');
+  const div=document.createElement('div');
+  div.className=`msg ${role}`;
+  const now=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  const av=role==='assistant'?'I':'👤';
+  div.innerHTML=`
+    <div class="msg-av">${av}</div>
+    <div class="msg-body">
+      <div class="msg-bubble">${fmt(text)}</div>
+      <div class="msg-time">${now}</div>
+    </div>`;
+  area.appendChild(div);
+  scrollDown();
+  return div;
+}
+
+function appendTyping(){
+  const area=document.getElementById('msgs');
+  const div=document.createElement('div');
+  div.className='msg assistant';
+  div.innerHTML='<div class="msg-av">I</div><div class="msg-body"><div class="typing"><span></span><span></span><span></span></div></div>';
+  area.appendChild(div);
+  scrollDown();
+  return div;
+}
+
+function fmt(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+          .replace(/`([^`]+)`/g,'<code>$1</code>')
+          .replace(/\n/g,'<br>');
+}
+
+function scrollDown(){const a=document.getElementById('msgs');a.scrollTop=a.scrollHeight}
+function setLoading(v){loading=v;document.getElementById('sendBtn').disabled=v}
+
+// ── Actions ───────────────────────────────────────────────────
+async function reloadSkills(){
+  try{
+    const d=await (await fetch('/api/reload',{method:'POST'})).json();
+    hideWelcome();
+    appendMsg('assistant',`🔄 ${d.message}`);
+  }catch(e){appendMsg('assistant','❌ Reload fehlgeschlagen')}
+}
+
+function clearChat(){
+  fetch('/api/clear',{method:'POST'}).catch(()=>{});
+  const a=document.getElementById('msgs');
+  a.innerHTML=`<div class="welcome" id="welcome">
+    <div class="w-avatar">I</div>
+    <h1 class="w-title">Chat <em>geleert</em></h1>
+    <p class="w-sub">Starte ein neues Gespräch.</p>
+  </div>`;
+}
+
+async function doUpload(files){
+  if(!files.length)return;
+  const fd=new FormData();
+  Array.from(files).forEach(f=>fd.append('files',f));
+  try{
+    const d=await (await fetch('/api/dms/upload',{method:'POST',body:fd})).json();
+    hideWelcome();
+    appendMsg('assistant',`📥 **${d.anzahl}** Datei(en) in DMS-Import gespeichert.\nSage "Dokumente einsortieren" um sie zu archivieren.`);
+  }catch(e){appendMsg('assistant','❌ Upload fehlgeschlagen.')}
+  document.getElementById('fIn2').value='';
+}
+
+// ── Model ─────────────────────────────────────────────────────
+async function loadModelInfo(){
+  try{
+    const d=await (await fetch('/api/model')).json();
+    document.getElementById('mLabel').textContent=d.current_provider||'auto';
+    const av=(d.available||[]).map(p=>p.toLowerCase());
+    ['claude','openai','gemini','ollama'].forEach(p=>{
+      const el=document.getElementById('mo-'+p);
+      if(el){
+        if(av.includes(p)||av.includes(p.charAt(0).toUpperCase()+p.slice(1))){
+          el.classList.remove('off');
+        }else{
+          el.classList.add('off');
+        }
+      }
+    });
+    const cur=(d.current_provider||'auto');
+    document.querySelectorAll('.mm-o').forEach(o=>o.classList.remove('cur'));
+    const co=document.querySelector(`.mm-o[onclick*="'${cur}'"]`);
+    if(co)co.classList.add('cur');
+  }catch(e){}
+}
+
+function toggleMM(){document.getElementById('mm').classList.toggle('open')}
+
+async function setProvider(p){
+  document.getElementById('mm').classList.remove('open');
+  try{
+    const r=await fetch('/api/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:p})});
+    const d=await r.json();
+    if(d.ok){
+      document.getElementById('mLabel').textContent=p;
+      loadModelInfo();
+      // Live-Wechsel im laufenden Kernel
+      await fetch('/api/switch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:p})});
+    }
+  }catch(e){}
+}
+</script>
+</body>
+</html>

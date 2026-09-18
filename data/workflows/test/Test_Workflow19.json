@@ -1,0 +1,100 @@
+{
+  "id": "wf_test19",
+  "name": "Mathematik-Pipeline",
+  "nodes": [
+    {
+      "id": "n_t19_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t19_02",
+      "type": "set",
+      "x": 300,
+      "y": 100,
+      "name": "Rechnung setzen",
+      "config": {
+        "variable": "rechnung",
+        "value": "(1250 * 1.19) + 48.50 - 200"
+      }
+    },
+    {
+      "id": "n_t19_03",
+      "type": "skill",
+      "x": 550,
+      "y": 100,
+      "name": "Taschenrechner",
+      "config": {
+        "skill": "taschenrechner",
+        "ausdruck": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t19_04",
+      "type": "skill",
+      "x": 800,
+      "y": 100,
+      "name": "Euro zu Dollar",
+      "config": {
+        "skill": "einheit_umrechnen",
+        "wert": "1000",
+        "von": "euro",
+        "nach": "dollar"
+      }
+    },
+    {
+      "id": "n_t19_05",
+      "type": "chat",
+      "x": 1050,
+      "y": 100,
+      "name": "Berechnung erklären",
+      "config": {
+        "message": "Erkläre diese Berechnung: {{input}}"
+      }
+    },
+    {
+      "id": "n_t19_06",
+      "type": "skill",
+      "x": 1300,
+      "y": 100,
+      "name": "Notiz speichern",
+      "config": {
+        "skill": "notiz_speichern",
+        "text": "{{input}}",
+        "datei": "berechnungen.txt"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t19_01",
+      "from": "n_t19_01",
+      "to": "n_t19_02"
+    },
+    {
+      "id": "c_t19_02",
+      "from": "n_t19_02",
+      "to": "n_t19_03"
+    },
+    {
+      "id": "c_t19_03",
+      "from": "n_t19_03",
+      "to": "n_t19_04"
+    },
+    {
+      "id": "c_t19_04",
+      "from": "n_t19_04",
+      "to": "n_t19_05"
+    },
+    {
+      "id": "c_t19_05",
+      "from": "n_t19_05",
+      "to": "n_t19_06"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

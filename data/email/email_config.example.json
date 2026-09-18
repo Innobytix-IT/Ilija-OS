@@ -1,0 +1,6 @@
+﻿{
+  "smtp_server": "smtp.example.com",
+  "smtp_port": 587,
+  "username": "deine@email.de",
+  "password": "DEIN_PASSWORT"
+}

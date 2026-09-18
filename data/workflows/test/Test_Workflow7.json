@@ -1,0 +1,81 @@
+{
+  "id": "wf_test07",
+  "name": "Notizen-Assistent",
+  "nodes": [
+    {
+      "id": "n_t07_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t07_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "Notizen lesen",
+      "config": {
+        "skill": "notizen_lesen",
+        "datei": "notizen.txt"
+      }
+    },
+    {
+      "id": "n_t07_03",
+      "type": "chat",
+      "x": 550,
+      "y": 100,
+      "name": "Notizen analysieren",
+      "config": {
+        "message": "Analysiere meine Notizen und erstelle eine Prioritätenliste: {{input}}"
+      }
+    },
+    {
+      "id": "n_t07_04",
+      "type": "chat",
+      "x": 800,
+      "y": 100,
+      "name": "Dringende Aufgaben",
+      "config": {
+        "message": "Welche Aufgaben sind am dringendsten? {{input}}"
+      }
+    },
+    {
+      "id": "n_t07_05",
+      "type": "skill",
+      "x": 1050,
+      "y": 100,
+      "name": "Ergebnis speichern",
+      "config": {
+        "skill": "notiz_speichern",
+        "text": "{{input}}",
+        "datei": "prioritaeten.txt"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t07_01",
+      "from": "n_t07_01",
+      "to": "n_t07_02"
+    },
+    {
+      "id": "c_t07_02",
+      "from": "n_t07_02",
+      "to": "n_t07_03"
+    },
+    {
+      "id": "c_t07_03",
+      "from": "n_t07_03",
+      "to": "n_t07_04"
+    },
+    {
+      "id": "c_t07_04",
+      "from": "n_t07_04",
+      "to": "n_t07_05"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

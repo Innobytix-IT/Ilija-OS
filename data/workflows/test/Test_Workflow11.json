@@ -1,0 +1,70 @@
+{
+  "id": "wf_test11",
+  "name": "API Health Monitor",
+  "nodes": [
+    {
+      "id": "n_t11_01",
+      "type": "schedule_trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Stündlich",
+      "config": {
+        "interval": "hourly",
+        "time": "00:00",
+        "active": false
+      }
+    },
+    {
+      "id": "n_t11_02",
+      "type": "http",
+      "x": 300,
+      "y": 100,
+      "name": "API Status abrufen",
+      "config": {
+        "url": "https://httpbin.org/status/200",
+        "method": "GET",
+        "headers": ""
+      }
+    },
+    {
+      "id": "n_t11_03",
+      "type": "condition",
+      "x": 550,
+      "y": 100,
+      "name": "Status prüfen",
+      "config": {
+        "operator": "enthält",
+        "value": "200"
+      }
+    },
+    {
+      "id": "n_t11_04",
+      "type": "telegram",
+      "x": 800,
+      "y": 100,
+      "name": "Status OK melden",
+      "config": {
+        "message": "✅ API Status OK: {{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t11_01",
+      "from": "n_t11_01",
+      "to": "n_t11_02"
+    },
+    {
+      "id": "c_t11_02",
+      "from": "n_t11_02",
+      "to": "n_t11_03"
+    },
+    {
+      "id": "c_t11_03",
+      "from": "n_t11_03",
+      "to": "n_t11_04"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

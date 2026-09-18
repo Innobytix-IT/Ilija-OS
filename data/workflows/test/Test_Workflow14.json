@@ -1,0 +1,97 @@
+{
+  "id": "wf_test14",
+  "name": "Gedächtnis-basiertes Lernen",
+  "nodes": [
+    {
+      "id": "n_t14_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t14_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "Gedächtnis-Anzahl",
+      "config": {
+        "skill": "gedaechtnis_anzahl"
+      }
+    },
+    {
+      "id": "n_t14_03",
+      "type": "chat",
+      "x": 550,
+      "y": 100,
+      "name": "KI-Wissen abfragen",
+      "config": {
+        "message": "Beantworte basierend auf meinem gespeicherten Wissen: Was weiß ich über KI? {{input}}"
+      }
+    },
+    {
+      "id": "n_t14_04",
+      "type": "skill",
+      "x": 800,
+      "y": 100,
+      "name": "Gedächtnis suchen",
+      "config": {
+        "skill": "gedaechtnis_suchen",
+        "anfrage": "KI Automatisierung",
+        "top_k": "5"
+      }
+    },
+    {
+      "id": "n_t14_05",
+      "type": "chat",
+      "x": 1050,
+      "y": 100,
+      "name": "Zusammenfassen",
+      "config": {
+        "message": "Fasse das zusammen: {{input}}"
+      }
+    },
+    {
+      "id": "n_t14_06",
+      "type": "skill",
+      "x": 1300,
+      "y": 100,
+      "name": "Im Gedächtnis speichern",
+      "config": {
+        "skill": "gedaechtnis_speichern",
+        "inhalt": "{{input}}",
+        "kategorie": "KI-Zusammenfassung"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t14_01",
+      "from": "n_t14_01",
+      "to": "n_t14_02"
+    },
+    {
+      "id": "c_t14_02",
+      "from": "n_t14_02",
+      "to": "n_t14_03"
+    },
+    {
+      "id": "c_t14_03",
+      "from": "n_t14_03",
+      "to": "n_t14_04"
+    },
+    {
+      "id": "c_t14_04",
+      "from": "n_t14_04",
+      "to": "n_t14_05"
+    },
+    {
+      "id": "c_t14_05",
+      "from": "n_t14_05",
+      "to": "n_t14_06"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

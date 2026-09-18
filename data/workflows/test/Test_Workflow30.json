@@ -1,0 +1,198 @@
+{
+  "id": "wf_test30",
+  "name": "Vollautomatische Business-Pipeline",
+  "nodes": [
+    {
+      "id": "n_t30_01",
+      "type": "schedule_trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Täglich 06:00",
+      "config": {
+        "interval": "daily",
+        "time": "06:00",
+        "active": false
+      }
+    },
+    {
+      "id": "n_t30_02",
+      "type": "http",
+      "x": 300,
+      "y": 100,
+      "name": "API-Daten abrufen",
+      "config": {
+        "url": "https://httpbin.org/json",
+        "method": "GET",
+        "headers": ""
+      }
+    },
+    {
+      "id": "n_t30_03",
+      "type": "error_handler",
+      "x": 550,
+      "y": 100,
+      "name": "Fehler abfangen",
+      "config": {
+        "action": "weitergeben"
+      }
+    },
+    {
+      "id": "n_t30_04",
+      "type": "condition",
+      "x": 800,
+      "y": 100,
+      "name": "Kein Fehler prüfen",
+      "config": {
+        "operator": "!=",
+        "value": "error"
+      }
+    },
+    {
+      "id": "n_t30_05",
+      "type": "skill",
+      "x": 1050,
+      "y": 100,
+      "name": "Business KI News suchen",
+      "config": {
+        "skill": "internet_suche",
+        "suchanfrage": "Business KI News"
+      }
+    },
+    {
+      "id": "n_t30_06",
+      "type": "skill",
+      "x": 1300,
+      "y": 100,
+      "name": "Wirtschafts-News abrufen",
+      "config": {
+        "skill": "news_abrufen",
+        "thema": "Wirtschaft"
+      }
+    },
+    {
+      "id": "n_t30_07",
+      "type": "loop",
+      "x": 1550,
+      "y": 100,
+      "name": "News-Loop",
+      "config": {
+        "max_items": "3"
+      }
+    },
+    {
+      "id": "n_t30_08",
+      "type": "chat",
+      "x": 1800,
+      "y": 100,
+      "name": "Executive Summary",
+      "config": {
+        "message": "Erstelle einen Executive Summary: {{input}}"
+      }
+    },
+    {
+      "id": "n_t30_09",
+      "type": "google_docs",
+      "x": 2050,
+      "y": 100,
+      "name": "Business Report Docs",
+      "config": {
+        "operation": "Dokument erstellen",
+        "title": "Business Report",
+        "content": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t30_10",
+      "type": "google_sheets",
+      "x": 2300,
+      "y": 100,
+      "name": "Sheets Eintrag",
+      "config": {
+        "operation": "Zeile anhängen",
+        "spreadsheet_id": "",
+        "range": "A1"
+      }
+    },
+    {
+      "id": "n_t30_11",
+      "type": "telegram",
+      "x": 2550,
+      "y": 100,
+      "name": "Telegram senden",
+      "config": {
+        "message": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t30_12",
+      "type": "email",
+      "x": 2800,
+      "y": 100,
+      "name": "Business Report E-Mail",
+      "config": {
+        "to": "user@example.com",
+        "subject": "Daily Business Report",
+        "body": "{{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t30_01",
+      "from": "n_t30_01",
+      "to": "n_t30_02"
+    },
+    {
+      "id": "c_t30_02",
+      "from": "n_t30_02",
+      "to": "n_t30_03"
+    },
+    {
+      "id": "c_t30_03",
+      "from": "n_t30_03",
+      "to": "n_t30_04"
+    },
+    {
+      "id": "c_t30_04",
+      "from": "n_t30_04",
+      "to": "n_t30_05"
+    },
+    {
+      "id": "c_t30_05",
+      "from": "n_t30_05",
+      "to": "n_t30_06"
+    },
+    {
+      "id": "c_t30_06",
+      "from": "n_t30_06",
+      "to": "n_t30_07"
+    },
+    {
+      "id": "c_t30_07",
+      "from": "n_t30_07",
+      "to": "n_t30_08"
+    },
+    {
+      "id": "c_t30_08",
+      "from": "n_t30_08",
+      "to": "n_t30_09"
+    },
+    {
+      "id": "c_t30_09",
+      "from": "n_t30_09",
+      "to": "n_t30_10"
+    },
+    {
+      "id": "c_t30_10",
+      "from": "n_t30_10",
+      "to": "n_t30_11"
+    },
+    {
+      "id": "c_t30_11",
+      "from": "n_t30_11",
+      "to": "n_t30_12"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

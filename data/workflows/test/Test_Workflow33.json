@@ -1,0 +1,88 @@
+{
+  "id": "wf_test33",
+  "name": "Memory Window & Summary Demo",
+  "nodes": [
+    {
+      "id": "n_t33_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 175,
+      "name": "Start",
+      "config": {
+        "startMessage": "Was habe ich über KI-Trends gelernt?"
+      }
+    },
+    {
+      "id": "n_t33_02",
+      "type": "memory_window",
+      "x": 300,
+      "y": 100,
+      "name": "Gesprächsverlauf laden",
+      "config": {
+        "memory_key": "ki_lernen",
+        "window_size": "5"
+      }
+    },
+    {
+      "id": "n_t33_03",
+      "type": "memory_summary",
+      "x": 300,
+      "y": 250,
+      "name": "Zusammenfassung laden",
+      "config": {
+        "memory_key": "ki_lernen"
+      }
+    },
+    {
+      "id": "n_t33_04",
+      "type": "chat",
+      "x": 600,
+      "y": 175,
+      "name": "Kontext-Antwort",
+      "config": {
+        "message": "Beantworte die Frage '{{input}}' basierend auf dem Kontext: {{input}}"
+      }
+    },
+    {
+      "id": "n_t33_05",
+      "type": "skill",
+      "x": 900,
+      "y": 175,
+      "name": "Ergebnis speichern",
+      "config": {
+        "skill": "notiz_speichern",
+        "text": "{{input}}",
+        "datei": "memory_demo.txt"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t33_01",
+      "from": "n_t33_01",
+      "to": "n_t33_02"
+    },
+    {
+      "id": "c_t33_02",
+      "from": "n_t33_01",
+      "to": "n_t33_03"
+    },
+    {
+      "id": "c_t33_03",
+      "from": "n_t33_02",
+      "to": "n_t33_04"
+    },
+    {
+      "id": "c_t33_04",
+      "from": "n_t33_03",
+      "to": "n_t33_04"
+    },
+    {
+      "id": "c_t33_05",
+      "from": "n_t33_04",
+      "to": "n_t33_05"
+    }
+  ],
+  "updated": "2026-04-19T10:00:00",
+  "created": "2026-04-19T10:00:00"
+}

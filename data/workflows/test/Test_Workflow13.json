@@ -1,0 +1,85 @@
+{
+  "id": "wf_test13",
+  "name": "Kalender-Assistent",
+  "nodes": [
+    {
+      "id": "n_t13_01",
+      "type": "schedule_trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Täglich 07:30",
+      "config": {
+        "interval": "daily",
+        "time": "07:30",
+        "active": false
+      }
+    },
+    {
+      "id": "n_t13_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "Kalender lesen",
+      "config": {
+        "skill": "outlook_kalender_lesen",
+        "tage": "7"
+      }
+    },
+    {
+      "id": "n_t13_03",
+      "type": "chat",
+      "x": 550,
+      "y": 100,
+      "name": "Wochenübersicht erstellen",
+      "config": {
+        "message": "Was steht diese Woche an? Erstelle eine strukturierte Übersicht: {{input}}"
+      }
+    },
+    {
+      "id": "n_t13_04",
+      "type": "telegram",
+      "x": 800,
+      "y": 100,
+      "name": "Telegram senden",
+      "config": {
+        "message": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t13_05",
+      "type": "skill",
+      "x": 800,
+      "y": 250,
+      "name": "Notiz speichern",
+      "config": {
+        "skill": "notiz_speichern",
+        "text": "{{input}}",
+        "datei": "kalender_uebersicht.txt"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t13_01",
+      "from": "n_t13_01",
+      "to": "n_t13_02"
+    },
+    {
+      "id": "c_t13_02",
+      "from": "n_t13_02",
+      "to": "n_t13_03"
+    },
+    {
+      "id": "c_t13_03",
+      "from": "n_t13_03",
+      "to": "n_t13_04"
+    },
+    {
+      "id": "c_t13_04",
+      "from": "n_t13_03",
+      "to": "n_t13_05"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

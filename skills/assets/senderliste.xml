@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tv generator-info-name="CustomList_Combined">
+
+  <!-- Öffentlich-Rechtliche (DE) -->
+  <channel id="DasErste.de" kategorie="oeffentlich-rechtlich" land="DE">
+    <display-name>Das Erste HD</display-name>
+  </channel>
+  <channel id="ZDF.de" kategorie="oeffentlich-rechtlich" land="DE">
+    <display-name>ZDF HD</display-name>
+  </channel>
+  <channel id="3sat.de" kategorie="oeffentlich-rechtlich" land="DE">
+    <display-name>3sat HD</display-name>
+  </channel>
+  <channel id="Arte.de" kategorie="oeffentlich-rechtlich" land="DE">
+    <display-name>arte HD</display-name>
+  </channel>
+  <channel id="Phoenix.de" kategorie="oeffentlich-rechtlich" land="DE">
+    <display-name>phoenix HD</display-name>
+  </channel>
+  <channel id="KiKA.de" kategorie="oeffentlich-rechtlich" land="DE">
+    <display-name>KiKA HD</display-name>
+  </channel>
+
+  <!-- Dritte Programme (ARD) -->
+  <channel id="BR.de" kategorie="drittes-programm" land="DE">
+    <display-name>BR Fernsehen</display-name>
+  </channel>
+  <channel id="WDR.de" kategorie="drittes-programm" land="DE">
+    <display-name>WDR HD</display-name>
+  </channel>
+  <channel id="NDR.de" kategorie="drittes-programm" land="DE">
+    <display-name>NDR HD</display-name>
+  </channel>
+  <channel id="SWR.de" kategorie="drittes-programm" land="DE">
+    <display-name>SWR HD</display-name>
+  </channel>
+  <channel id="MDR.de" kategorie="drittes-programm" land="DE">
+    <display-name>MDR HD</display-name>
+  </channel>
+  <channel id="HR.de" kategorie="drittes-programm" land="DE">
+    <display-name>hr-fernsehen HD</display-name>
+  </channel>
+  <channel id="RBB.de" kategorie="drittes-programm" land="DE">
+    <display-name>rbb Berlin HD</display-name>
+  </channel>
+
+  <!-- Private Sender -->
+  <channel id="RTL.de" kategorie="privat" land="DE">
+    <display-name>RTL</display-name>
+  </channel>
+  <channel id="Sat1.de" kategorie="privat" land="DE">
+    <display-name>SAT.1</display-name>
+  </channel>
+  <channel id="Pro7.de" kategorie="privat" land="DE">
+    <display-name>ProSieben</display-name>
+  </channel>
+  <channel id="VOX.de" kategorie="privat" land="DE">
+    <display-name>VOX</display-name>
+  </channel>
+  <channel id="RTL2.de" kategorie="privat" land="DE">
+    <display-name>RTLZWEI</display-name>
+  </channel>
+  <channel id="Kabel1.de" kategorie="privat" land="DE">
+    <display-name>kabel eins</display-name>
+  </channel>
+  <channel id="SuperRTL.de" kategorie="privat" land="DE">
+    <display-name>SUPER RTL</display-name>
+  </channel>
+  <channel id="Nitro.de" kategorie="privat" land="DE">
+    <display-name>NITRO</display-name>
+  </channel>
+  <channel id="Pro7Maxx.de" kategorie="privat" land="DE">
+    <display-name>ProSieben MAXX</display-name>
+  </channel>
+  <channel id="DMAX.de" kategorie="privat" land="DE">
+    <display-name>DMAX</display-name>
+  </channel>
+  <channel id="Tele5.de" kategorie="privat" land="DE">
+    <display-name>Tele 5</display-name>
+  </channel>
+
+  <!-- News und Doku -->
+  <channel id="n-tv.de" kategorie="news-doku" land="DE">
+    <display-name>ntv</display-name>
+  </channel>
+  <channel id="Welt.de" kategorie="news-doku" land="DE">
+    <display-name>WELT</display-name>
+  </channel>
+  <channel id="ZDFinfo.de" kategorie="news-doku" land="DE">
+    <display-name>ZDFinfo HD</display-name>
+  </channel>
+  <channel id="ZDFneo.de" kategorie="news-doku" land="DE">
+    <display-name>zdf_neo HD</display-name>
+  </channel>
+
+  <!-- Christliche Sender -->
+  <channel id="BibelTV.de" kategorie="christlich" land="DE">
+    <display-name>Bibel TV</display-name>
+  </channel>
+  <channel id="KTV.at" kategorie="christlich" land="AT">
+    <display-name>K-TV</display-name>
+  </channel>
+  <channel id="EWTN.de" kategorie="christlich" land="DE">
+    <display-name>EWTN katholisches TV</display-name>
+  </channel>
+  <channel id="HopeTV.de" kategorie="christlich" land="DE">
+    <display-name>Hope TV</display-name>
+  </channel>
+  <channel id="ERFPlus.de" kategorie="christlich" land="DE">
+    <display-name>ERF Jess</display-name>
+  </channel>
+  <channel id="SophiaTV.de" kategorie="christlich" land="DE">
+    <display-name>Sophia TV</display-name>
+  </channel>
+  <channel id="Livenet.ch" kategorie="christlich" land="CH">
+    <display-name>Livenet (CH)</display-name>
+  </channel>
+
+  <!-- Österreich -->
+  <channel id="ORF1.at" kategorie="oeffentlich-rechtlich" land="AT">
+    <display-name>ORF 1</display-name>
+  </channel>
+  <channel id="ORF2.at" kategorie="oeffentlich-rechtlich" land="AT">
+    <display-name>ORF 2</display-name>
+  </channel>
+  <channel id="ServusTV.at" kategorie="privat" land="AT">
+    <display-name>ServusTV</display-name>
+  </channel>
+
+  <!-- Schweiz -->
+  <channel id="SRF1.ch" kategorie="oeffentlich-rechtlich" land="CH">
+    <display-name>SRF 1</display-name>
+  </channel>
+  <channel id="SRF2.ch" kategorie="oeffentlich-rechtlich" land="CH">
+    <display-name>SRF zwei</display-name>
+  </channel>
+
+</tv>

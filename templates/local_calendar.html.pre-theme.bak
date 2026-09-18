@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ilija · Lokaler Kalender</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- FullCalendar JS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090A;
+  --s1:#0D1215;--s2:#121820;--s3:#18212A;--s4:#1E2A35;
+  --bdr:rgba(255,255,255,.055);--bdr2:rgba(255,255,255,.1);
+  --g:#00D882;--g2:#00AF68;--gd:rgba(0,216,130,.07);--gg:rgba(0,216,130,.12);
+  --tx:#D8EEE4;--tx2:#6E9A87;--tx3:#354E44;
+  --red:#FF5C6A;--blue:#5AA4FF;
+  --f:'Inter',sans-serif;--m:'JetBrains Mono',monospace;
+  --r:9px;--r2:5px;
+
+  /* FullCalendar Overrides */
+  --fc-page-bg-color: var(--bg);
+  --fc-neutral-bg-color: var(--s1);
+  --fc-neutral-text-color: var(--tx2);
+  --fc-border-color: rgba(255, 255, 255, 0.08);
+  --fc-button-text-color: var(--tx);
+  --fc-button-bg-color: var(--s2);
+  --fc-button-border-color: var(--bdr2);
+  --fc-button-hover-bg-color: var(--s3);
+  --fc-button-hover-border-color: var(--g);
+  --fc-button-active-bg-color: var(--gd);
+  --fc-button-active-border-color: var(--g);
+  --fc-today-bg-color: transparent; /* wird direkt per .fc-day-today gesteuert */
+  --fc-now-indicator-color: var(--red);
+}
+html{font-size:16px;color-scheme:dark}
+body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+.topbar{display:flex;align-items:center;height:52px;padding:0 20px;background:var(--s1);border-bottom:1px solid var(--bdr);flex-shrink:0}
+.logo{display:flex;align-items:center;gap:9px;text-decoration:none}
+.logo-gem{width:30px;height:30px;background:var(--g);border-radius:7px;display:grid;place-items:center;font-family:var(--m);font-weight:500;font-size:14px;color:var(--bg)}
+.logo-name{font-size:.9rem;font-weight:500;color:var(--tx)}
+.logo-name em{font-style:italic;color:var(--g)}
+.tb-sep{width:1px;height:20px;background:var(--bdr2);margin:0 12px}
+.tab-group{display:flex;gap:2px}
+.tab{padding:5px 12px;border-radius:var(--r2);font-size:.78rem;font-weight:500;cursor:pointer;transition:all .14s;color:var(--tx2);border:none;background:none;font-family:var(--f);text-decoration:none}
+.tab:hover{background:var(--s3);color:var(--tx)}
+.tab.active{background:var(--gd);color:var(--g);border:1px solid rgba(0,216,130,.12)}
+
+.app{display:flex;flex:1;overflow:hidden}
+.sidebar{width:226px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--bdr);display:flex;flex-direction:column;padding:20px 10px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:20px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:8px 14px;border-radius:var(--r2);font-family:var(--f);font-size:.8rem;font-weight:600;cursor:pointer;transition:all .14s;border:none}
+.btn-p{background:var(--g);color:var(--bg)}
+.btn-p:hover{background:var(--g2);transform:translateY(-1px)}
+.btn-g{background:var(--s2);color:var(--tx);border:1px solid var(--bdr2)}
+.btn-g:hover{background:var(--s3);border-color:var(--tx2)}
+.btn-d{background:rgba(255,92,106,.09);color:var(--red);border:1px solid rgba(255,92,106,.18)}
+.btn-d:hover{background:rgba(255,92,106,.18)}
+
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(3px);z-index:9000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-bg.open{opacity:1;pointer-events:all}
+.modal{background:var(--s1);border:1px solid var(--bdr2);border-radius:var(--r);width:100%;max-width:550px;box-shadow:0 20px 60px rgba(0,0,0,.6);transform:scale(.96);transition:transform .2s;display:flex;flex-direction:column}
+.modal-bg.open .modal{transform:scale(1)}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:1rem}
+.modal-body{padding:20px;display:flex;flex-direction:column;gap:14px;max-height:75vh;overflow-y:auto;}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--bdr);display:flex;justify-content:space-between;gap:10px}
+
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-size:.7rem;color:var(--tx3);text-transform:uppercase;font-family:var(--m);letter-spacing:.05em}
+.fi{background:var(--s2);border:1px solid var(--bdr2);color:var(--tx);padding:10px;border-radius:var(--r2);font-family:var(--f);font-size:.9rem;outline:none;transition:border-color .15s}
+.fi:focus{border-color:var(--g)}
+.ft{min-height:70px;resize:vertical;font-family:var(--f)}
+select.fi { cursor: pointer; appearance: none; }
+
+/* ── KALENDER STYLING ── */
+#local_calendar { height: 100%; font-family: var(--f); }
+.fc-toolbar-title { font-size: 1.2rem !important; font-weight: 600; color: var(--tx); }
+
+/* Events allgemein – weiße Schrift auf farbigem Hintergrund */
+.fc-event { cursor: pointer; padding: 2px 5px; border-radius: 4px; font-family: var(--m); font-size: 0.78rem; }
+.fc-event-time  { font-weight: 700; color: #fff !important; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.fc-event-title { font-weight: 600; color: #fff !important; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+
+/* Monatsansicht: Events größer + gut lesbar */
+.fc-daygrid-event { padding: 3px 7px !important; margin-bottom: 2px !important; border-radius: 5px !important; border: none !important; }
+.fc-daygrid-event .fc-event-title { color: #fff !important; font-size: 0.78rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+.fc-daygrid-event .fc-event-time  { color: rgba(255,255,255,.85) !important; font-size: 0.7rem; font-weight: 700; margin-right: 4px; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+
+/* Monatsansicht: Tageszellen etwas höher */
+.fc-daygrid-day-frame { min-height: 80px !important; }
+
+/* Heutiger Tag: deutlich hervorheben */
+.fc-day-today { background: rgba(0,216,130,.13) !important; }
+.fc-day-today .fc-daygrid-day-number {
+  background: var(--g);
+  color: var(--bg) !important;
+  font-weight: 700;
+  border-radius: 50%;
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  text-decoration: none !important;
+  box-shadow: 0 0 10px rgba(0,216,130,.6);
+}
+/* Wochenansicht heute: linke Spalte + Header */
+.fc-timegrid .fc-day-today { background: rgba(0,216,130,.07) !important; border-left: 2px solid var(--g) !important; }
+.fc-col-header-cell.fc-day-today { background: rgba(0,216,130,.15) !important; border-bottom: 2px solid var(--g) !important; }
+.fc-col-header-cell.fc-day-today .fc-col-header-cell-cushion { color: var(--g) !important; font-weight: 700; }
+
+/* Blocker-Tage in Monatsansicht: roter Rand oben als Hinweis */
+.fc-daygrid-day.has-blocker { border-top: 3px solid rgba(255, 92, 106, 0.5) !important; }
+
+.fc-col-header-cell-cushion    { color: var(--tx); font-family: var(--m); padding: 8px 0; }
+.fc-timegrid-slot-label-cushion{ color: var(--tx2); font-family: var(--m); }
+
+/* Hintergrund-Events (Blocker) in Wochen-/Tagesansicht */
+.fc-bg-event {
+  opacity: 0.9 !important;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 92, 106, 0.15),
+    rgba(255, 92, 106, 0.15) 10px,
+    rgba(255, 92, 106, 0.35) 10px,
+    rgba(255, 92, 106, 0.35) 20px
+  ) !important;
+  border: 1px solid rgba(255, 92, 106, 0.5) !important;
+  cursor: pointer;
+}
+.fc-bg-event .fc-event-title {
+  color: #ffccd0 !important;
+  font-family: var(--f);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  margin-top: 8px;
+  display: block;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+}
+
+.toasts{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:7px;z-index:9999}
+.toast{padding:10px 16px;border-radius:var(--r2);font-size:.8rem;animation:tin .2s ease;max-width:300px;border:1px solid rgba(0,216,130,.2);background:var(--gd);color:var(--g)}
+.toast.err{border-color:rgba(255,92,106,.2);background:rgba(255,92,106,.09);color:var(--red)}
+.toast.info{border-color:rgba(90,164,255,.2);background:rgba(90,164,255,.09);color:var(--blue)}
+@keyframes tin{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+
+/* Modal-Kopfzeile: kategoriespezifisches Pulsieren beim Bearbeiten */
+@keyframes pulse-blocker  {
+  0%,100% { color: var(--red);  text-shadow: 0 0 8px rgba(255,92,106,.6); }
+  50%     { color: #ff8f99;     text-shadow: 0 0 18px rgba(255,92,106,1), 0 0 30px rgba(255,92,106,.4); }
+}
+@keyframes pulse-standard {
+  0%,100% { color: var(--g);   text-shadow: 0 0 8px rgba(0,216,130,.5); }
+  50%     { color: #5fffc0;    text-shadow: 0 0 18px rgba(0,216,130,.9), 0 0 30px rgba(0,216,130,.3); }
+}
+@keyframes pulse-wichtig  {
+  0%,100% { color: #FF7A00; text-shadow: 0 0 8px rgba(255,122,0,.6); }
+  50%     { color: #FFB347; text-shadow: 0 0 18px rgba(255,122,0,1), 0 0 30px rgba(255,122,0,.5); }
+}
+@keyframes pulse-privat   {
+  0%,100% { color: var(--blue); text-shadow: 0 0 8px rgba(90,164,255,.5); }
+  50%     { color: #90c4ff;     text-shadow: 0 0 18px rgba(90,164,255,.9), 0 0 30px rgba(90,164,255,.3); }
+}
+.modal-head.pulse-blocker  { animation: pulse-blocker  1.2s ease-in-out infinite; background: rgba(255,92,106,.06); border-bottom-color: rgba(255,92,106,.3); }
+.modal-head.pulse-standard { animation: pulse-standard 1.4s ease-in-out infinite; background: rgba(0,216,130,.04);  border-bottom-color: rgba(0,216,130,.2); }
+.modal-head.pulse-wichtig  { animation: pulse-wichtig  1.2s ease-in-out infinite; background: rgba(255,122,0,.06); border-bottom-color: rgba(255,122,0,.3); }
+.modal-head.pulse-privat   { animation: pulse-privat   1.4s ease-in-out infinite; background: rgba(90,164,255,.05); border-bottom-color: rgba(90,164,255,.2); }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="/" class="logo">
+    <div class="logo-gem">I</div>
+    <span class="logo-name">Ilija<em>PE</em></span>
+  </a>
+  <div class="tb-sep"></div>
+  <nav class="tab-group">
+    <a href="/" class="tab">⚡ Workflow</a>
+    <a href="/chat" class="tab">💬 Chat</a>
+    <a href="/dms" class="tab">🗂 DMS</a>
+    <a href="/local_calendar" class="tab active">📅 Kalender</a>
+  </nav>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    <button class="btn btn-p" style="width:100%; padding:12px; font-size:.9rem" onclick="openModal()">
+      ＋ Neuer Termin
+    </button>
+    <button class="btn btn-g" style="width:100%; padding:10px; font-size:.82rem; margin-top:8px" onclick="openVerfModal()">
+      📋 Verfügbarkeit
+    </button>
+    <button class="btn btn-g" style="width:100%; padding:10px; font-size:.82rem; margin-top:8px" onclick="openNotizenModal()">
+      📝 Notizen
+    </button>
+
+    <div style="margin-top: 24px; font-size: .75rem; color: var(--tx3); line-height: 1.6;">
+      <strong>Kategorien:</strong><br>
+      • <span style="color:var(--g)">🟩 Standard</span> (Normale Termine)<br>
+      • <span style="color:#FF7A00">🟠 Wichtig</span> (Dringend)<br>
+      • <span style="color:var(--blue)">🟦 Privat</span> (Persönliche Termine)<br>
+      • <span style="color:#ffccd0">🔲 Blocker</span> (Blockiert KI-Buchungen)
+      <br><br>
+      <strong>Hinweise:</strong><br>
+      • Blocker verhindern das Buchen neuer Termine auf dieser Zeit.<br>
+      • Klick auf einen Blocker öffnet ihn zum Bearbeiten.
+    </div>
+  </aside>
+
+  <main class="main">
+    <div id="local_calendar"></div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="eventModal" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head" id="modalTitle">Neuer Termin</div>
+    <div class="modal-body">
+      <input type="hidden" id="evId">
+
+      <div class="fg">
+        <label class="fl">Titel / Grund</label>
+        <input class="fi" type="text" id="evTitle" placeholder="z.B. Termin mit Herr Müller">
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <div class="fg" style="flex:1">
+          <label class="fl">Kategorie</label>
+          <select class="fi" id="evCategory">
+            <option value="standard">🟩 Standard</option>
+            <option value="wichtig">🟠 Wichtig</option>
+            <option value="privat">🟦 Privat</option>
+            <option value="blocker">🔲 Blocker (Nicht verfügbar)</option>
+          </select>
+        </div>
+        <div class="fg" style="flex:1">
+          <label class="fl">Wiederholung</label>
+          <select class="fi" id="evRecurrence" onchange="toggleEndRecur()">
+            <option value="none">Einmalig</option>
+            <option value="daily">Täglich</option>
+            <option value="weekly">Wöchentlich</option>
+            <option value="monthly">Monatlich</option>
+            <option value="yearly">Jährlich</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <div class="fg" style="flex:1">
+          <label class="fl">Start</label>
+          <input class="fi" type="datetime-local" id="evStart">
+        </div>
+        <div class="fg" style="flex:1">
+          <label class="fl">Ende</label>
+          <input class="fi" type="datetime-local" id="evEnd">
+        </div>
+      </div>
+
+      <!-- Enddatum für Serientermine -->
+      <div class="fg" id="endRecurField" style="display:none;">
+        <label class="fl">Serie endet am <span style="color:var(--tx2);font-weight:400">(leer = unbegrenzt)</span></label>
+        <input class="fi" type="date" id="evEndRecur">
+      </div>
+
+      <!-- NEUES FELD FÜR TEILNEHMER / KONTAKTINFOS -->
+      <div class="fg">
+        <label class="fl">Teilnehmer / Kontaktinfos (Email, Telefon...)</label>
+        <textarea class="fi ft" id="evContact" placeholder="Name, E-Mail-Adresse, Telefonnummer..." style="min-height:50px; font-family: var(--m); font-size:0.8rem;"></textarea>
+      </div>
+
+      <div class="fg">
+        <label class="fl">Beschreibung (Optional)</label>
+        <textarea class="fi ft" id="evDesc" placeholder="Weitere Details zum Termin..."></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div>
+        <button class="btn btn-d" id="btnDelete" onclick="deleteEvent()" style="display:none;">🗑 Löschen</button>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-g" onclick="closeModal()">Abbrechen</button>
+        <button class="btn btn-p" onclick="saveEvent()">💾 Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Verfügbarkeits-Editor-Modal ─────────────────────────────────────── -->
+<div class="modal-bg" id="verfModal" onclick="closeVerfModal(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:700px">
+    <div class="modal-head" style="gap:10px">
+      <span>📋 Verfügbarkeit &amp; Öffnungszeiten</span>
+      <span style="font-size:.72rem;color:var(--tx3);font-family:var(--m);font-weight:400">verfuegbarkeit.txt</span>
+    </div>
+    <div class="modal-body" style="gap:10px">
+      <div style="font-size:.75rem;color:var(--tx3);line-height:1.7;background:var(--s2);padding:10px 14px;border-radius:var(--r2);border:1px solid var(--bdr)">
+        <strong style="color:var(--tx2)">Format-Referenz:</strong><br>
+        <code style="color:var(--g)">[MO]&nbsp;09:00&nbsp;-&nbsp;17:00</code> &nbsp;·&nbsp;
+        <code style="color:var(--g)">[SA]&nbsp;Geschlossen</code><br>
+        <code style="color:#FF7A00">[FEIERTAG]&nbsp;&nbsp;JJJJ-MM-TT&nbsp;&nbsp;Bezeichnung</code><br>
+        <code style="color:var(--blue)">[URLAUB]&nbsp;&nbsp;&nbsp;&nbsp;JJJJ-MM-TT&nbsp;-&nbsp;JJJJ-MM-TT&nbsp;&nbsp;Bezeichnung</code><br>
+        <code style="color:var(--tx2)">[HINWEIS]&nbsp;&nbsp;&nbsp;Text für Kunden</code> &nbsp;·&nbsp;
+        <code style="color:var(--tx3)"># Kommentar</code>
+      </div>
+      <textarea class="fi ft" id="verfContent"
+        style="min-height:340px; font-family:var(--m); font-size:.78rem; line-height:1.6; resize:vertical; white-space:pre;"
+        placeholder="Lade Daten..."></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-g" onclick="resetVerfuegbarkeit()"
+        style="color:var(--tx3);font-size:.78rem" title="Standard-Vorlage wiederherstellen">
+        ↺ Standard
+      </button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:.72rem;color:var(--tx3)">Gilt sofort für alle KI-Kanäle</span>
+        <button class="btn btn-g" onclick="closeVerfModal()">Abbrechen</button>
+        <button class="btn btn-p" onclick="saveVerfuegbarkeit()">💾 Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Notizen-Modal ──────────────────────────────────────────────────── -->
+<div class="modal-bg" id="notizenModal" onclick="closeNotizenModal(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:820px">
+    <div class="modal-head" style="gap:10px">
+      <span>📝 Notizen</span>
+      <span style="font-size:.72rem;color:var(--tx3);font-family:var(--m);font-weight:400">Telefon &amp; WhatsApp</span>
+      <button class="btn btn-g" onclick="ladeNotizen()" style="margin-left:auto;font-size:.76rem;padding:5px 10px">⟳ Aktualisieren</button>
+    </div>
+    <div class="modal-body" style="flex-direction:row;gap:16px;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin-bottom:6px">📞 Telefon-Notizen</div>
+        <textarea id="notizenTelefon" readonly
+          style="width:100%;min-height:320px;background:var(--s2);color:var(--tx);border:1px solid var(--bdr2);border-radius:var(--r2);padding:12px;font-family:var(--m);font-size:.78rem;line-height:1.6;resize:vertical;box-sizing:border-box"
+          placeholder="Lade …"></textarea>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin-bottom:6px">💬 WhatsApp-Nachrichten</div>
+        <textarea id="notizenWhatsapp" readonly
+          style="width:100%;min-height:320px;background:var(--s2);color:var(--tx);border:1px solid var(--bdr2);border-radius:var(--r2);padding:12px;font-family:var(--m);font-size:.78rem;line-height:1.6;resize:vertical;box-sizing:border-box"
+          placeholder="Lade …"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span style="font-size:.72rem;color:var(--tx3)">Nur lesbar — Bearbeitung direkt in den .txt-Dateien</span>
+      <button class="btn btn-g" onclick="closeNotizenModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+let localCalendar;
+
+document.addEventListener('DOMContentLoaded', function() {
+  const calendarEl = document.getElementById('local_calendar');
+
+  localCalendar = new FullCalendar.Calendar(calendarEl, {
+    locale: 'de',
+    firstDay: 1, // Montag
+    initialView: 'timeGridWeek',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,timeGridDay'
+    },
+    slotMinTime: '06:00:00',
+    slotMaxTime: '23:00:00',
+    nowIndicator: true,
+    editable: true,
+    selectable: true,
+    selectMirror: true,
+    dayMaxEvents: true,
+    events: function(fetchInfo, successCallback, failureCallback) {
+      fetch('/api/local_calendar/events')
+        .then(r => r.json())
+        .then(data => {
+          const viewStart = fetchInfo.start;
+          const viewEnd   = fetchInfo.end;
+          const result = [];
+
+          for (const ev of data) {
+            const rec = ev.recurrence || 'none';
+            if (rec !== 'monthly' && rec !== 'yearly') {
+              result.push(ev);
+              continue;
+            }
+            if (!ev.startRecur || !ev.startTime || !ev.endTime) continue;
+
+            // Parse anchor date (timezone-safe via explicit Y/M/D)
+            const [ay, am, ad] = ev.startRecur.split('-').map(Number);
+            const serieStart = new Date(ay, am - 1, ad);
+            const serieEnd   = ev.endRecur
+              ? (([y,m,d]) => new Date(y, m-1, d))(ev.endRecur.split('-').map(Number))
+              : null;
+
+            const [sh, sm] = ev.startTime.split(':').map(Number);
+            const [eh, em] = ev.endTime.split(':').map(Number);
+
+            // Fast-forward starting point to near viewStart
+            let d = new Date(serieStart);
+            if (rec === 'monthly') {
+              const jump = (viewStart.getFullYear() - d.getFullYear()) * 12
+                         + (viewStart.getMonth() - d.getMonth()) - 1;
+              if (jump > 0) {
+                const tm = new Date(d.getFullYear(), d.getMonth() + jump, ad);
+                d = (tm.getDate() === ad) ? tm : new Date(d.getFullYear(), d.getMonth() + jump + 1, 0);
+              }
+            } else {
+              const jump = viewStart.getFullYear() - d.getFullYear() - 1;
+              if (jump > 0) d = new Date(d.getFullYear() + jump, am - 1, ad);
+            }
+
+            // Generate instances within view range
+            let guard = 0;
+            while (d < viewEnd && guard++ < 600) {
+              if (d >= serieStart && (!serieEnd || d < serieEnd)) {
+                const evStart = new Date(d); evStart.setHours(sh, sm, 0, 0);
+                const evEnd   = new Date(d); evEnd.setHours(eh, em, 0, 0);
+                if (evStart < viewEnd && evEnd > viewStart) {
+                  const dk = d.getFullYear() + '-'
+                    + String(d.getMonth()+1).padStart(2,'0') + '-'
+                    + String(d.getDate()).padStart(2,'0');
+                  result.push({
+                    id: ev.id + '__' + dk,
+                    start: evStart.toISOString(),
+                    end:   evEnd.toISOString(),
+                    title: ev.title,
+                    description:  ev.description  || '',
+                    contactInfo:  ev.contactInfo  || '',
+                    category:     ev.category     || 'standard',
+                    recurrence:   ev.recurrence,
+                    endRecur:     ev.endRecur      || '',
+                    seriesId:     ev.id,
+                    backgroundColor: ev.backgroundColor,
+                    borderColor:     ev.borderColor,
+                    display: ev.display || 'auto',
+                    allDay: false
+                  });
+                }
+              }
+              // Advance to next occurrence
+              if (rec === 'monthly') {
+                const ny = d.getFullYear() + (d.getMonth() === 11 ? 1 : 0);
+                const nm = (d.getMonth() + 1) % 12;
+                const trial = new Date(ny, nm, ad);
+                d = (trial.getDate() === ad) ? trial : new Date(ny, nm + 1, 0);
+              } else {
+                d = new Date(d.getFullYear() + 1, am - 1, ad);
+              }
+            }
+          }
+          successCallback(result);
+        })
+        .catch(failureCallback);
+    },
+    eventInteractive: true,
+
+    selectOverlap: function(event) {
+      // Blocker verhindern das Aufziehen in Wochen-/Tagesansicht (visuelles Feedback)
+      // In der Monatsansicht wird nur ein Tag angeklickt – dort gilt die Prüfung beim Speichern
+      if (localCalendar.view.type === 'dayGridMonth') return true;
+      if (event.display === 'background') return false;
+      return true;
+    },
+
+    select: function(info) {
+      openModal(info.start, info.end, info.allDay);
+      localCalendar.unselect();
+    },
+
+    eventClick: function(info) {
+      const ev = info.event;
+
+      const isBlocker = ev.display === 'background' ||
+                        (ev.extendedProps.category === 'blocker');
+
+      // Für monatliche/jährliche Serien: echte JSON-ID verwenden (nicht Instanz-ID)
+      document.getElementById('evId').value = ev.extendedProps.seriesId || ev.id;
+      document.getElementById('evTitle').value = ev.title;
+      document.getElementById('evDesc').value = ev.extendedProps.description || '';
+      document.getElementById('evContact').value = ev.extendedProps.contactInfo || '';
+      document.getElementById('evCategory').value = ev.extendedProps.category || 'standard';
+      const rec = ev.extendedProps.recurrence || 'none';
+      document.getElementById('evRecurrence').value = rec;
+      document.getElementById('evEndRecur').value = ev.extendedProps.endRecur || '';
+      document.getElementById('endRecurField').style.display = (rec !== 'none') ? 'flex' : 'none';
+
+      document.getElementById('evStart').value = toLocalISO(ev.start);
+      document.getElementById('evEnd').value = ev.end ? toLocalISO(ev.end) : toLocalISO(ev.start);
+
+      const modalHead = document.getElementById('modalTitle');
+      const cat = ev.extendedProps.category || 'standard';
+      const catLabels = { blocker: '⛔', wichtig: '🟠', privat: '🔵', standard: '🟢' };
+      modalHead.textContent = `${catLabels[cat] || '🟢'} Eintrag bearbeiten`;
+      modalHead.classList.remove('pulse-blocker','pulse-standard','pulse-wichtig','pulse-privat');
+      modalHead.classList.add(isBlocker ? 'pulse-blocker' : `pulse-${cat}`);
+
+      document.getElementById('btnDelete').style.display = 'block';
+      document.getElementById('eventModal').classList.add('open');
+    },
+
+    eventDrop: function(info) {
+      if (info.event.extendedProps.recurrence && info.event.extendedProps.recurrence !== 'none') {
+        if (!confirm('Serientermin verschieben?\n\nACHTUNG: Das verschiebt den Beginn der gesamten Serie, nicht nur dieses Vorkommens.')) {
+          info.revert();
+          return;
+        }
+      }
+      updateEventAPI(info.event);
+    },
+    eventResize: function(info) {
+      if (info.event.extendedProps.recurrence && info.event.extendedProps.recurrence !== 'none') {
+        if (!confirm('Serientermin anpassen?\n\nACHTUNG: Das ändert die Uhrzeit der gesamten Serie.')) {
+          info.revert();
+          return;
+        }
+      }
+      updateEventAPI(info.event);
+    },
+
+    eventOverlap: function(stillEvent, movingEvent) {
+      // Verhindert das visuelle Einrasten beim Ziehen über einen Blocker
+      if (localCalendar.view.type === 'dayGridMonth') return true;
+      if (stillEvent.display === 'background') return false;
+      return true;
+    }
+  });
+
+  localCalendar.render();
+});
+
+function toggleEndRecur() {
+  const rec = document.getElementById('evRecurrence').value;
+  document.getElementById('endRecurField').style.display = (rec !== 'none') ? 'flex' : 'none';
+}
+
+function openModal(startObj = null, endObj = null, allDay = false) {
+  document.getElementById('evId').value = '';
+  document.getElementById('evTitle').value = '';
+  document.getElementById('evDesc').value = '';
+  document.getElementById('evContact').value = '';
+  document.getElementById('evCategory').value = 'standard';
+  document.getElementById('evRecurrence').value = 'none';
+  document.getElementById('evEndRecur').value = '';
+  document.getElementById('endRecurField').style.display = 'none';
+
+  if (allDay && startObj) {
+    // Klick in Monatsansicht: Uhrzeit sinnvoll vorbelegen statt 00:00
+    const s = new Date(startObj);
+    s.setHours(9, 0, 0, 0);
+    const e = new Date(startObj);
+    e.setHours(10, 0, 0, 0);
+    document.getElementById('evStart').value = toLocalISO(s);
+    document.getElementById('evEnd').value   = toLocalISO(e);
+  } else {
+    const now = new Date();
+    document.getElementById('evStart').value = startObj ? toLocalISO(startObj) : toLocalISO(now);
+    if (endObj) {
+      document.getElementById('evEnd').value = toLocalISO(endObj);
+    } else {
+      now.setHours(now.getHours() + 1);
+      document.getElementById('evEnd').value = toLocalISO(now);
+    }
+  }
+
+  const mh = document.getElementById('modalTitle');
+  mh.textContent = 'Neuer Termin';
+  mh.classList.remove('pulse-blocker','pulse-standard','pulse-wichtig','pulse-privat');
+  document.getElementById('btnDelete').style.display = 'none';
+  document.getElementById('eventModal').classList.add('open');
+}
+
+function closeModal(e) {
+  if(e && e.target !== e.currentTarget) return;
+  document.getElementById('eventModal').classList.remove('open');
+  document.getElementById('modalTitle').classList.remove('pulse-blocker','pulse-standard','pulse-wichtig','pulse-privat');
+}
+
+/**
+ * Prüft ob startDt–endDt mit einem Blocker-Eintrag kollidiert.
+ * Holt die Rohdaten direkt vom Server – funktioniert in ALLEN Ansichten.
+ * Gibt den Titel des kollidierenden Blockers zurück, oder null wenn frei.
+ */
+async function checkBlockerConflict(startDt, endDt, ownId) {
+  try {
+    const resp = await fetch('/api/local_calendar/events');
+    const events = await resp.json();
+
+    const newDay      = startDt.getDay();                                // 0=So … 6=Sa
+    const newMinStart = startDt.getHours() * 60 + startDt.getMinutes();
+    // Falls Ende nächster Tag (z.B. 00:00): als 1440 Min behandeln
+    const sameDay     = endDt.getDate()  === startDt.getDate() &&
+                        endDt.getMonth() === startDt.getMonth();
+    const newMinEnd   = sameDay ? (endDt.getHours() * 60 + endDt.getMinutes()) : 1440;
+
+    for (const ev of events) {
+      // Nur Blocker prüfen, eigenes Event beim Bearbeiten überspringen
+      if (ev.category !== 'blocker' && ev.display !== 'background') continue;
+      if (ownId && ev.id === ownId) continue;
+
+      const rec = ev.recurrence || 'none';
+
+      if (rec !== 'none') {
+        // ── Serienblocker ──────────────────────────────────────────────
+        if (ev.startRecur) {
+          const serieStart = new Date(ev.startRecur);
+          serieStart.setHours(0, 0, 0, 0);
+          if (startDt < serieStart) continue;
+        }
+        if (ev.endRecur) {
+          const serieEnd = new Date(ev.endRecur);
+          serieEnd.setHours(0, 0, 0, 0);
+          if (startDt >= serieEnd) continue;
+        }
+        if (rec === 'weekly') {
+          if (!ev.daysOfWeek || !ev.daysOfWeek.includes(newDay)) continue;
+        } else if (rec === 'monthly') {
+          const [,, bDay] = (ev.startRecur || '').split('-').map(Number);
+          if (!bDay || startDt.getDate() !== bDay) continue;
+        } else if (rec === 'yearly') {
+          const [, bMon, bDay] = (ev.startRecur || '').split('-').map(Number);
+          if (!bMon || startDt.getMonth() + 1 !== bMon || startDt.getDate() !== bDay) continue;
+        }
+        // Zeitüberschneidung prüfen (in Minuten)
+        const [bh, bm] = (ev.startTime || '00:00').split(':').map(Number);
+        const [eh, em] = (ev.endTime   || '23:59').split(':').map(Number);
+        const bMin = bh * 60 + bm;
+        const eMin = eh * 60 + em;
+        if (newMinStart < eMin && newMinEnd > bMin) return ev.title || 'Blocker';
+
+      } else {
+        // ── Einzelner Blocker ──────────────────────────────────────────
+        if (!ev.start || !ev.end) continue;
+        const bStart = new Date(ev.start);
+        const bEnd   = new Date(ev.end);
+        if (startDt < bEnd && endDt > bStart) return ev.title || 'Blocker';
+      }
+    }
+  } catch (e) {
+    console.warn('Blocker-Check fehlgeschlagen:', e);
+  }
+  return null;
+}
+
+async function saveEvent() {
+  const id = document.getElementById('evId').value;
+  const title = document.getElementById('evTitle').value.trim();
+  const start = document.getElementById('evStart').value;
+  const end = document.getElementById('evEnd').value;
+  const desc = document.getElementById('evDesc').value.trim();
+  const contact = document.getElementById('evContact').value.trim();
+  const category = document.getElementById('evCategory').value;
+  const recurrence = document.getElementById('evRecurrence').value;
+  const endRecur = document.getElementById('evEndRecur').value.trim();
+
+  if (!title || !start) { toast('Titel und Startzeit sind Pflicht!', 'err'); return; }
+
+  const startDt = new Date(start);
+  const endDt = end ? new Date(end) : new Date(startDt.getTime() + 3600000);
+
+  // ── Blocker-Kollision prüfen (außer wenn selbst ein Blocker eingetragen wird) ──
+  if (category !== 'blocker') {
+    const konflikt = await checkBlockerConflict(startDt, endDt, id || null);
+    if (konflikt) {
+      const hinweis = recurrence !== 'none'
+        ? `⛔ Blockiert: "${konflikt}" – die gewählte Uhrzeit ist gesperrt (gilt für alle Serieneinträge).`
+        : `⛔ Blockiert: "${konflikt}" – bitte andere Zeit wählen.`;
+      toast(hinweis, 'err');
+      return;
+    }
+  }
+
+  let payload = {
+    id: id || null,
+    title: title,
+    description: desc,
+    contactInfo: contact, // NEU
+    category: category,
+    recurrence: recurrence,
+    allDay: false
+  };
+
+  if (category === 'blocker') {
+    payload.display = 'background';
+  } else if (category === 'wichtig') {
+    payload.backgroundColor = '#FF7A00'; payload.borderColor = '#FF7A00';
+  } else if (category === 'privat') {
+    payload.backgroundColor = 'var(--blue)'; payload.borderColor = 'var(--blue)';
+  } else {
+    payload.backgroundColor = 'var(--g)'; payload.borderColor = 'var(--g2)';
+  }
+
+  const timeStr = (dt) => dt.toTimeString().slice(0, 5);
+  const dateStr = (dt) => dt.toISOString().slice(0, 10);
+
+  if (recurrence !== 'none') {
+    payload.startTime = timeStr(startDt);
+    payload.endTime = timeStr(endDt);
+    payload.startRecur = dateStr(startDt);
+    if (endRecur) payload.endRecur = endRecur;
+    if (recurrence === 'weekly') {
+      payload.daysOfWeek = [startDt.getDay()];
+    }
+  } else {
+    payload.start = startDt.toISOString();
+    payload.end = endDt.toISOString();
+  }
+
+  try {
+    const res = await fetch('/api/local_calendar/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      localCalendar.refetchEvents();
+      closeModal();
+      toast('Eintrag gespeichert ✓');
+    } else toast('Fehler beim Speichern', 'err');
+  } catch (e) { toast('Netzwerkfehler', 'err'); }
+}
+
+async function deleteEvent() {
+  const id = document.getElementById('evId').value;
+  if(!id || !confirm('Diesen Eintrag wirklich löschen?')) return;
+  try {
+    const res = await fetch(`/api/local_calendar/events/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      localCalendar.refetchEvents();
+      closeModal();
+      toast('Eintrag gelöscht');
+    }
+  } catch (e) { toast('Netzwerkfehler', 'err'); }
+}
+
+async function updateEventAPI(eventObj) {
+  const ev = eventObj;
+  const rec = ev.extendedProps.recurrence || 'none';
+  document.getElementById('evId').value = ev.extendedProps.seriesId || ev.id;
+  document.getElementById('evTitle').value = ev.title;
+  document.getElementById('evDesc').value = ev.extendedProps.description || '';
+  document.getElementById('evContact').value = ev.extendedProps.contactInfo || '';
+  document.getElementById('evCategory').value = ev.extendedProps.category || 'standard';
+  document.getElementById('evRecurrence').value = rec;
+  document.getElementById('evEndRecur').value = ev.extendedProps.endRecur || '';
+  document.getElementById('evStart').value = toLocalISO(ev.start);
+  document.getElementById('evEnd').value = ev.end ? toLocalISO(ev.end) : toLocalISO(ev.start);
+
+  await saveEvent();
+}
+
+function toLocalISO(date) {
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
+}
+function toast(msg, type='info') {
+  const wrap = document.getElementById('toasts');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ── Verfügbarkeits-Editor ─────────────────────────────────────────────────
+async function openVerfModal() {
+  try {
+    const r = await fetch('/api/verfuegbarkeit');
+    const d = await r.json();
+    document.getElementById('verfContent').value = d.content || '';
+  } catch (e) {
+    document.getElementById('verfContent').value = '';
+    toast('Datei konnte nicht geladen werden', 'err');
+  }
+  document.getElementById('verfModal').classList.add('open');
+}
+
+function closeVerfModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('verfModal').classList.remove('open');
+}
+
+async function resetVerfuegbarkeit() {
+  if (!confirm('Standard-Vorlage wiederherstellen?\n\nDer aktuelle Inhalt wird durch die Original-Vorlage ersetzt. Eigene Öffnungszeiten, Feiertage und Urlaub bleiben nur erhalten wenn du danach auf „Speichern" klickst.')) return;
+  try {
+    const r = await fetch('/api/verfuegbarkeit/default');
+    const d = await r.json();
+    document.getElementById('verfContent').value = d.content || '';
+    toast('Vorlage geladen – bitte anpassen und speichern');
+  } catch (e) {
+    toast('Vorlage konnte nicht geladen werden', 'err');
+  }
+}
+
+async function saveVerfuegbarkeit() {
+  const content = document.getElementById('verfContent').value;
+  try {
+    const r = await fetch('/api/verfuegbarkeit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content })
+    });
+    if (r.ok) {
+      closeVerfModal();
+      toast('✅ Verfügbarkeit gespeichert');
+    } else {
+      toast('Fehler beim Speichern', 'err');
+    }
+  } catch (e) {
+    toast('Netzwerkfehler', 'err');
+  }
+}
+
+// ── Notizen-Modal ─────────────────────────────────────────────────────────
+async function ladeNotizen() {
+  document.getElementById('notizenTelefon').value  = 'Lade …';
+  document.getElementById('notizenWhatsapp').value = 'Lade …';
+  try {
+    const r = await fetch('/api/notizen');
+    const d = await r.json();
+    document.getElementById('notizenTelefon').value  = d.telefon  || '(leer)';
+    document.getElementById('notizenWhatsapp').value = d.whatsapp || '(leer)';
+    // ans Ende scrollen damit neueste Einträge sofort sichtbar sind
+    ['notizenTelefon','notizenWhatsapp'].forEach(id => {
+      const el = document.getElementById(id);
+      el.scrollTop = el.scrollHeight;
+    });
+  } catch (e) {
+    const msg = 'Fehler beim Laden der Notizen';
+    document.getElementById('notizenTelefon').value  = msg;
+    document.getElementById('notizenWhatsapp').value = msg;
+    toast(msg, 'err');
+  }
+}
+
+async function openNotizenModal() {
+  document.getElementById('notizenModal').classList.add('open');
+  await ladeNotizen();
+}
+
+function closeNotizenModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('notizenModal').classList.remove('open');
+}
+</script>
+
+</body>
+</html>

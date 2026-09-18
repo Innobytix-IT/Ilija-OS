@@ -1,0 +1,80 @@
+{
+  "id": "wf_test18",
+  "name": "Fehlerbehandlung & Retry",
+  "nodes": [
+    {
+      "id": "n_t18_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t18_02",
+      "type": "http",
+      "x": 300,
+      "y": 100,
+      "name": "API-Aufruf",
+      "config": {
+        "url": "https://api.example.com/data",
+        "method": "GET",
+        "headers": ""
+      }
+    },
+    {
+      "id": "n_t18_03",
+      "type": "error_handler",
+      "x": 550,
+      "y": 100,
+      "name": "Fehler abfangen",
+      "config": {
+        "action": "weitergeben"
+      }
+    },
+    {
+      "id": "n_t18_04",
+      "type": "chat",
+      "x": 800,
+      "y": 100,
+      "name": "Fehler analysieren",
+      "config": {
+        "message": "Die API hat folgenden Fehler zurückgegeben: {{input}}. Was könnte die Ursache sein?"
+      }
+    },
+    {
+      "id": "n_t18_05",
+      "type": "telegram",
+      "x": 1050,
+      "y": 100,
+      "name": "Fehler-Alert senden",
+      "config": {
+        "message": "{{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t18_01",
+      "from": "n_t18_01",
+      "to": "n_t18_02"
+    },
+    {
+      "id": "c_t18_02",
+      "from": "n_t18_02",
+      "to": "n_t18_03"
+    },
+    {
+      "id": "c_t18_03",
+      "from": "n_t18_03",
+      "to": "n_t18_04"
+    },
+    {
+      "id": "c_t18_04",
+      "from": "n_t18_04",
+      "to": "n_t18_05"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

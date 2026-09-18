@@ -1,0 +1,97 @@
+{
+  "id": "wf_test10",
+  "name": "Multi-Themen Recherche (Loop)",
+  "nodes": [
+    {
+      "id": "n_t10_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t10_02",
+      "type": "set",
+      "x": 300,
+      "y": 100,
+      "name": "Themen setzen",
+      "config": {
+        "variable": "themen",
+        "value": "KI,Robotik,Quantencomputing,Blockchain,Biotechnologie"
+      }
+    },
+    {
+      "id": "n_t10_03",
+      "type": "loop",
+      "x": 550,
+      "y": 100,
+      "name": "Themen-Loop",
+      "config": {
+        "max_items": "5"
+      }
+    },
+    {
+      "id": "n_t10_04",
+      "type": "skill",
+      "x": 800,
+      "y": 100,
+      "name": "Internet-Suche",
+      "config": {
+        "skill": "internet_suche",
+        "suchanfrage": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t10_05",
+      "type": "chat",
+      "x": 1050,
+      "y": 100,
+      "name": "Zusammenfassung",
+      "config": {
+        "message": "Zusammenfassung: {{input}}"
+      }
+    },
+    {
+      "id": "n_t10_06",
+      "type": "skill",
+      "x": 1300,
+      "y": 100,
+      "name": "Notiz speichern",
+      "config": {
+        "skill": "notiz_speichern",
+        "text": "{{input}}",
+        "datei": "recherche_loop.txt"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t10_01",
+      "from": "n_t10_01",
+      "to": "n_t10_02"
+    },
+    {
+      "id": "c_t10_02",
+      "from": "n_t10_02",
+      "to": "n_t10_03"
+    },
+    {
+      "id": "c_t10_03",
+      "from": "n_t10_03",
+      "to": "n_t10_04"
+    },
+    {
+      "id": "c_t10_04",
+      "from": "n_t10_04",
+      "to": "n_t10_05"
+    },
+    {
+      "id": "c_t10_05",
+      "from": "n_t10_05",
+      "to": "n_t10_06"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

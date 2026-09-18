@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ilija · Cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B1520;
+  --s1:#10202D;--s2:#16293A;--s3:#1E3547;--s4:#274257;
+  --bdr:rgba(255,255,255,.055);--bdr2:rgba(255,255,255,.1);
+  --g:#E0A82E;--g2:#C8871B;--gd:rgba(224,168,46,.08);--gg:rgba(224,168,46,.14);
+  --blue:#5AA9E6;
+  --tx:#E6EEF5;--tx2:#8FA6B8;--tx3:#4A6072;
+  --red:#FF5C6A;
+  --f:'Inter',sans-serif;--m:'JetBrains Mono',monospace;
+  --r:9px;--r2:5px;
+}
+html{font-size:16px;color-scheme:dark}
+body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:var(--s4);border-radius:3px}
+
+/* Topbar */
+.topbar{display:flex;align-items:center;gap:0;height:52px;padding:0 20px;background:var(--s1);border-bottom:1px solid var(--bdr);flex-shrink:0}
+.logo{display:flex;align-items:center;gap:9px;text-decoration:none}
+.logo-gem{width:30px;height:30px;background:var(--g);border-radius:7px;display:grid;place-items:center;font-family:var(--m);font-weight:600;font-size:14px;color:var(--bg);flex-shrink:0}
+.logo-name{font-size:.9rem;font-weight:500;color:var(--tx)}
+.logo-name em{font-style:italic;color:var(--g)}
+.tb-sep{width:1px;height:20px;background:var(--bdr2);margin:0 12px;flex-shrink:0}
+.tab-group{display:flex;gap:2px}
+.tab{padding:5px 12px;border-radius:var(--r2);font-size:.78rem;font-weight:500;cursor:pointer;transition:all .14s;color:var(--tx2);border:none;background:none;font-family:var(--f)}
+.tab:hover{background:var(--s3);color:var(--tx)}
+.tab.active{background:var(--gd);color:var(--g);border:1px solid var(--gg)}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.rootlabel{font-size:.66rem;color:var(--tx3);font-family:var(--m);max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Main */
+.wrap{flex:1;overflow:auto;padding:22px 26px}
+.card{max-width:1100px;margin:0 auto;background:var(--s1);border:1px solid var(--bdr);border-radius:12px;overflow:hidden}
+.toolbar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--bdr);flex-wrap:wrap}
+.crumbs{display:flex;align-items:center;gap:4px;font-size:.82rem;flex-wrap:wrap}
+.crumb{color:var(--g);cursor:pointer;text-decoration:none}
+.crumb:hover{text-decoration:underline}
+.crumb.cur{color:var(--tx);cursor:default;text-decoration:none;font-weight:600}
+.crumb-sep{color:var(--tx3)}
+.gap{flex:1}
+.fi{background:var(--s2);border:1px solid var(--bdr2);border-radius:7px;color:var(--tx);font-family:var(--f);font-size:.8rem;padding:7px 10px;outline:none}
+.fi:focus{border-color:var(--g)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:7px;border:1px solid var(--bdr2);background:var(--s2);color:var(--tx2);cursor:pointer;font-family:var(--f);font-size:.8rem;font-weight:500;transition:all .13s}
+.btn:hover{color:var(--tx);border-color:var(--g)}
+.btn-p{background:var(--g);color:var(--bg);border-color:var(--g);font-weight:600}
+.btn-p:hover{background:var(--g2);color:var(--bg)}
+
+.liste{display:flex;flex-direction:column}
+.row{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--bdr);cursor:pointer;transition:background .12s}
+.row:hover{background:var(--s2)}
+.row:last-child{border-bottom:none}
+.ic{font-size:20px;width:26px;text-align:center;flex-shrink:0}
+.nm{flex:1;font-size:.86rem;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta{font-size:.7rem;color:var(--tx3);font-family:var(--m);flex-shrink:0}
+.row-act{display:flex;gap:4px;flex-shrink:0;opacity:0;transition:opacity .12s}
+.row:hover .row-act{opacity:1}
+.iact{width:28px;height:28px;border-radius:6px;border:none;background:transparent;color:var(--tx3);cursor:pointer;display:grid;place-items:center;font-size:13px}
+.iact:hover{background:var(--s3);color:var(--tx)}
+.iact.del:hover{color:var(--red)}
+.empty{padding:60px 20px;text-align:center;color:var(--tx3)}
+.empty .ei{font-size:42px;margin-bottom:12px}
+
+/* Vorschau */
+dialog{border:1px solid var(--bdr2);border-radius:12px;background:var(--s1);color:var(--tx);max-width:90vw;max-height:88vh;padding:0;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+.dlg-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--bdr)}
+.dlg-head b{font-size:.9rem}
+.dlg-body{padding:14px;max-width:82vw}
+.dlg-body img,.dlg-body iframe{max-width:100%;max-height:70vh;border-radius:8px;border:1px solid var(--bdr)}
+.dlg-body iframe{width:80vw;height:70vh}
+.dlg-body pre{background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:14px;font-family:var(--m);font-size:.78rem;max-height:70vh;overflow:auto;white-space:pre-wrap;color:var(--tx2)}
+
+.drop{position:fixed;inset:0;background:rgba(224,168,46,.12);border:3px dashed var(--g);display:none;place-items:center;font-size:1.4rem;color:var(--g);z-index:900;font-weight:600}
+.drop.on{display:grid}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--s3);border:1px solid var(--bdr2);color:var(--tx);padding:10px 18px;border-radius:8px;font-size:.82rem;z-index:1000;opacity:0;transition:opacity .2s}
+.toast.on{opacity:1}
+#fInput{display:none}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="/" class="logo"><div class="logo-gem">I</div><span class="logo-name">Ilija<em>PE</em></span></a>
+  <div class="tb-sep"></div>
+  <nav class="tab-group">
+    <button class="tab" onclick="location.href='/'">⚡ Workflow</button>
+    <button class="tab" onclick="location.href='/chat'">💬 Chat</button>
+    <button class="tab" onclick="location.href='/dms'">🗂 DMS</button>
+    <button class="tab" onclick="location.href='/local_calendar'">📅 Kalender</button>
+    <button class="tab active">☁ Cloud</button>
+  </nav>
+  <div class="tb-right"><span class="rootlabel" id="rootlabel"></span>
+    <button class="btn" style="padding:5px 9px" onclick="oeffneEinst()" title="Speicherort ändern">⚙</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <div class="toolbar">
+      <div class="crumbs" id="crumbs"></div>
+      <span class="gap"></span>
+      <input class="fi" id="filter" placeholder="Filtern …" style="width:150px" oninput="render()">
+      <button class="btn" onclick="lade(pfad)">↻ Aktualisieren</button>
+      <button class="btn" onclick="neuerOrdner()">📁 Neuer Ordner</button>
+      <button class="btn btn-p" onclick="document.getElementById('fInput').click()">⬆ Hochladen</button>
+      <input type="file" id="fInput" multiple onchange="hochladen(this.files)">
+    </div>
+    <div class="liste" id="liste"></div>
+  </div>
+</div>
+
+<div class="drop" id="drop">Dateien hier ablegen zum Hochladen</div>
+<dialog id="dlg">
+  <div class="dlg-head"><b id="dlg-titel"></b><span class="gap" style="flex:1"></span>
+    <button class="btn" id="dlg-dl">⬇ Herunterladen</button>
+    <button class="btn" onclick="document.getElementById('dlg').close()">Schließen</button></div>
+  <div class="dlg-body" id="dlg-body"></div>
+</dialog>
+<dialog id="einst">
+  <div class="dlg-head"><b>Cloud-Speicherort</b><span class="gap" style="flex:1"></span>
+    <button class="btn" onclick="document.getElementById('einst').close()">Schließen</button></div>
+  <div class="dlg-body" style="min-width:min(440px,86vw)">
+    <p id="einst-info" style="font-size:.82rem;color:var(--tx2);line-height:1.6;margin-bottom:14px"></p>
+    <label style="font-size:.72rem;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em">Eigener Cloud-Pfad <span style="text-transform:none">(leer = dem DMS-Archiv folgen)</span></label>
+    <input class="fi" id="einst-pfad" style="width:100%;margin-top:6px;font-family:var(--m)" placeholder="/home/innobytix/Ilija-Ablage/DMS/archiv">
+    <div id="einst-err" style="color:var(--red);font-size:.74rem;margin-top:8px;display:none"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn" onclick="folgeDMS()">Standard: DMS-Archiv folgen</button>
+      <button class="btn btn-p" onclick="speichereEinst()">Eigenen Pfad setzen</button>
+    </div>
+  </div>
+</dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+let pfad = '';
+let eintraege = [];
+const ICON = {ordner:'📁',bild:'🖼️',pdf:'📕',text:'📄',tabelle:'📊',dokument:'📝',praesentation:'📽️',audio:'🎵',video:'🎬',datei:'📎'};
+
+document.addEventListener('DOMContentLoaded',()=>{
+  fetch('/api/cloud/root').then(r=>r.json()).then(d=>{document.getElementById('rootlabel').textContent='📂 '+(d.root||'');}).catch(()=>{});
+  lade('');
+  const drop=document.getElementById('drop');
+  ['dragenter','dragover'].forEach(e=>document.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('on');}));
+  ['dragleave','drop'].forEach(e=>document.addEventListener(e,ev=>{ev.preventDefault();if(e==='drop'||ev.clientX===0)drop.classList.remove('on');}));
+  document.addEventListener('drop',ev=>{ev.preventDefault();drop.classList.remove('on');if(ev.dataTransfer.files.length)hochladen(ev.dataTransfer.files);});
+});
+
+function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('on');setTimeout(()=>el.classList.remove('on'),2200);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function groesse(b){if(b<1024)return b+' B';if(b<1048576)return (b/1024).toFixed(0)+' KB';return (b/1048576).toFixed(1)+' MB';}
+
+async function lade(p){
+  try{
+    const d=await (await fetch('/api/cloud/list?path='+encodeURIComponent(p))).json();
+    if(d.error){toast(d.error);return;}
+    pfad=d.pfad||''; eintraege=d.eintraege||[];
+    crumbs(); render();
+  }catch(e){toast('Laden fehlgeschlagen');}
+}
+
+function crumbs(){
+  const c=document.getElementById('crumbs');
+  const teile=pfad?pfad.split('/'):[];
+  let acc='';
+  let html='<a class="crumb" onclick="lade(\'\')">☁ Ablage</a>';
+  teile.forEach((t,i)=>{
+    acc=acc?acc+'/'+t:t;
+    html+='<span class="crumb-sep">/</span>';
+    if(i===teile.length-1) html+=`<span class="crumb cur">${esc(t)}</span>`;
+    else html+=`<a class="crumb" onclick="lade('${esc(acc)}')">${esc(t)}</a>`;
+  });
+  c.innerHTML=html;
+}
+
+function render(){
+  const f=(document.getElementById('filter').value||'').toLowerCase();
+  const el=document.getElementById('liste');
+  const items=eintraege.filter(e=>!f||e.name.toLowerCase().includes(f));
+  if(!items.length){el.innerHTML='<div class="empty"><div class="ei">📂</div>'+(eintraege.length?'Keine Treffer.':'Dieser Ordner ist leer.')+'</div>';return;}
+  el.innerHTML=items.map(e=>{
+    const meta=e.typ==='ordner'?e.geaendert:`${groesse(e.groesse)} · ${e.geaendert}`;
+    const oeffnen=e.typ==='ordner'?`lade('${esc(e.pfad)}')`:`vorschau('${esc(e.pfad)}','${esc(e.name)}','${e.gruppe}')`;
+    return `<div class="row" onclick="${oeffnen}">
+      <div class="ic">${ICON[e.typ==='ordner'?'ordner':e.gruppe]||'📎'}</div>
+      <div class="nm">${esc(e.name)}</div>
+      <div class="meta">${meta}</div>
+      <div class="row-act">
+        ${e.typ==='datei'?`<button class="iact" title="Herunterladen" onclick="event.stopPropagation();dl('${esc(e.pfad)}')">⬇</button>`:''}
+        <button class="iact del" title="Löschen" onclick="event.stopPropagation();loeschen('${esc(e.pfad)}','${esc(e.name)}')">🗑</button>
+      </div></div>`;
+  }).join('');
+}
+
+function dl(p){window.location='/api/cloud/download?path='+encodeURIComponent(p);}
+
+async function vorschau(p,name,gruppe){
+  const dlg=document.getElementById('dlg'), body=document.getElementById('dlg-body');
+  document.getElementById('dlg-titel').textContent=name;
+  document.getElementById('dlg-dl').onclick=()=>dl(p);
+  const url='/api/cloud/preview?path='+encodeURIComponent(p);
+  if(gruppe==='bild') body.innerHTML=`<img src="${url}">`;
+  else if(gruppe==='pdf') body.innerHTML=`<iframe src="${url}"></iframe>`;
+  else if(gruppe==='text'){try{const t=await (await fetch(url)).text();body.innerHTML=`<pre>${esc(t.slice(0,20000))}</pre>`;}catch(e){body.innerHTML='<pre>Konnte nicht laden.</pre>';}}
+  else body.innerHTML=`<div style="padding:30px;text-align:center;color:var(--tx2)">Keine Vorschau für diesen Dateityp.<br><br><button class="btn btn-p" onclick="dl('${esc(p)}')">⬇ Herunterladen</button></div>`;
+  dlg.showModal();
+}
+
+async function neuerOrdner(){
+  const name=prompt('Name des neuen Ordners:');
+  if(!name)return;
+  const d=await (await fetch('/api/cloud/mkdir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:pfad,name})})).json();
+  if(d.error){toast(d.error);return;}
+  toast('Ordner erstellt'); lade(pfad);
+}
+
+async function hochladen(files){
+  if(!files.length)return;
+  const fd=new FormData(); fd.append('path',pfad);
+  Array.from(files).forEach(f=>fd.append('files',f));
+  toast('Lade '+files.length+' Datei(en) hoch …');
+  const d=await (await fetch('/api/cloud/upload',{method:'POST',body:fd})).json();
+  if(d.error){toast(d.error);return;}
+  toast(d.anzahl+' hochgeladen'); lade(pfad);
+  document.getElementById('fInput').value='';
+}
+
+function oeffneEinst(){
+  fetch('/api/cloud/settings').then(r=>r.json()).then(d=>{
+    document.getElementById('einst-info').innerHTML = (d.folgt_dms
+      ? 'Aktuell: <b>folgt dem DMS-Archiv</b> (Standard)'
+      : 'Aktuell: <b>eigener Cloud-Pfad</b>')
+      + `<br><span style="font-family:var(--m);font-size:.74rem;color:var(--tx3)">${esc(d.root||'')}</span>`;
+    document.getElementById('einst-pfad').value=d.eigener_pfad||'';
+    document.getElementById('einst-err').style.display='none';
+    document.getElementById('einst').showModal();
+  });
+}
+async function postEinst(p){
+  const err=document.getElementById('einst-err');
+  try{
+    const d=await (await fetch('/api/cloud/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({eigener_pfad:p})})).json();
+    if(d.error){err.textContent=d.error;err.style.display='block';return null;}
+    return d;
+  }catch(e){err.textContent='Fehler beim Speichern';err.style.display='block';return null;}
+}
+async function speichereEinst(){ if(await postEinst(document.getElementById('einst-pfad').value.trim())) fertigEinst(); }
+async function folgeDMS(){ if(await postEinst('')){document.getElementById('einst-pfad').value='';fertigEinst();} }
+function fertigEinst(){
+  document.getElementById('einst').close();
+  fetch('/api/cloud/root').then(r=>r.json()).then(d=>{document.getElementById('rootlabel').textContent='📂 '+(d.root||'');}).catch(()=>{});
+  lade(''); toast('Speicherort aktualisiert');
+}
+
+async function loeschen(p,name){
+  if(!confirm('„'+name+'" wirklich löschen?'+(name?'\n(Ordner werden mitsamt Inhalt gelöscht.)':'')))return;
+  const d=await (await fetch('/api/cloud/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:p})})).json();
+  if(d.error){toast(d.error);return;}
+  toast('Gelöscht'); lade(pfad);
+}
+</script>
+</body>
+</html>

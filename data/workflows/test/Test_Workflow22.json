@@ -1,0 +1,101 @@
+{
+  "id": "wf_test22",
+  "name": "DMS Statistik Dashboard",
+  "nodes": [
+    {
+      "id": "n_t22_01",
+      "type": "schedule_trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Täglich 18:00",
+      "config": {
+        "interval": "daily",
+        "time": "18:00",
+        "active": false
+      }
+    },
+    {
+      "id": "n_t22_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "DMS Statistik",
+      "config": {
+        "skill": "dms_stats"
+      }
+    },
+    {
+      "id": "n_t22_03",
+      "type": "skill",
+      "x": 550,
+      "y": 100,
+      "name": "Archiv-Übersicht",
+      "config": {
+        "skill": "dms_archiv_uebersicht"
+      }
+    },
+    {
+      "id": "n_t22_04",
+      "type": "chat",
+      "x": 800,
+      "y": 100,
+      "name": "DMS-Statusbericht erstellen",
+      "config": {
+        "message": "Erstelle einen übersichtlichen DMS-Statusbericht mit Statistiken: {{input}}"
+      }
+    },
+    {
+      "id": "n_t22_05",
+      "type": "google_docs",
+      "x": 1050,
+      "y": 100,
+      "name": "DMS Report Docs",
+      "config": {
+        "operation": "Dokument erstellen",
+        "title": "DMS Report",
+        "content": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t22_06",
+      "type": "google_sheets",
+      "x": 1300,
+      "y": 100,
+      "name": "Sheets Zeile anhängen",
+      "config": {
+        "operation": "Zeile anhängen",
+        "spreadsheet_id": "",
+        "range": "A1"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t22_01",
+      "from": "n_t22_01",
+      "to": "n_t22_02"
+    },
+    {
+      "id": "c_t22_02",
+      "from": "n_t22_02",
+      "to": "n_t22_03"
+    },
+    {
+      "id": "c_t22_03",
+      "from": "n_t22_03",
+      "to": "n_t22_04"
+    },
+    {
+      "id": "c_t22_04",
+      "from": "n_t22_04",
+      "to": "n_t22_05"
+    },
+    {
+      "id": "c_t22_05",
+      "from": "n_t22_05",
+      "to": "n_t22_06"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

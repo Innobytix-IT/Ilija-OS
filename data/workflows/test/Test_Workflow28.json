@@ -1,0 +1,129 @@
+{
+  "id": "wf_test28",
+  "name": "Multi-RSS Aggregator",
+  "nodes": [
+    {
+      "id": "n_t28_01",
+      "type": "schedule_trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Täglich 09:00",
+      "config": {
+        "interval": "daily",
+        "time": "09:00",
+        "active": false
+      }
+    },
+    {
+      "id": "n_t28_02",
+      "type": "rss",
+      "x": 300,
+      "y": 100,
+      "name": "Heise RSS",
+      "config": {
+        "url": "https://www.heise.de/rss/heise-atom.xml",
+        "max_items": "5"
+      }
+    },
+    {
+      "id": "n_t28_03",
+      "type": "rss",
+      "x": 300,
+      "y": 250,
+      "name": "TechCrunch RSS",
+      "config": {
+        "url": "https://feeds.feedburner.com/TechCrunch/",
+        "max_items": "5"
+      }
+    },
+    {
+      "id": "n_t28_04",
+      "type": "rss",
+      "x": 300,
+      "y": 400,
+      "name": "Golem RSS",
+      "config": {
+        "url": "https://www.golem.de/rss",
+        "max_items": "5"
+      }
+    },
+    {
+      "id": "n_t28_05",
+      "type": "chat",
+      "x": 600,
+      "y": 250,
+      "name": "Tech-Überblick erstellen",
+      "config": {
+        "message": "Aggregiere diese RSS-Feeds und erstelle einen Tech-Überblick: {{input}}"
+      }
+    },
+    {
+      "id": "n_t28_06",
+      "type": "email",
+      "x": 850,
+      "y": 250,
+      "name": "Tech-Aggregat senden",
+      "config": {
+        "to": "user@example.com",
+        "subject": "Tech-Aggregat",
+        "body": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t28_07",
+      "type": "skill",
+      "x": 1100,
+      "y": 250,
+      "name": "Notiz speichern",
+      "config": {
+        "skill": "notiz_speichern",
+        "text": "{{input}}",
+        "datei": "rss_aggregat.txt"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t28_01",
+      "from": "n_t28_01",
+      "to": "n_t28_02"
+    },
+    {
+      "id": "c_t28_02",
+      "from": "n_t28_01",
+      "to": "n_t28_03"
+    },
+    {
+      "id": "c_t28_03",
+      "from": "n_t28_01",
+      "to": "n_t28_04"
+    },
+    {
+      "id": "c_t28_04",
+      "from": "n_t28_02",
+      "to": "n_t28_05"
+    },
+    {
+      "id": "c_t28_05",
+      "from": "n_t28_03",
+      "to": "n_t28_05"
+    },
+    {
+      "id": "c_t28_06",
+      "from": "n_t28_04",
+      "to": "n_t28_05"
+    },
+    {
+      "id": "c_t28_07",
+      "from": "n_t28_05",
+      "to": "n_t28_06"
+    },
+    {
+      "id": "c_t28_08",
+      "from": "n_t28_06",
+      "to": "n_t28_07"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

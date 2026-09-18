@@ -1,0 +1,73 @@
+# ===================================================================
+#  Ilija Public Edition - Python-Abhaengigkeiten
+#  Installieren: pip install -r requirements.txt
+# ===================================================================
+
+# -- Web-Framework ---------------------------------------------------
+flask>=3.0.0
+flask-cors>=4.0.0
+werkzeug>=3.0.0
+
+# -- Umgebung --------------------------------------------------------
+python-dotenv>=1.0.0
+requests>=2.31.0
+
+# -- KI-Provider -----------------------------------------------------
+anthropic>=0.40.0
+openai>=1.54.0
+ollama>=0.1.0
+google-generativeai>=0.8.0
+
+# -- Langzeitgedaechtnis ---------------------------------------------
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+
+# -- Telegram --------------------------------------------------------
+python-telegram-bot>=20.0
+
+# -- WhatsApp Web / Outlook (Selenium-Automatisierung) ---------------
+selenium>=4.0.0
+webdriver-manager>=4.0.0
+
+# -- Google Kalender (OAuth2) ----------------------------------------
+google-auth>=2.0.0
+google-auth-oauthlib>=1.0.0
+google-auth-httplib2>=0.2.0
+google-api-python-client>=2.0.0
+
+# -- Web-Suche -------------------------------------------------------
+ddgs>=9.0.0
+
+# -- Dokument-Verarbeitung -------------------------------------------
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+pdfplumber>=0.9.0
+PyPDF2>=3.0.0
+python-docx>=1.0.0
+openpyxl>=3.1.0
+python-pptx>=0.6.0
+
+# -- Bild-OCR (fuer Dokument-Scans) ----------------------------------
+Pillow>=10.0.0
+# pytesseract>=0.3.10  # Benoetigt Tesseract: sudo apt install tesseract-ocr tesseract-ocr-deu
+
+# -- Optional: HEIC-Bilder (iPhone-Fotos) ----------------------------
+# pillow-heif>=0.13.0
+
+# -- Optional: OpenDocument-Formate ----------------------------------
+# odfpy>=1.4.0
+
+# -- Telefon-Assistent (FritzBox / SIP) ------------------------------
+# HINWEIS: pyaudio benoetigt auf Linux:
+#   sudo apt-get install -y portaudio19-dev
+# Dann: pip install pyaudio
+pyaudio>=0.2.11
+edge-tts>=6.1.0     # Microsoft Edge TTS (kein API-Key noetig)
+
+# -- Spracherkennung -------------------------------------------------
+openai-whisper>=20231117   # Lokal (benoetigt PyTorch ~2 GB)
+# Alternativ: OpenAI Whisper API via OPENAI_API_KEY (kein PyTorch noetig)
+
+# -- Tests -----------------------------------------------------------
+pytest>=7.0.0
+pytest-cov>=4.0.0

@@ -1,0 +1,68 @@
+{
+  "id": "wf_test31",
+  "name": "ChatFilter-Nachrichten-Filter",
+  "nodes": [
+    {
+      "id": "n_t31_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {
+        "startMessage": "Hallo, bitte antworte auf meine Frage!"
+      }
+    },
+    {
+      "id": "n_t31_02",
+      "type": "chatfilter",
+      "x": 300,
+      "y": 100,
+      "name": "Nachrichten-Filter",
+      "config": {
+        "modus": "einfach",
+        "bei_leer": "stoppen"
+      }
+    },
+    {
+      "id": "n_t31_03",
+      "type": "chat",
+      "x": 550,
+      "y": 100,
+      "name": "Auf Nachricht reagieren",
+      "config": {
+        "message": "Beantworte freundlich: {{input}}"
+      }
+    },
+    {
+      "id": "n_t31_04",
+      "type": "skill",
+      "x": 800,
+      "y": 100,
+      "name": "Antwort speichern",
+      "config": {
+        "skill": "notiz_speichern",
+        "text": "{{input}}",
+        "datei": "chatfilter_antwort.txt"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t31_01",
+      "from": "n_t31_01",
+      "to": "n_t31_02"
+    },
+    {
+      "id": "c_t31_02",
+      "from": "n_t31_02",
+      "to": "n_t31_03"
+    },
+    {
+      "id": "c_t31_03",
+      "from": "n_t31_03",
+      "to": "n_t31_04"
+    }
+  ],
+  "updated": "2026-04-19T10:00:00",
+  "created": "2026-04-19T10:00:00"
+}

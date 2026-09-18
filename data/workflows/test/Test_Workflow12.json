@@ -1,0 +1,99 @@
+{
+  "id": "wf_test12",
+  "name": "DMS Automatisierung",
+  "nodes": [
+    {
+      "id": "n_t12_01",
+      "type": "schedule_trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Täglich 09:00",
+      "config": {
+        "interval": "daily",
+        "time": "09:00",
+        "active": false
+      }
+    },
+    {
+      "id": "n_t12_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "DMS Import-Scan",
+      "config": {
+        "skill": "dms_import_scan"
+      }
+    },
+    {
+      "id": "n_t12_03",
+      "type": "skill",
+      "x": 550,
+      "y": 100,
+      "name": "DMS Einsortieren",
+      "config": {
+        "skill": "dms_einsortieren"
+      }
+    },
+    {
+      "id": "n_t12_04",
+      "type": "skill",
+      "x": 800,
+      "y": 100,
+      "name": "DMS Statistik",
+      "config": {
+        "skill": "dms_stats"
+      }
+    },
+    {
+      "id": "n_t12_05",
+      "type": "chat",
+      "x": 1050,
+      "y": 100,
+      "name": "DMS-Report erstellen",
+      "config": {
+        "message": "Erstelle einen kurzen DMS-Report: {{input}}"
+      }
+    },
+    {
+      "id": "n_t12_06",
+      "type": "email",
+      "x": 1300,
+      "y": 100,
+      "name": "Tagesbericht senden",
+      "config": {
+        "to": "user@example.com",
+        "subject": "DMS Tagesbericht",
+        "body": "{{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t12_01",
+      "from": "n_t12_01",
+      "to": "n_t12_02"
+    },
+    {
+      "id": "c_t12_02",
+      "from": "n_t12_02",
+      "to": "n_t12_03"
+    },
+    {
+      "id": "c_t12_03",
+      "from": "n_t12_03",
+      "to": "n_t12_04"
+    },
+    {
+      "id": "c_t12_04",
+      "from": "n_t12_04",
+      "to": "n_t12_05"
+    },
+    {
+      "id": "c_t12_05",
+      "from": "n_t12_05",
+      "to": "n_t12_06"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

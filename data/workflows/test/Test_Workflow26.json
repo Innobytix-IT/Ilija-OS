@@ -1,0 +1,130 @@
+{
+  "id": "wf_test26",
+  "name": "Einheit-Umrechner Batch",
+  "nodes": [
+    {
+      "id": "n_t26_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t26_02",
+      "type": "set",
+      "x": 300,
+      "y": 100,
+      "name": "Messungen setzen",
+      "config": {
+        "variable": "messungen",
+        "value": "100km, 50kg, 20celsius, 500euro"
+      }
+    },
+    {
+      "id": "n_t26_03",
+      "type": "skill",
+      "x": 550,
+      "y": 100,
+      "name": "km zu Meilen",
+      "config": {
+        "skill": "einheit_umrechnen",
+        "wert": "100",
+        "von": "km",
+        "nach": "meilen"
+      }
+    },
+    {
+      "id": "n_t26_04",
+      "type": "skill",
+      "x": 550,
+      "y": 250,
+      "name": "kg zu Pfund",
+      "config": {
+        "skill": "einheit_umrechnen",
+        "wert": "50",
+        "von": "kg",
+        "nach": "pfund"
+      }
+    },
+    {
+      "id": "n_t26_05",
+      "type": "skill",
+      "x": 550,
+      "y": 400,
+      "name": "Celsius zu Fahrenheit",
+      "config": {
+        "skill": "einheit_umrechnen",
+        "wert": "20",
+        "von": "celsius",
+        "nach": "fahrenheit"
+      }
+    },
+    {
+      "id": "n_t26_06",
+      "type": "chat",
+      "x": 850,
+      "y": 250,
+      "name": "Übersicht erstellen",
+      "config": {
+        "message": "Erstelle eine schöne Übersicht dieser Umrechnungen: {{input}}"
+      }
+    },
+    {
+      "id": "n_t26_07",
+      "type": "skill",
+      "x": 1100,
+      "y": 250,
+      "name": "Notiz speichern",
+      "config": {
+        "skill": "notiz_speichern",
+        "text": "{{input}}",
+        "datei": "umrechnungen.txt"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t26_01",
+      "from": "n_t26_01",
+      "to": "n_t26_02"
+    },
+    {
+      "id": "c_t26_02",
+      "from": "n_t26_02",
+      "to": "n_t26_03"
+    },
+    {
+      "id": "c_t26_03",
+      "from": "n_t26_02",
+      "to": "n_t26_04"
+    },
+    {
+      "id": "c_t26_04",
+      "from": "n_t26_02",
+      "to": "n_t26_05"
+    },
+    {
+      "id": "c_t26_05",
+      "from": "n_t26_03",
+      "to": "n_t26_06"
+    },
+    {
+      "id": "c_t26_06",
+      "from": "n_t26_04",
+      "to": "n_t26_06"
+    },
+    {
+      "id": "c_t26_07",
+      "from": "n_t26_05",
+      "to": "n_t26_06"
+    },
+    {
+      "id": "c_t26_08",
+      "from": "n_t26_06",
+      "to": "n_t26_07"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

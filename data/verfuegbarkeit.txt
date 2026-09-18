@@ -1,0 +1,43 @@
+# ══════════════════════════════════════════════════════════════════
+#  VERFÜGBARKEIT & ÖFFNUNGSZEITEN
+#  Bearbeitung: Kalender → Schaltfläche "📋 Verfügbarkeit"
+# ══════════════════════════════════════════════════════════════════
+#
+# FORMAT:
+#   [MO] bis [SO]     Reguläre Öffnungszeiten pro Wochentag
+#   [FEIERTAG]        Einzelner Feiertag:  [FEIERTAG] JJJJ-MM-TT  Bezeichnung
+#   [URLAUB]          Zeitraum:            [URLAUB]   JJJJ-MM-TT - JJJJ-MM-TT  Bezeichnung
+#   [HINWEIS]         Freier Hinweistext:  [HINWEIS]  Text für Kunden
+#   Zeilen mit # sind Kommentare und werden ignoriert.
+#
+# ── SLOT-DAUER FÜR TERMINBUCHUNGEN ──────────────────────────────
+[SLOT_DAUER]  30
+#
+# ── REGULÄRE ÖFFNUNGSZEITEN ──────────────────────────────────────
+[MO]  08:30 - 12:00 und 13:00 - 17:00
+[DI]  08:30 - 12:00 und 13:00 - 17:00
+[MI]  08:30 - 12:00 und 13:00 - 17:00
+[DO]  08:30 - 12:00 und 13:00 - 17:00
+[FR]  08:30 - 15:00
+[SA]  Geschlossen
+[SO]  Geschlossen
+#
+# ── URLAUB / BETRIEBSFERIEN ──────────────────────────────────────
+# [URLAUB]  2026-08-03 - 2026-08-14  Sommerurlaub
+# [URLAUB]  2026-12-23 - 2027-01-02  Weihnachtsferien
+#
+# ── FEIERTAGE (Deutschland) ──────────────────────────────────────
+[FEIERTAG]  2026-01-01  Neujahr
+[FEIERTAG]  2026-04-03  Karfreitag
+[FEIERTAG]  2026-04-06  Ostermontag
+[FEIERTAG]  2026-05-01  Tag der Arbeit
+[FEIERTAG]  2026-05-14  Christi Himmelfahrt
+[FEIERTAG]  2026-05-25  Pfingstmontag
+[FEIERTAG]  2026-10-03  Tag der Deutschen Einheit
+[FEIERTAG]  2026-11-01  Allerheiligen
+[FEIERTAG]  2026-12-25  1. Weihnachtstag
+[FEIERTAG]  2026-12-26  2. Weihnachtstag
+#
+# ── HINWEISE FÜR KUNDEN ──────────────────────────────────────────
+# [HINWEIS]  Bitte vereinbaren Sie Termine telefonisch oder per E-Mail.
+# [HINWEIS]  Kurzfristige Terminanfragen bitte mindestens 24h im Voraus.

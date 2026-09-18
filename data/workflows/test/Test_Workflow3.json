@@ -1,0 +1,82 @@
+{
+  "id": "wf_test03",
+  "name": "Web-Recherche & Artikel",
+  "nodes": [
+    {
+      "id": "n_t03_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t03_02",
+      "type": "set",
+      "x": 300,
+      "y": 100,
+      "name": "Thema setzen",
+      "config": {
+        "variable": "thema",
+        "value": "Künstliche Intelligenz 2026"
+      }
+    },
+    {
+      "id": "n_t03_03",
+      "type": "skill",
+      "x": 550,
+      "y": 100,
+      "name": "Internet-Suche",
+      "config": {
+        "skill": "internet_suche",
+        "suchanfrage": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t03_04",
+      "type": "chat",
+      "x": 800,
+      "y": 100,
+      "name": "Artikel schreiben",
+      "config": {
+        "message": "Schreibe einen professionellen Artikel auf Deutsch: {{input}}"
+      }
+    },
+    {
+      "id": "n_t03_05",
+      "type": "google_docs",
+      "x": 1050,
+      "y": 100,
+      "name": "Artikel speichern",
+      "config": {
+        "operation": "Dokument erstellen",
+        "title": "Artikel: Künstliche Intelligenz 2026",
+        "content": "{{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t03_01",
+      "from": "n_t03_01",
+      "to": "n_t03_02"
+    },
+    {
+      "id": "c_t03_02",
+      "from": "n_t03_02",
+      "to": "n_t03_03"
+    },
+    {
+      "id": "c_t03_03",
+      "from": "n_t03_03",
+      "to": "n_t03_04"
+    },
+    {
+      "id": "c_t03_04",
+      "from": "n_t03_04",
+      "to": "n_t03_05"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

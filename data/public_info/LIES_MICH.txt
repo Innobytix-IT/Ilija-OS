@@ -1,0 +1,25 @@
+WISSENSBASIS – ÖFFENTLICHE INFORMATIONEN
+=========================================
+
+Dieser Ordner enthält alle Informationen die Ilija an Kunden
+weitergeben darf (Telefon, WhatsApp, E-Mail-Support).
+
+UNTERSTÜTZTE FORMATE:
+  .txt   – Einfache Textdateien (empfohlen)
+  .md    – Markdown-Dateien
+  .pdf   – PDF-Dokumente (benötigt: pip install pymupdf)
+
+BEISPIELE FÜR INHALTE:
+  - produkte.txt        → Produktbeschreibungen & Preise
+  - faq.txt             → Häufig gestellte Fragen
+  - oeffnungszeiten.txt → Öffnungszeiten & Kontakt
+  - support.txt         → Häufige Probleme & Lösungen
+
+WIE ES FUNKTIONIERT:
+Ilija durchsucht diese Dateien automatisch wenn ein Kunde eine
+Frage stellt. Nur passende Abschnitte werden in die Antwort
+eingebunden. Ilija erfindet dabei nichts dazu.
+
+HINWEIS:
+Legen Sie hier NUR Informationen ab die für Kunden bestimmt sind.
+Keine internen Daten, Passwörter oder vertraulichen Informationen.

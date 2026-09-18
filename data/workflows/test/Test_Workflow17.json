@@ -1,0 +1,120 @@
+{
+  "id": "wf_test17",
+  "name": "Vollautomatischer Wochenbericht",
+  "nodes": [
+    {
+      "id": "n_t17_01",
+      "type": "schedule_trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Montags 06:00",
+      "config": {
+        "interval": "weekly",
+        "time": "06:00",
+        "active": false
+      }
+    },
+    {
+      "id": "n_t17_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "KI News suchen",
+      "config": {
+        "skill": "internet_suche",
+        "suchanfrage": "KI News diese Woche"
+      }
+    },
+    {
+      "id": "n_t17_03",
+      "type": "skill",
+      "x": 550,
+      "y": 100,
+      "name": "Tech-News abrufen",
+      "config": {
+        "skill": "news_abrufen",
+        "thema": "Technologie"
+      }
+    },
+    {
+      "id": "n_t17_04",
+      "type": "skill",
+      "x": 800,
+      "y": 100,
+      "name": "Wikipedia KI",
+      "config": {
+        "skill": "wikipedia_suche",
+        "suchbegriff": "Künstliche Intelligenz",
+        "sprache": "de"
+      }
+    },
+    {
+      "id": "n_t17_05",
+      "type": "chat",
+      "x": 1050,
+      "y": 100,
+      "name": "Wochenbericht erstellen",
+      "config": {
+        "message": "Erstelle einen umfassenden Wochenbericht: {{input}}"
+      }
+    },
+    {
+      "id": "n_t17_06",
+      "type": "google_docs",
+      "x": 1300,
+      "y": 100,
+      "name": "Google Docs speichern",
+      "config": {
+        "operation": "Dokument erstellen",
+        "title": "Wochenbericht",
+        "content": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t17_07",
+      "type": "email",
+      "x": 1550,
+      "y": 100,
+      "name": "Bericht versenden",
+      "config": {
+        "to": "user@example.com",
+        "subject": "Wochenbericht KW{{input}}",
+        "body": "{{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t17_01",
+      "from": "n_t17_01",
+      "to": "n_t17_02"
+    },
+    {
+      "id": "c_t17_02",
+      "from": "n_t17_02",
+      "to": "n_t17_03"
+    },
+    {
+      "id": "c_t17_03",
+      "from": "n_t17_03",
+      "to": "n_t17_04"
+    },
+    {
+      "id": "c_t17_04",
+      "from": "n_t17_04",
+      "to": "n_t17_05"
+    },
+    {
+      "id": "c_t17_05",
+      "from": "n_t17_05",
+      "to": "n_t17_06"
+    },
+    {
+      "id": "c_t17_06",
+      "from": "n_t17_06",
+      "to": "n_t17_07"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

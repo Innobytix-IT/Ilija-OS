@@ -1,0 +1,85 @@
+{
+  "id": "wf_test01",
+  "name": "Morgen-Report",
+  "nodes": [
+    {
+      "id": "n_t01_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t01_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "Uhrzeit & Datum",
+      "config": {
+        "skill": "uhrzeit_datum"
+      }
+    },
+    {
+      "id": "n_t01_03",
+      "type": "skill",
+      "x": 300,
+      "y": 250,
+      "name": "Wetter Offenburg",
+      "config": {
+        "skill": "wetter_offenburg_abfragen"
+      }
+    },
+    {
+      "id": "n_t01_04",
+      "type": "chat",
+      "x": 550,
+      "y": 175,
+      "name": "Morgen-Report erstellen",
+      "config": {
+        "message": "Erstelle einen freundlichen Morgen-Report: {{input}}"
+      }
+    },
+    {
+      "id": "n_t01_05",
+      "type": "skill",
+      "x": 800,
+      "y": 175,
+      "name": "Notiz speichern",
+      "config": {
+        "skill": "notiz_speichern",
+        "text": "{{input}}",
+        "datei": "morgen_report.txt"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t01_01",
+      "from": "n_t01_01",
+      "to": "n_t01_02"
+    },
+    {
+      "id": "c_t01_02",
+      "from": "n_t01_01",
+      "to": "n_t01_03"
+    },
+    {
+      "id": "c_t01_03",
+      "from": "n_t01_02",
+      "to": "n_t01_04"
+    },
+    {
+      "id": "c_t01_04",
+      "from": "n_t01_03",
+      "to": "n_t01_04"
+    },
+    {
+      "id": "c_t01_05",
+      "from": "n_t01_04",
+      "to": "n_t01_05"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

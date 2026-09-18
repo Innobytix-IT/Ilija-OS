@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ilija DMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#070B09;
+  --surface:#0D1410;
+  --surface2:#121A15;
+  --surface3:#18221C;
+  --border:rgba(255,255,255,.06);
+  --border2:rgba(255,255,255,.1);
+  --green:#00D882;
+  --green2:#00AF68;
+  --greenDim:rgba(0,216,130,.06);
+  --greenGlow:rgba(0,216,130,.12);
+  --text:#DFF2E8;
+  --text2:#7A9E8C;
+  --text3:#3D5E4D;
+  --red:#FF5C6A;
+  --warn:#FFB547;
+  --blue:#5B9BFF;
+  --font:'Fraunces',serif;
+  --mono:'DM Mono',monospace;
+  --r:8px;
+  --r2:5px;
+  --shadow:0 8px 32px rgba(0,0,0,.5);
+  --t:160ms ease;
+}
+
+html{font-size:15px;color-scheme:dark}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+
+/* ── Top bar ─────────────────────────────────────────────── */
+.topbar{
+  position:sticky;top:0;z-index:200;
+  background:rgba(7,11,9,.92);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:0;
+  height:58px;padding:0;
+}
+.topbar-inner{
+  display:flex;align-items:center;gap:16px;
+  width:100%;max-width:1400px;margin:0 auto;padding:0 28px;
+}
+.logo{
+  display:flex;align-items:center;gap:10px;
+  text-decoration:none;flex-shrink:0;
+}
+.logo-gem{
+  width:34px;height:34px;background:var(--green);
+  border-radius:9px;display:grid;place-items:center;
+  font-weight:700;font-size:16px;color:var(--bg);
+  font-family:var(--mono);
+}
+.logo-name{font-size:1rem;font-weight:500;color:var(--text);letter-spacing:.01em}
+.logo-name em{font-style:italic;color:var(--green)}
+
+.topbar-sep{width:1px;height:22px;background:var(--border2);flex-shrink:0}
+
+.tab-group{display:flex;gap:2px}
+.tab{
+  padding:7px 14px;border-radius:var(--r2);
+  font-size:.82rem;font-weight:500;
+  cursor:pointer;transition:all var(--t);
+  color:var(--text2);border:none;background:none;
+  font-family:var(--font);
+}
+.tab:hover{background:var(--surface3);color:var(--text)}
+.tab.active{background:var(--greenDim);color:var(--green);border:1px solid rgba(0,216,130,.15)}
+
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+/* Model selector */
+.model-select-wrap{position:relative}
+.model-btn{
+  display:flex;align-items:center;gap:7px;
+  padding:6px 12px;background:var(--surface2);
+  border:1px solid var(--border2);border-radius:var(--r2);
+  cursor:pointer;transition:all var(--t);
+  font-family:var(--mono);font-size:.73rem;color:var(--text2);
+}
+.model-btn:hover{border-color:var(--green);color:var(--text)}
+.model-dot{width:6px;height:6px;background:var(--green);border-radius:50%;flex-shrink:0}
+.model-dropdown{
+  position:absolute;top:calc(100% + 6px);right:0;
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:var(--r);min-width:220px;
+  box-shadow:var(--shadow);z-index:999;
+  display:none;overflow:hidden;
+}
+.model-dropdown.open{display:block;animation:dropIn .15s ease}
+@keyframes dropIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.model-section{padding:8px 12px 4px;font-size:.65rem;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono)}
+.model-option{
+  padding:9px 14px;cursor:pointer;
+  font-size:.82rem;color:var(--text2);
+  transition:all var(--t);display:flex;align-items:center;gap:8px;
+}
+.model-option:hover{background:var(--greenDim);color:var(--text)}
+.model-option.current{color:var(--green)}
+.model-option .provider-badge{
+  margin-left:auto;font-size:.65rem;font-family:var(--mono);
+  color:var(--text3);background:var(--surface3);
+  padding:2px 6px;border-radius:3px;
+}
+
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 15px;border-radius:var(--r2);
+  font-family:var(--font);font-size:.82rem;font-weight:500;
+  cursor:pointer;transition:all var(--t);border:none;
+}
+.btn-primary{background:var(--green);color:var(--bg);font-weight:600}
+.btn-primary:hover{background:var(--green2);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+.btn-ghost:hover{background:var(--surface3);color:var(--text);border-color:var(--border2)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
+.btn-danger{background:rgba(255,92,106,.1);color:var(--red);border:1px solid rgba(255,92,106,.2)}
+.btn-danger:hover{background:rgba(255,92,106,.2)}
+
+/* ── Page layout ─────────────────────────────────────────── */
+.page{display:none;animation:fadeUp .2s ease}
+.page.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.container{max-width:1400px;margin:0 auto;padding:32px 28px}
+
+/* ── Stats row ───────────────────────────────────────────── */
+.stats-row{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:16px;
+  margin-bottom:32px;
+}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:20px 22px;
+  transition:border-color var(--t);
+}
+.stat-card:hover{border-color:var(--border2)}
+.stat-num{font-size:1.8rem;font-weight:700;color:var(--green);font-family:var(--mono);line-height:1}
+.stat-label{font-size:.75rem;color:var(--text3);margin-top:6px;text-transform:uppercase;letter-spacing:.06em}
+
+/* ── Section header ──────────────────────────────────────── */
+.sec-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:20px;flex-wrap:wrap;gap:10px;
+}
+.sec-title{font-size:1.25rem;font-weight:500;font-style:italic;color:var(--text)}
+.sec-title strong{font-style:normal;font-weight:700}
+
+/* ── Upload zone ─────────────────────────────────────────── */
+.drop-zone{
+  border:2px dashed var(--border2);border-radius:var(--r);
+  padding:52px 32px;text-align:center;cursor:pointer;
+  transition:all .25s ease;background:var(--surface);
+  position:relative;overflow:hidden;
+  margin-bottom:24px;
+}
+.drop-zone::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 100%,var(--greenGlow),transparent 60%);
+  opacity:0;transition:opacity .3s;
+}
+.drop-zone:hover,.drop-zone.over{border-color:var(--green);background:var(--greenDim)}
+.drop-zone:hover::before,.drop-zone.over::before{opacity:1}
+.dz-emoji{font-size:2.2rem;display:block;margin-bottom:12px;transition:transform .3s}
+.drop-zone:hover .dz-emoji{transform:translateY(-4px)}
+.dz-head{font-size:1rem;font-weight:500;color:var(--text);margin-bottom:5px}
+.dz-sub{font-size:.78rem;color:var(--text3);font-family:var(--mono);line-height:1.7}
+#fileIn{display:none}
+
+/* ── Sort bar ────────────────────────────────────────────── */
+.sort-bar{
+  display:flex;align-items:center;gap:14px;
+  background:var(--greenDim);border:1px solid rgba(0,216,130,.15);
+  border-radius:var(--r);padding:14px 18px;margin-bottom:16px;
+}
+.sort-bar p{flex:1;font-size:.85rem;color:var(--text2)}
+.sort-bar strong{color:var(--green)}
+
+/* ── Import list ─────────────────────────────────────────── */
+.import-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:12px;
+}
+.import-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+  transition:all var(--t);position:relative;
+}
+.import-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.import-thumb{
+  height:120px;background:var(--surface2);
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;cursor:pointer;position:relative;
+}
+.import-thumb img{width:100%;height:100%;object-fit:cover}
+.import-thumb .thumb-icon{font-size:2.4rem;opacity:.5}
+.import-thumb .preview-hint{
+  position:absolute;inset:0;background:rgba(0,0,0,.5);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity var(--t);font-size:.75rem;
+  color:white;font-family:var(--mono);gap:4px;
+}
+.import-card:hover .preview-hint{opacity:1}
+.import-info{padding:10px 12px}
+.import-name{
+  font-size:.8rem;font-weight:500;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-bottom:3px;
+}
+.import-meta{font-size:.7rem;color:var(--text3);font-family:var(--mono)}
+.import-del{
+  position:absolute;top:8px;right:8px;
+  width:24px;height:24px;border-radius:50%;
+  background:rgba(0,0,0,.6);border:none;color:var(--text3);
+  cursor:pointer;display:grid;place-items:center;font-size:11px;
+  transition:all var(--t);opacity:0;
+}
+.import-card:hover .import-del{opacity:1}
+.import-del:hover{background:var(--red);color:white}
+
+/* ── Sort output ─────────────────────────────────────────── */
+.sort-out{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:18px;
+  font-family:var(--mono);font-size:.78rem;color:var(--text2);
+  line-height:2;max-height:320px;overflow-y:auto;
+  white-space:pre-wrap;display:none;margin-top:16px;
+}
+.sort-out.show{display:block;animation:fadeUp .2s ease}
+
+/* ── Archive ─────────────────────────────────────────────── */
+.archive-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:14px;
+}
+.cat-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:22px;cursor:pointer;
+  transition:all .2s ease;position:relative;overflow:hidden;
+}
+.cat-card::after{
+  content:'';position:absolute;inset:0 0 auto 0;
+  height:2px;background:var(--green);
+  transform:scaleX(0);transition:transform .2s;transform-origin:left;
+}
+.cat-card:hover{border-color:rgba(0,216,130,.25);transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.cat-card:hover::after{transform:scaleX(1)}
+.cat-emoji{font-size:1.9rem;margin-bottom:12px;display:block}
+.cat-name{font-size:.95rem;font-weight:600;color:var(--text);margin-bottom:4px}
+.cat-count{font-size:.75rem;font-family:var(--mono);color:var(--green)}
+
+/* ── File table ──────────────────────────────────────────── */
+.file-table{width:100%;border-collapse:collapse}
+.file-table th{
+  text-align:left;padding:10px 14px;
+  font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--text3);border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-weight:500;
+}
+.file-table td{
+  padding:11px 14px;border-bottom:1px solid var(--border);
+  font-size:.84rem;vertical-align:middle;
+}
+.file-table tr:hover td{background:var(--surface2)}
+.file-table tr:last-child td{border-bottom:none}
+.file-ext-badge{
+  display:inline-block;padding:2px 7px;border-radius:3px;
+  font-size:.65rem;font-weight:600;font-family:var(--mono);
+  text-transform:uppercase;
+}
+.ext-pdf{background:rgba(255,92,106,.15);color:#FF5C6A}
+.ext-docx,.ext-doc{background:rgba(91,155,255,.15);color:#5B9BFF}
+.ext-xlsx,.ext-xls{background:rgba(0,216,130,.15);color:var(--green)}
+.ext-img{background:rgba(167,119,255,.15);color:#A777FF}
+.ext-txt,.ext-csv,.ext-md{background:rgba(122,158,140,.15);color:var(--text2)}
+.ext-def{background:var(--surface3);color:var(--text3)}
+
+.file-name-cell{max-width:320px}
+.file-name{font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-size{font-family:var(--mono);font-size:.75rem;color:var(--text3)}
+.file-date{font-family:var(--mono);font-size:.75rem;color:var(--text3)}
+.file-actions{display:flex;gap:6px;opacity:0;transition:opacity var(--t)}
+.file-table tr:hover .file-actions{opacity:1}
+.action-btn{
+  padding:4px 10px;border-radius:var(--r2);
+  font-size:.72rem;font-family:var(--mono);
+  cursor:pointer;transition:all var(--t);
+  border:1px solid var(--border2);background:none;color:var(--text3);
+}
+.action-btn:hover{background:var(--greenDim);color:var(--green);border-color:rgba(0,216,130,.25)}
+.action-btn.del:hover{background:rgba(255,92,106,.1);color:var(--red);border-color:rgba(255,92,106,.2)}
+
+/* ── Breadcrumb ──────────────────────────────────────────── */
+.breadcrumb{display:flex;align-items:center;gap:6px;margin-bottom:22px;flex-wrap:wrap}
+.bc-item{font-size:.82rem;color:var(--text3);cursor:pointer;transition:color var(--t);font-weight:500}
+.bc-item:hover{color:var(--green)}
+.bc-item.cur{color:var(--text);cursor:default}
+.bc-sep{color:var(--text3);font-size:.7rem}
+
+/* ── Search ──────────────────────────────────────────────── */
+.search-box{
+  display:flex;gap:10px;align-items:center;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--r);padding:10px 16px;margin-bottom:24px;
+  transition:border-color var(--t);
+}
+.search-box:focus-within{border-color:var(--green)}
+.search-box input{
+  flex:1;background:none;border:none;outline:none;
+  font-family:var(--mono);font-size:.85rem;color:var(--text);
+}
+.search-box input::placeholder{color:var(--text3)}
+.search-box .search-icon{color:var(--text3);font-size:16px;flex-shrink:0}
+
+/* ── Settings panel ──────────────────────────────────────── */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:700px){.settings-grid{grid-template-columns:1fr}}
+
+.settings-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:24px;
+}
+.settings-card h3{font-size:.95rem;font-weight:600;margin-bottom:16px;color:var(--text)}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:.75rem;color:var(--text3);margin-bottom:6px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em}
+.form-input{
+  width:100%;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:var(--r2);padding:9px 12px;
+  font-family:var(--mono);font-size:.82rem;color:var(--text);
+  outline:none;transition:border-color var(--t);
+}
+.form-input:focus{border-color:var(--green)}
+.form-hint{font-size:.72rem;color:var(--text3);margin-top:5px;font-family:var(--mono);line-height:1.5}
+.form-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+
+.info-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 10px;background:var(--greenDim);
+  border:1px solid rgba(0,216,130,.15);border-radius:var(--r2);
+  font-size:.75rem;font-family:var(--mono);color:var(--green);
+  margin-bottom:12px;
+}
+.warn-badge{
+  background:rgba(255,181,71,.08);
+  border-color:rgba(255,181,71,.2);color:var(--warn);
+}
+
+/* ── Preview Modal ───────────────────────────────────────── */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,.8);
+  backdrop-filter:blur(4px);z-index:9000;
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.modal-backdrop.open{opacity:1;pointer-events:all}
+.modal{
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--r);max-width:860px;width:100%;
+  max-height:90vh;display:flex;flex-direction:column;
+  box-shadow:0 24px 64px rgba(0,0,0,.6);
+  transform:scale(.96);transition:transform .2s;
+}
+.modal-backdrop.open .modal{transform:scale(1)}
+.modal-header{
+  display:flex;align-items:center;gap:12px;
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.modal-title{flex:1;font-size:.9rem;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modal-close{
+  width:30px;height:30px;border-radius:50%;
+  background:none;border:none;color:var(--text3);
+  cursor:pointer;font-size:16px;display:grid;place-items:center;
+  transition:all var(--t);flex-shrink:0;
+}
+.modal-close:hover{background:var(--surface3);color:var(--text)}
+.modal-body{flex:1;overflow:auto;padding:20px;min-height:200px;display:flex;align-items:center;justify-content:center}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+
+.preview-img{max-width:100%;max-height:60vh;object-fit:contain;border-radius:var(--r2)}
+.preview-pdf{width:100%;height:60vh;border:none;border-radius:var(--r2)}
+.preview-none{text-align:center;color:var(--text3);font-family:var(--mono);font-size:.85rem;padding:40px}
+
+/* ── Toast ───────────────────────────────────────────────── */
+.toasts{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+.toast{
+  padding:12px 18px;border-radius:var(--r2);font-size:.82rem;
+  animation:toastIn .2s ease;max-width:320px;
+  border:1px solid transparent;
+}
+.toast-ok  {background:var(--greenDim);border-color:rgba(0,216,130,.2);color:var(--green)}
+.toast-err {background:rgba(255,92,106,.1);border-color:rgba(255,92,106,.25);color:var(--red)}
+.toast-info{background:var(--surface2);border-color:var(--border2);color:var(--text2)}
+@keyframes toastIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+/* ── Spinner ─────────────────────────────────────────────── */
+.spin{width:14px;height:14px;border:2px solid var(--surface3);border-top-color:var(--green);border-radius:50%;animation:rot .5s linear infinite;display:inline-block;flex-shrink:0}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* ── Empty state ─────────────────────────────────────────── */
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty .e-icon{font-size:2.8rem;margin-bottom:14px}
+.empty .e-title{font-size:1rem;color:var(--text2);font-weight:500;margin-bottom:6px}
+.empty .e-sub{font-size:.8rem;font-family:var(--mono);line-height:1.7}
+
+/* ── Loading bar ─────────────────────────────────────────── */
+.lbar{height:2px;background:var(--green);position:fixed;top:0;left:0;width:0;z-index:9999;transition:width .3s;box-shadow:0 0 8px var(--green)}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media(max-width:900px){
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .archive-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:600px){
+  .topbar-inner{padding:0 16px}
+  .container{padding:20px 16px}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .archive-grid{grid-template-columns:1fr}
+  .import-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="lbar" id="lbar"></div>
+<div class="toasts" id="toasts"></div>
+
+<!-- ── Preview Modal ─────────────────────────────────────── -->
+<div class="modal-backdrop" id="previewModal" onclick="closePreview(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="previewTitle">Vorschau</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="previewBody">
+      <div class="preview-none">Lade Vorschau...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Schließen</button>
+      <a class="btn btn-primary" id="previewDownload" href="#" download>⬇ Herunterladen</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Topbar ─────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="/" class="logo">
+      <div class="logo-gem">I</div>
+      <span class="logo-name">Ilija<em> DMS</em></span>
+    </a>
+    <div class="topbar-sep"></div>
+    <nav class="tab-group">
+      <button class="tab active" id="tab-archiv"  onclick="showPage('archiv')">Archiv</button>
+      <button class="tab"        id="tab-import"  onclick="showPage('import')">Import <span id="importCount" style="font-family:var(--mono);font-size:.7rem;opacity:.7"></span></button>
+      <button class="tab"        id="tab-suche"   onclick="showPage('suche')">Suche</button>
+      <button class="tab"        id="tab-settings"onclick="showPage('settings')">Einstellungen</button>
+    </nav>
+    <div class="topbar-right">
+      <!-- Model selector -->
+      <div class="model-select-wrap" id="modelWrap">
+        <button class="model-btn" id="modelBtn" onclick="toggleModelDropdown()">
+          <span class="model-dot"></span>
+          <span id="modelLabel">auto</span>
+          <span style="font-size:10px;opacity:.5">▾</span>
+        </button>
+        <div class="model-dropdown" id="modelDropdown">
+          <div class="model-section">Provider wählen</div>
+          <div class="model-option" onclick="setProvider('auto')">🔄 Auto (empfohlen) <span class="provider-badge">auto</span></div>
+          <div class="model-option" id="opt-claude" onclick="setProvider('claude')">✦ Claude <span class="provider-badge">Anthropic</span></div>
+          <div class="model-option" id="opt-openai" onclick="setProvider('openai')">◈ ChatGPT <span class="provider-badge">OpenAI</span></div>
+          <div class="model-option" id="opt-gemini" onclick="setProvider('gemini')">◎ Gemini <span class="provider-badge">Google</span></div>
+          <div class="model-option" id="opt-ollama" onclick="setProvider('ollama')">⬡ Ollama <span class="provider-badge">lokal</span></div>
+        </div>
+      </div>
+      <a href="/" class="btn btn-ghost">← Chat</a>
+    </div>
+  </div>
+</header>
+
+<!-- ══ ARCHIV ═══════════════════════════════════════════════ -->
+<div class="page active" id="page-archiv">
+  <div class="container">
+
+    <!-- Stats -->
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card"><div class="stat-num" id="sDocs">–</div><div class="stat-label">Dokumente</div></div>
+      <div class="stat-card"><div class="stat-num" id="sSize">–</div><div class="stat-label">Archivgröße</div></div>
+      <div class="stat-card"><div class="stat-num" id="sCats">–</div><div class="stat-label">Kategorien</div></div>
+      <div class="stat-card"><div class="stat-num" id="sImport">–</div><div class="stat-label">Im Import</div></div>
+    </div>
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb" id="breadcrumb">
+      <span class="bc-item cur">Alle Kategorien</span>
+    </div>
+
+    <!-- Content -->
+    <div class="sec-header">
+      <h2 class="sec-title" id="archivHeading">Alle <strong>Kategorien</strong></h2>
+      <div id="archivActions"></div>
+    </div>
+    <div id="archivContent">
+      <div class="empty"><div class="e-icon">🗄️</div><div class="e-title">Lade Archiv...</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ IMPORT ════════════════════════════════════════════════ -->
+<div class="page" id="page-import">
+  <div class="container">
+
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileIn').click()">
+      <span class="dz-emoji">📂</span>
+      <div class="dz-head">Dateien hierher ziehen oder klicken</div>
+      <div class="dz-sub">PDF · DOCX · XLSX · JPG · PNG · TIFF · TXT · CSV · MD · PPTX · und mehr</div>
+    </div>
+    <input type="file" id="fileIn" multiple>
+
+    <div id="sortBar" class="sort-bar" style="display:none">
+      <p><strong id="sortCount">0</strong> Datei(en) warten auf Einsortierung. Die KI benennt und kategorisiert automatisch.</p>
+      <button class="btn btn-primary" onclick="triggerSort()" id="sortBtnImport">✦ Jetzt einsortieren</button>
+    </div>
+
+    <div class="sec-header" style="margin-top:4px">
+      <h2 class="sec-title">Import-<strong>Warteschlange</strong></h2>
+    </div>
+    <div id="importGrid" class="import-grid"></div>
+    <div class="sort-out" id="sortOut"></div>
+
+  </div>
+</div>
+
+<!-- ══ SUCHE ═════════════════════════════════════════════════ -->
+<div class="page" id="page-suche">
+  <div class="container">
+    <div class="search-box">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="searchIn" placeholder="Dateiname, Kategorie, Jahr suchen..." autocomplete="off">
+    </div>
+    <div id="searchResults">
+      <div class="empty"><div class="e-icon">🔍</div><div class="e-title">Suchbegriff eingeben</div><div class="e-sub">Sucht in Dateinamen, Kategorien und Pfaden</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EINSTELLUNGEN ═════════════════════════════════════════ -->
+<div class="page" id="page-settings">
+  <div class="container">
+    <div class="sec-header" style="margin-bottom:24px">
+      <h2 class="sec-title">DMS-<strong>Einstellungen</strong></h2>
+    </div>
+    <div class="settings-grid">
+
+      <!-- Pfade -->
+      <div class="settings-card">
+        <h3>📁 Archiv-Pfade</h3>
+        <div class="info-badge" id="currentArchivPath" style="margin-bottom:12px;word-break:break-all">– wird geladen –</div>
+        <div class="form-group">
+          <label class="form-label">Archiv-Pfad</label>
+          <input class="form-input" id="setArchivPfad" placeholder="/home/user/archiv oder //nas/dokumente">
+          <div class="form-hint">Lokaler Pfad oder UNC-Netzwerkpfad (//server/freigabe)</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Import-Pfad</label>
+          <input class="form-input" id="setImportPfad" placeholder="/home/user/import">
+        </div>
+        <div class="form-group" id="pwGroup">
+          <label class="form-label">Aktuelles Passwort <span style="opacity:.5">(falls gesetzt)</span></label>
+          <input class="form-input" type="password" id="setPw" placeholder="Passwort eingeben">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="saveSettings()">Pfade speichern</button>
+        </div>
+        <div id="settingsMsg" style="margin-top:10px;font-size:.8rem;font-family:var(--mono)"></div>
+      </div>
+
+      <!-- Passwortschutz -->
+      <div class="settings-card">
+        <h3>🔒 Passwortschutz</h3>
+        <p style="font-size:.83rem;color:var(--text2);margin-bottom:16px;line-height:1.6">
+          Schützt die Einstellungen (Pfade ändern) mit einem Passwort.<br>
+          Der Archiv-Zugriff selbst bleibt ungeschützt.
+        </p>
+        <div class="info-badge warn-badge" id="pwStatus">Wird geladen...</div>
+        <div class="form-group" style="margin-top:14px">
+          <label class="form-label">Neues Passwort setzen</label>
+          <input class="form-input" type="password" id="newPw" placeholder="Neues Passwort">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Aktuelles Passwort bestätigen</label>
+          <input class="form-input" type="password" id="confirmPw" placeholder="Aktuelles Passwort (falls gesetzt)">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="setPassword()">Passwort setzen</button>
+          <button class="btn btn-danger"  onclick="removePassword()">Passwort entfernen</button>
+        </div>
+        <div id="pwMsg" style="margin-top:10px;font-size:.8rem;font-family:var(--mono)"></div>
+      </div>
+
+      <!-- Modell-Einstellungen -->
+      <div class="settings-card">
+        <h3>🤖 KI-Modell-Einstellungen</h3>
+        <p style="font-size:.83rem;color:var(--text2);margin-bottom:16px;line-height:1.6">
+          Passe die Modell-Namen für jeden Provider an.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Claude (Anthropic)</label>
+          <input class="form-input" id="mClaude" placeholder="claude-opus-4-6">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ChatGPT (OpenAI)</label>
+          <input class="form-input" id="mOpenAI" placeholder="gpt-4o">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gemini (Google)</label>
+          <input class="form-input" id="mGemini" placeholder="gemini-2.5-flash">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ollama (lokal)</label>
+          <input class="form-input" id="mOllama" placeholder="qwen2.5:7b">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="saveModels()">Modelle speichern</button>
+        </div>
+        <div id="modelMsg" style="margin-top:10px;font-size:.8rem;font-family:var(--mono)"></div>
+      </div>
+
+      <!-- Info -->
+      <div class="settings-card">
+        <h3>ℹ️ DMS-Info</h3>
+        <div style="font-family:var(--mono);font-size:.78rem;color:var(--text2);line-height:2" id="dmsInfo">Lade...</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ State ════════════════════════════════════════════════════
+let tree = [], currentPage = 'archiv';
+
+// ══ Init ═════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  loadStats(); loadArchiv(); loadImportList(); loadModelInfo();
+  setupDrop(); setupSearch();
+  document.addEventListener('click', e => {
+    if (!document.getElementById('modelWrap').contains(e.target))
+      document.getElementById('modelDropdown').classList.remove('open');
+  });
+});
+
+// ══ Loading bar ═══════════════════════════════════════════════
+const lb = document.getElementById('lbar');
+function lbStart(){ lb.style.width = '60%' }
+function lbEnd()  { lb.style.width = '100%'; setTimeout(() => lb.style.width = '0', 300) }
+
+// ══ Toast ═════════════════════════════════════════════════════
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type === 'success' ? 'ok' : type === 'error' ? 'err' : 'info'}`;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 4200);
+}
+
+// ══ Page navigation ═══════════════════════════════════════════
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  document.getElementById(`tab-${name}`).classList.add('active');
+  currentPage = name;
+  if (name === 'import')   loadImportList();
+  if (name === 'settings') loadSettingsData();
+  if (name === 'suche')    document.getElementById('searchIn').focus();
+}
+
+// ══ Stats ═════════════════════════════════════════════════════
+async function loadStats() {
+  try {
+    const d = await (await fetch('/api/dms/stats')).json();
+    document.getElementById('sDocs').textContent   = d.gesamt ?? 0;
+    const mb = d.groesse_mb ?? 0;
+    document.getElementById('sSize').textContent   = mb < 1 ? Math.round(mb*1024)+' KB' : mb+' MB';
+    document.getElementById('sCats').textContent   = Object.keys(d.kategorien || {}).length;
+    document.getElementById('sImport').textContent = d.import_count ?? 0;
+    document.getElementById('importCount').textContent = d.import_count > 0 ? `(${d.import_count})` : '';
+  } catch(e) {}
+}
+
+// ══ Archive ════════════════════════════════════════════════════
+async function loadArchiv() {
+  lbStart();
+  try {
+    const r = await fetch('/api/dms/tree');
+    tree    = await r.json();
+    renderRoot();
+  } catch(e) {
+    document.getElementById('archivContent').innerHTML =
+      '<div class="empty"><div class="e-icon">⚠️</div><div class="e-title">Archiv konnte nicht geladen werden</div></div>';
+  }
+  lbEnd();
+}
+
+const CAT_ICONS = {
+  Rechnungen:'🧾',Verträge:'📋',Versicherung:'🛡️',Steuern:'💰',
+  Behörden:'🏛️',Medizin:'⚕️',Privat:'🏠',Finanzen:'📈',
+  Arbeit:'💼',Immobilien:'🏢',Fahrzeuge:'🚗',Bildung:'🎓',Unsortiert:'📦'
+};
+
+function renderRoot() {
+  document.getElementById('breadcrumb').innerHTML = '<span class="bc-item cur">Alle Kategorien</span>';
+  document.getElementById('archivHeading').innerHTML = 'Alle <strong>Kategorien</strong>';
+  document.getElementById('archivActions').innerHTML = '';
+
+  if (!tree.length) {
+    document.getElementById('archivContent').innerHTML =
+      '<div class="empty"><div class="e-icon">📁</div><div class="e-title">Archiv ist leer</div><div class="e-sub">Lade Dokumente hoch und klicke "Einsortieren"</div></div>';
+    return;
+  }
+  const grid = document.createElement('div');
+  grid.className = 'archive-grid';
+  tree.forEach(cat => {
+    const c = document.createElement('div');
+    c.className = 'cat-card';
+    c.innerHTML = `
+      <span class="cat-emoji">${CAT_ICONS[cat.name] || '📂'}</span>
+      <div class="cat-name">${cat.name}</div>
+      <div class="cat-count">${cat.count} Dokument${cat.count!==1?'e':''}</div>`;
+    c.onclick = () => renderCat(cat);
+    grid.appendChild(c);
+  });
+  document.getElementById('archivContent').innerHTML = '';
+  document.getElementById('archivContent').appendChild(grid);
+}
+
+function renderCat(cat) {
+  document.getElementById('breadcrumb').innerHTML = `
+    <span class="bc-item" onclick="renderRoot()">Alle Kategorien</span>
+    <span class="bc-sep">›</span>
+    <span class="bc-item cur">${cat.name}</span>`;
+  document.getElementById('archivHeading').innerHTML = `<strong>${cat.name}</strong>`;
+  document.getElementById('archivActions').innerHTML =
+    `<button class="btn btn-ghost" onclick="renderRoot()">← Zurück</button>`;
+
+  const wrap = document.createElement('div');
+
+  cat.subs.forEach(sub => {
+    const subLabel = document.createElement('div');
+    subLabel.style.cssText = 'font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:var(--mono);font-weight:500;margin:20px 0 10px';
+    subLabel.textContent = '📁 ' + sub.name.replace('/', ' · ');
+    wrap.appendChild(subLabel);
+
+    const tbl = document.createElement('table');
+    tbl.className = 'file-table';
+    tbl.innerHTML = `<thead><tr>
+      <th style="width:60px">Typ</th>
+      <th>Dateiname</th>
+      <th>Größe</th>
+      <th>Datum</th>
+      <th>Aktionen</th>
+    </tr></thead><tbody id="tbody_${Math.random().toString(36).slice(2)}"></tbody>`;
+
+    const tbody = tbl.querySelector('tbody');
+    sub.dateien.forEach(doc => {
+      const tr = document.createElement('tr');
+      const sz = doc.groesse > 1048576 ? (doc.groesse/1048576).toFixed(1)+' MB'
+               : doc.groesse > 1024    ? Math.round(doc.groesse/1024)+' KB'
+               : doc.groesse+' B';
+      const isPreviewable = ['pdf','jpg','jpeg','png','webp','tiff','bmp','gif'].includes(doc.ext);
+      tr.innerHTML = `
+        <td><span class="file-ext-badge ${extClass(doc.ext)}">${doc.ext||'?'}</span></td>
+        <td class="file-name-cell"><div class="file-name" title="${doc.name}">${doc.name}</div></td>
+        <td class="file-size">${sz}</td>
+        <td class="file-date">${doc.datum}</td>
+        <td>
+          <div class="file-actions">
+            ${isPreviewable ? `<button class="action-btn" onclick="openPreview('${doc.pfad}','${escHtml(doc.name)}')">👁 Vorschau</button>` : ''}
+            <button class="action-btn" onclick="dlFile('${doc.pfad}')">⬇ Download</button>
+            <button class="action-btn del" onclick="delArchive('${doc.pfad}',this)">🗑 Löschen</button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+    wrap.appendChild(tbl);
+  });
+
+  if (!cat.count) wrap.innerHTML = '<div class="empty"><div class="e-icon">📂</div><div class="e-title">Keine Dokumente</div></div>';
+  document.getElementById('archivContent').innerHTML = '';
+  document.getElementById('archivContent').appendChild(wrap);
+}
+
+// ══ Import ═════════════════════════════════════════════════════
+async function loadImportList() {
+  try {
+    const files = await (await fetch('/api/dms/import-list')).json();
+    renderImport(files);
+    document.getElementById('sImport').textContent = files.length;
+    document.getElementById('importCount').textContent = files.length > 0 ? `(${files.length})` : '';
+    const bar = document.getElementById('sortBar');
+    bar.style.display = files.length ? 'flex' : 'none';
+    document.getElementById('sortCount').textContent = files.length;
+  } catch(e) {}
+}
+
+function renderImport(files) {
+  const grid = document.getElementById('importGrid');
+  if (!files.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="e-icon">📥</div><div class="e-title">Import-Ordner leer</div><div class="e-sub">Dateien hochladen oder in den Import-Ordner kopieren</div></div>';
+    return;
+  }
+  grid.innerHTML = '';
+  files.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'import-card';
+    const isImg = ['jpg','jpeg','png','webp','gif','bmp','tiff'].includes(f.ext);
+    const isPdf = f.ext === 'pdf';
+    const canPreview = isImg || isPdf;
+    const sz = f.groesse > 1024 ? Math.round(f.groesse/1024)+' KB' : f.groesse+' B';
+    card.innerHTML = `
+      <div class="import-thumb" onclick="${canPreview ? `openImportPreview('${f.name}')` : ''}">
+        ${isImg
+          ? `<img src="/api/dms/import-preview?name=${encodeURIComponent(f.name)}" alt="${f.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+          : `<div class="thumb-icon">${isPdf ? '📄' : extIcon(f.ext)}</div>`}
+        ${canPreview ? '<div class="preview-hint">👁 Vorschau</div>' : ''}
+      </div>
+      <div class="import-info">
+        <div class="import-name" title="${f.name}">${f.name}</div>
+        <div class="import-meta">${sz}</div>
+      </div>
+      <button class="import-del" onclick="delImport('${f.name}',this)" title="Entfernen">✕</button>`;
+    grid.appendChild(card);
+  });
+}
+
+// ══ Upload ═════════════════════════════════════════════════════
+function setupDrop() {
+  const zone = document.getElementById('dropZone');
+  const inp  = document.getElementById('fileIn');
+  ['dragenter','dragover'].forEach(e => zone.addEventListener(e, ev => { ev.preventDefault(); zone.classList.add('over') }));
+  ['dragleave','drop']    .forEach(e => zone.addEventListener(e, ev => { ev.preventDefault(); zone.classList.remove('over') }));
+  zone.addEventListener('drop', ev => { if (ev.dataTransfer.files.length) upload(ev.dataTransfer.files) });
+  inp .addEventListener('change', () => { if (inp.files.length) upload(inp.files); inp.value='' });
+}
+
+async function upload(files) {
+  lbStart();
+  const fd = new FormData();
+  Array.from(files).forEach(f => fd.append('files', f));
+  try {
+    const d = await (await fetch('/api/dms/upload', {method:'POST',body:fd})).json();
+    toast(`${d.anzahl} Datei(en) hochgeladen`, 'success');
+    d.fehler?.forEach(e => toast(e, 'error'));
+    await loadImportList(); loadStats();
+  } catch(e) { toast('Upload fehlgeschlagen', 'error') }
+  lbEnd();
+}
+
+// ══ Sort ═══════════════════════════════════════════════════════
+async function triggerSort() {
+  const btns = [document.getElementById('sortBtnImport')];
+  btns.forEach(b => { if(b){ b.disabled=true; b.innerHTML='<span class="spin"></span> KI arbeitet...' }});
+  const out = document.getElementById('sortOut');
+  out.textContent = '⏳ KI liest, benennt und sortiert Dokumente ein...\n';
+  out.classList.add('show');
+  lbStart();
+  try {
+    const d = await (await fetch('/api/dms/sort', {method:'POST'})).json();
+    out.textContent = d.error ? `❌ ${d.error}` : d.ergebnis;
+    if (!d.error) { toast('Dokumente einsortiert ✓', 'success'); await loadImportList(); await loadArchiv(); loadStats() }
+    else toast('Fehler beim Einsortieren', 'error');
+  } catch(e) { out.textContent += `\n❌ Fehler: ${e.message}`; toast('Verbindungsfehler', 'error') }
+  btns.forEach(b => { if(b){ b.disabled=false; b.innerHTML='✦ Jetzt einsortieren' }});
+  lbEnd();
+}
+
+// ══ Delete ═════════════════════════════════════════════════════
+async function delImport(name, btn) {
+  if (!confirm(`"${name}" wirklich entfernen?`)) return;
+  btn.disabled = true;
+  try {
+    await fetch('/api/dms/delete', {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+    toast(`${name} entfernt`, 'info');
+    await loadImportList();
+  } catch(e) { toast('Fehler', 'error'); btn.disabled=false }
+}
+
+async function delArchive(pfad, btn) {
+  if (!confirm(`"${pfad}" dauerhaft löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
+  btn.disabled = true;
+  try {
+    const d = await (await fetch('/api/dms/delete-archive', {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({pfad})})).json();
+    if (d.ok) { toast('Dokument gelöscht ✓', 'success'); await loadArchiv(); loadStats() }
+    else       { toast(d.error || 'Fehler', 'error'); btn.disabled=false }
+  } catch(e) { toast('Fehler', 'error'); btn.disabled=false }
+}
+
+// ══ Preview ════════════════════════════════════════════════════
+function openPreview(pfad, name) {
+  const ext  = pfad.split('.').pop().toLowerCase();
+  const body = document.getElementById('previewBody');
+  document.getElementById('previewTitle').textContent = name;
+  document.getElementById('previewDownload').href = `/api/dms/download?pfad=${encodeURIComponent(pfad)}`;
+  document.getElementById('previewDownload').download = name;
+
+  const imgExts = ['jpg','jpeg','png','webp','gif','bmp','tiff'];
+  if (imgExts.includes(ext)) {
+    body.innerHTML = `<img class="preview-img" src="/api/dms/preview?pfad=${encodeURIComponent(pfad)}" alt="${name}">`;
+  } else if (ext === 'pdf') {
+    body.innerHTML = `<iframe class="preview-pdf" src="/api/dms/preview?pfad=${encodeURIComponent(pfad)}"></iframe>`;
+  } else {
+    body.innerHTML = `<div class="preview-none">📄 Keine Vorschau für .${ext} verfügbar.<br>Bitte Datei herunterladen.</div>`;
+  }
+  document.getElementById('previewModal').classList.add('open');
+}
+
+function openImportPreview(name) {
+  const ext  = name.split('.').pop().toLowerCase();
+  const body = document.getElementById('previewBody');
+  document.getElementById('previewTitle').textContent = name;
+  document.getElementById('previewDownload').style.display = 'none';
+
+  const imgExts = ['jpg','jpeg','png','webp','gif','bmp','tiff'];
+  if (imgExts.includes(ext)) {
+    body.innerHTML = `<img class="preview-img" src="/api/dms/import-preview?name=${encodeURIComponent(name)}" alt="${name}">`;
+  } else if (ext === 'pdf') {
+    body.innerHTML = `<iframe class="preview-pdf" src="/api/dms/import-preview?name=${encodeURIComponent(name)}"></iframe>`;
+  } else {
+    body.innerHTML = `<div class="preview-none">Keine Vorschau verfügbar.</div>`;
+  }
+  document.getElementById('previewModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('previewModal').classList.remove('open');
+  document.getElementById('previewDownload').style.display = '';
+  document.getElementById('previewBody').innerHTML = '';
+}
+function closePreview(e) { if (e.target === e.currentTarget) closeModal() }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal() });
+
+// ══ Search ═════════════════════════════════════════════════════
+let searchTimer;
+function setupSearch() {
+  document.getElementById('searchIn').addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    const q = e.target.value.trim();
+    if (!q) {
+      document.getElementById('searchResults').innerHTML =
+        '<div class="empty"><div class="e-icon">🔍</div><div class="e-title">Suchbegriff eingeben</div></div>';
+      return;
+    }
+    searchTimer = setTimeout(() => doSearch(q), 320);
+  });
+}
+
+async function doSearch(q) {
+  const el = document.getElementById('searchResults');
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:20px;color:var(--text3)"><span class="spin"></span> Suche...</div>';
+  try {
+    const results = await (await fetch(`/api/dms/search?q=${encodeURIComponent(q)}`)).json();
+    if (!results.length) {
+      el.innerHTML = `<div class="empty"><div class="e-icon">🔍</div><div class="e-title">Keine Ergebnisse für "${q}"</div></div>`;
+      return;
+    }
+    const tbl = document.createElement('table');
+    tbl.className = 'file-table';
+    tbl.innerHTML = `<thead><tr><th>Typ</th><th>Dateiname</th><th>Pfad</th><th>Größe</th><th>Aktionen</th></tr></thead><tbody></tbody>`;
+    const tb = tbl.querySelector('tbody');
+    results.forEach(doc => {
+      const sz  = doc.groesse > 1024 ? Math.round(doc.groesse/1024)+' KB' : doc.groesse+' B';
+      const tr  = document.createElement('tr');
+      const isP = ['pdf','jpg','jpeg','png','webp'].includes(doc.ext);
+      tr.innerHTML = `
+        <td><span class="file-ext-badge ${extClass(doc.ext)}">${doc.ext||'?'}</span></td>
+        <td class="file-name-cell"><div class="file-name">${doc.name}</div></td>
+        <td style="font-family:var(--mono);font-size:.72rem;color:var(--text3)">${doc.pfad}</td>
+        <td class="file-size">${sz}</td>
+        <td><div class="file-actions">
+          ${isP ? `<button class="action-btn" onclick="openPreview('${doc.pfad}','${escHtml(doc.name)}')">👁 Vorschau</button>` : ''}
+          <button class="action-btn" onclick="dlFile('${doc.pfad}')">⬇</button>
+          <button class="action-btn del" onclick="delArchive('${doc.pfad}',this)">🗑</button>
+        </div></td>`;
+      tb.appendChild(tr);
+    });
+    el.innerHTML = `<div style="font-size:.75rem;font-family:var(--mono);color:var(--text3);margin-bottom:14px">${results.length} Treffer für "${q}"</div>`;
+    el.appendChild(tbl);
+  } catch(e) {
+    el.innerHTML = '<div class="empty"><div class="e-icon">⚠️</div><div class="e-title">Suche fehlgeschlagen</div></div>';
+  }
+}
+
+// ══ Download ═══════════════════════════════════════════════════
+function dlFile(pfad) {
+  window.location.href = `/api/dms/download?pfad=${encodeURIComponent(pfad)}`;
+}
+
+// ══ Model selector ═════════════════════════════════════════════
+async function loadModelInfo() {
+  try {
+    const d = await (await fetch('/api/model')).json();
+    document.getElementById('modelLabel').textContent = d.current_provider || 'auto';
+    // Mark available
+    const avail = d.available || [];
+    ['claude','openai','gemini','ollama'].forEach(p => {
+      const el = document.getElementById(`opt-${p}`);
+      if (el) el.style.opacity = avail.includes(p.charAt(0).toUpperCase()+p.slice(1)) || avail.map(a=>a.toLowerCase()).includes(p) ? '1' : '.4';
+    });
+    const cur = d.current_provider || 'auto';
+    document.querySelectorAll('.model-option').forEach(o => o.classList.remove('current'));
+    const curOpt = document.querySelector(`.model-option[onclick*="${cur}"]`);
+    if (curOpt) curOpt.classList.add('current');
+  } catch(e) {}
+}
+
+function toggleModelDropdown() {
+  document.getElementById('modelDropdown').classList.toggle('open');
+}
+
+async function setProvider(p) {
+  document.getElementById('modelDropdown').classList.remove('open');
+  try {
+    await fetch('/api/model', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:p})});
+    document.getElementById('modelLabel').textContent = p;
+    toast(`Provider: ${p}`, 'success');
+    loadModelInfo();
+  } catch(e) { toast('Fehler', 'error') }
+}
+
+// ══ Settings ═══════════════════════════════════════════════════
+async function loadSettingsData() {
+  try {
+    const d = await (await fetch('/api/dms/settings')).json();
+    document.getElementById('currentArchivPath').textContent = '📂 ' + d.archiv_pfad;
+    document.getElementById('setArchivPfad').placeholder   = d.archiv_pfad;
+    document.getElementById('setImportPfad').placeholder   = d.import_pfad;
+    document.getElementById('pwStatus').textContent        = d.passwort_aktiv ? '🔒 Passwortschutz aktiv' : '🔓 Kein Passwortschutz';
+    document.getElementById('pwStatus').className          = `info-badge ${d.passwort_aktiv ? '' : 'warn-badge'}`;
+  } catch(e) {}
+
+  try {
+    const m = await (await fetch('/api/model')).json();
+    const models = m.models || {};
+    document.getElementById('mClaude').value = models.claude  || '';
+    document.getElementById('mOpenAI').value = models.openai  || '';
+    document.getElementById('mGemini').value = models.gemini  || '';
+    document.getElementById('mOllama').value = models.ollama  || '';
+
+    const info = document.getElementById('dmsInfo');
+    info.innerHTML = `Provider aktiv: ${(m.available||[]).join(', ') || 'keiner'}<br>Standard: ${m.current_provider||'auto'}`;
+  } catch(e) {}
+}
+
+async function saveSettings() {
+  const body = {
+    archiv_pfad: document.getElementById('setArchivPfad').value.trim(),
+    import_pfad: document.getElementById('setImportPfad').value.trim(),
+    passwort:    document.getElementById('setPw').value,
+  };
+  try {
+    const d = await (await fetch('/api/dms/settings', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+    const msg = document.getElementById('settingsMsg');
+    if (d.ok) { msg.style.color='var(--green)'; msg.textContent = d.message; toast('Pfade gespeichert', 'success'); await loadSettingsData() }
+    else       { msg.style.color='var(--red)';   msg.textContent = d.error;   toast(d.error, 'error') }
+  } catch(e) { toast('Fehler', 'error') }
+}
+
+async function setPassword() {
+  const body = {
+    passwort_neu: document.getElementById('newPw').value,
+    passwort:     document.getElementById('confirmPw').value,
+    archiv_pfad:  '', import_pfad: '',
+  };
+  if (!body.passwort_neu) { toast('Kein neues Passwort eingegeben', 'error'); return }
+  try {
+    const d = await (await fetch('/api/dms/settings', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+    if (d.ok) { toast('Passwort gesetzt ✓', 'success'); await loadSettingsData() }
+    else toast(d.error, 'error');
+  } catch(e) { toast('Fehler', 'error') }
+}
+
+async function removePassword() {
+  const pw = document.getElementById('confirmPw').value;
+  try {
+    const d = await (await fetch('/api/dms/settings/remove-password', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({passwort:pw})})).json();
+    if (d.ok) { toast('Passwort entfernt', 'info'); await loadSettingsData() }
+    else toast(d.error, 'error');
+  } catch(e) { toast('Fehler', 'error') }
+}
+
+async function saveModels() {
+  const providers = ['claude','openai','gemini','ollama'];
+  const ids       = ['mClaude','mOpenAI','mGemini','mOllama'];
+  let saved = 0;
+  for (let i = 0; i < providers.length; i++) {
+    const val = document.getElementById(ids[i]).value.trim();
+    if (!val) continue;
+    try {
+      await fetch('/api/model', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:providers[i],model_name:val})});
+      saved++;
+    } catch(e) {}
+  }
+  if (saved) { toast(`${saved} Modell(e) gespeichert`, 'success'); loadModelInfo() }
+  else toast('Keine Änderungen', 'info');
+}
+
+// ══ Helpers ════════════════════════════════════════════════════
+function extClass(ext) {
+  const e = (ext||'').toLowerCase();
+  if (e==='pdf') return 'ext-pdf';
+  if (['docx','doc','odt'].includes(e)) return 'ext-docx';
+  if (['xlsx','xls','xlsm','ods','csv'].includes(e)) return 'ext-xlsx';
+  if (['jpg','jpeg','png','webp','tiff','bmp','gif'].includes(e)) return 'ext-img';
+  if (['txt','md','rtf'].includes(e)) return 'ext-txt';
+  return 'ext-def';
+}
+
+function extIcon(ext) {
+  const e = (ext||'').toLowerCase();
+  if (e==='pdf') return '📄';
+  if (['docx','doc'].includes(e)) return '📝';
+  if (['xlsx','xls'].includes(e)) return '📊';
+  if (['pptx','ppt'].includes(e)) return '📑';
+  if (['txt','md'].includes(e))   return '📃';
+  return '📎';
+}
+
+function escHtml(s) { return s.replace(/'/g,"&#39;").replace(/"/g,'&quot;') }
+</script>
+</body>
+</html>

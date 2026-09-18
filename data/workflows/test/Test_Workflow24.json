@@ -1,0 +1,103 @@
+{
+  "id": "wf_test24",
+  "name": "Intelligenter E-Mail-Autoresponder",
+  "nodes": [
+    {
+      "id": "n_t24_01",
+      "type": "schedule_trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Stündlich",
+      "config": {
+        "interval": "hourly",
+        "time": "00:00",
+        "active": false
+      }
+    },
+    {
+      "id": "n_t24_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "E-Mails lesen",
+      "config": {
+        "skill": "emails_lesen",
+        "anzahl": "3",
+        "nur_ungelesen": "true"
+      }
+    },
+    {
+      "id": "n_t24_03",
+      "type": "condition",
+      "x": 550,
+      "y": 100,
+      "name": "Anfrage prüfen",
+      "config": {
+        "operator": "enthält",
+        "value": "Anfrage"
+      }
+    },
+    {
+      "id": "n_t24_04",
+      "type": "chat",
+      "x": 800,
+      "y": 100,
+      "name": "Antwort formulieren",
+      "config": {
+        "message": "Formuliere eine professionelle Antwort auf diese E-Mail: {{input}}"
+      }
+    },
+    {
+      "id": "n_t24_05",
+      "type": "wait",
+      "x": 1050,
+      "y": 100,
+      "name": "5 Sekunden warten",
+      "config": {
+        "seconds": "5"
+      }
+    },
+    {
+      "id": "n_t24_06",
+      "type": "skill",
+      "x": 1300,
+      "y": 100,
+      "name": "E-Mail senden",
+      "config": {
+        "skill": "email_senden",
+        "an": "{{input}}",
+        "betreff": "Re: Ihre Anfrage",
+        "inhalt": "{{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t24_01",
+      "from": "n_t24_01",
+      "to": "n_t24_02"
+    },
+    {
+      "id": "c_t24_02",
+      "from": "n_t24_02",
+      "to": "n_t24_03"
+    },
+    {
+      "id": "c_t24_03",
+      "from": "n_t24_03",
+      "to": "n_t24_04"
+    },
+    {
+      "id": "c_t24_04",
+      "from": "n_t24_04",
+      "to": "n_t24_05"
+    },
+    {
+      "id": "c_t24_05",
+      "from": "n_t24_05",
+      "to": "n_t24_06"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

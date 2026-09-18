@@ -1,0 +1,86 @@
+{
+  "id": "wf_test29",
+  "name": "Outlook Terminmanager",
+  "nodes": [
+    {
+      "id": "n_t29_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t29_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "Kalender lesen",
+      "config": {
+        "skill": "outlook_kalender_lesen",
+        "tage": "14"
+      }
+    },
+    {
+      "id": "n_t29_03",
+      "type": "skill",
+      "x": 550,
+      "y": 100,
+      "name": "Freie Slots finden",
+      "config": {
+        "skill": "outlook_freie_slots_finden",
+        "datum": "2026-04-25",
+        "dauer_minuten": "60"
+      }
+    },
+    {
+      "id": "n_t29_04",
+      "type": "chat",
+      "x": 800,
+      "y": 100,
+      "name": "Meeting-Zeiten vorschlagen",
+      "config": {
+        "message": "Analysiere meinen Kalender und schlage optimale Meeting-Zeiten vor: {{input}}"
+      }
+    },
+    {
+      "id": "n_t29_05",
+      "type": "skill",
+      "x": 1050,
+      "y": 100,
+      "name": "Termin eintragen",
+      "config": {
+        "skill": "outlook_termin_eintragen",
+        "titel": "KI-Review Meeting",
+        "datum": "2026-04-25",
+        "uhrzeit": "10:00",
+        "dauer": "60",
+        "beschreibung": "Automatisch eingetragen durch Ilija"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t29_01",
+      "from": "n_t29_01",
+      "to": "n_t29_02"
+    },
+    {
+      "id": "c_t29_02",
+      "from": "n_t29_02",
+      "to": "n_t29_03"
+    },
+    {
+      "id": "c_t29_03",
+      "from": "n_t29_03",
+      "to": "n_t29_04"
+    },
+    {
+      "id": "c_t29_04",
+      "from": "n_t29_04",
+      "to": "n_t29_05"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

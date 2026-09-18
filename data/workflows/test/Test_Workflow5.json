@@ -1,0 +1,100 @@
+{
+  "id": "wf_test05",
+  "name": "Wikipedia Wissens-Report",
+  "nodes": [
+    {
+      "id": "n_t05_01",
+      "type": "trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Start",
+      "config": {}
+    },
+    {
+      "id": "n_t05_02",
+      "type": "set",
+      "x": 300,
+      "y": 100,
+      "name": "Thema setzen",
+      "config": {
+        "variable": "thema",
+        "value": "Quantencomputing"
+      }
+    },
+    {
+      "id": "n_t05_03",
+      "type": "skill",
+      "x": 550,
+      "y": 100,
+      "name": "Wikipedia-Suche",
+      "config": {
+        "skill": "wikipedia_suche",
+        "suchbegriff": "{{input}}",
+        "sprache": "de"
+      }
+    },
+    {
+      "id": "n_t05_04",
+      "type": "chat",
+      "x": 800,
+      "y": 100,
+      "name": "Thema erklären",
+      "config": {
+        "message": "Erkläre dieses Thema verständlich in 300 Wörtern: {{input}}"
+      }
+    },
+    {
+      "id": "n_t05_05",
+      "type": "google_docs",
+      "x": 1050,
+      "y": 100,
+      "name": "Google Docs speichern",
+      "config": {
+        "operation": "Dokument erstellen",
+        "title": "Wissens-Report: Quantencomputing",
+        "content": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t05_06",
+      "type": "skill",
+      "x": 1050,
+      "y": 250,
+      "name": "Notiz speichern",
+      "config": {
+        "skill": "notiz_speichern",
+        "text": "{{input}}",
+        "datei": "wissens_report.txt"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t05_01",
+      "from": "n_t05_01",
+      "to": "n_t05_02"
+    },
+    {
+      "id": "c_t05_02",
+      "from": "n_t05_02",
+      "to": "n_t05_03"
+    },
+    {
+      "id": "c_t05_03",
+      "from": "n_t05_03",
+      "to": "n_t05_04"
+    },
+    {
+      "id": "c_t05_04",
+      "from": "n_t05_04",
+      "to": "n_t05_05"
+    },
+    {
+      "id": "c_t05_05",
+      "from": "n_t05_04",
+      "to": "n_t05_06"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

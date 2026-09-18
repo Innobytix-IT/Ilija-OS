@@ -1,0 +1,4153 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ilija · Workflow Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════
+   ILIJA WORKFLOW STUDIO v2 — n8n-True Interface
+   ══════════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:         #101014;
+  --canvas-bg:  #0d0d11;
+  --dot:        rgba(255,255,255,.045);
+  --sb-bg:      #16161e;
+  --panel-bg:   #1c1c26;
+  --border:     rgba(255,255,255,.07);
+  --border2:    rgba(255,255,255,.12);
+  --border3:    rgba(255,255,255,.18);
+
+  --orange:     #ff6d3a;
+  --orange2:    #e85520;
+  --orange-glow:rgba(255,109,58,.15);
+  --blue:       #4d9fff;
+  --blue-dim:   rgba(77,159,255,.12);
+  --green:      #22c97c;
+  --green-dim:  rgba(34,201,124,.12);
+  --purple:     #a855f7;
+  --purple-dim: rgba(168,85,247,.12);
+  --teal:       #14b8a6;
+  --teal-dim:   rgba(20,184,166,.12);
+  --yellow:     #f59e0b;
+  --yellow-dim: rgba(245,158,11,.12);
+  --red:        #ef4444;
+  --red-dim:    rgba(239,68,68,.12);
+
+  --tx:   #e2e2ee;
+  --tx2:  #7878a0;
+  --tx3:  #44445a;
+
+  --node-bg:     #1e1e2e;
+  --node-sel:    rgba(77,159,255,.25);
+  --port:        12px;
+
+  --f:  'Inter', sans-serif;
+  --m:  'JetBrains Mono', monospace;
+  --r:  7px;
+  --r2: 12px;
+}
+
+html,body{height:100%;overflow:hidden;font-family:var(--f);font-size:16px;color:var(--tx);background:var(--bg)}
+button{font-family:var(--f)}
+
+/* ── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.18)}
+
+/* ── App Shell ──────────────────────────────────────────── */
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* ── Topbar ─────────────────────────────────────────────── */
+.topbar{
+  height:65px;flex-shrink:0;
+  background:var(--sb-bg);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;
+  padding:0 14px;gap:4px;z-index:300;
+  position:relative;
+}
+
+.tb-logo{
+  display:flex;align-items:center;gap:9px;
+  padding-right:14px;margin-right:6px;
+  border-right:1px solid var(--border);
+  flex-shrink:0;
+}
+.tb-logo-mark{
+  width:38px;height:38px;border-radius:10px;
+  background:linear-gradient(135deg,var(--orange),var(--orange2));
+  display:grid;place-items:center;font-size:15px;
+  box-shadow:0 2px 12px rgba(255,109,58,.3);
+}
+.tb-logo-text{font-size:.85rem;font-weight:700;letter-spacing:-.02em;color:var(--tx)}
+.tb-logo-text em{color:var(--orange);font-style:normal}
+
+/* Breadcrumb / workflow name */
+.tb-wf{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 10px;border-radius:var(--r);
+  border:1px solid transparent;cursor:pointer;
+  transition:all .15s;margin-left:2px;
+}
+.tb-wf:hover,.tb-wf:focus-within{background:rgba(255,255,255,.05);border-color:var(--border2)}
+.tb-wf-input{
+  background:none;border:none;outline:none;
+  font-family:var(--f);font-size:.88rem;font-weight:500;
+  color:var(--tx);width:200px;cursor:pointer;
+}
+.tb-wf-input:focus{cursor:text}
+
+.tb-badge{
+  padding:2px 8px;border-radius:100px;
+  font-size:.61rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+}
+.badge-inactive{background:rgba(255,255,255,.06);color:var(--tx3)}
+.badge-active{background:var(--green-dim);color:var(--green)}
+.badge-running{background:var(--orange-glow);color:var(--orange);animation:blink 1s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+.tb-sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+.tb-gap{flex:1}
+
+/* Toolbar buttons */
+.tb-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:var(--r);
+  border:1px solid var(--border2);
+  background:none;color:var(--tx2);cursor:pointer;
+  font-size:.78rem;font-weight:500;
+  transition:all .13s;white-space:nowrap;
+}
+.tb-btn svg{width:13px;height:13px;flex-shrink:0}
+.tb-btn:hover{background:rgba(255,255,255,.06);color:var(--tx);border-color:var(--border3)}
+
+.tb-btn-primary{
+  background:var(--orange);color:#fff;
+  border-color:var(--orange2);
+  padding:6px 18px;font-weight:600;
+}
+.tb-btn-primary:hover{background:var(--orange2);color:#fff;border-color:var(--orange2)}
+.tb-btn-primary.running{background:var(--red);border-color:#c0392b}
+
+.tb-btn-ghost{border-color:transparent}
+.tb-btn-ghost:hover{border-color:var(--border2)}
+
+/* ── Main ───────────────────────────────────────────────── */
+.main{display:flex;flex:1;overflow:hidden}
+
+/* ── Left Sidebar ───────────────────────────────────────── */
+.lsidebar{
+  width:288px;flex-shrink:0;
+  background:var(--sb-bg);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;transition:width .2s ease;
+}
+.lsidebar.collapsed{width:0;border-right:none}
+
+.ls-tabs{
+  display:flex;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.ls-tab{
+  flex:1;padding:11px 6px;
+  font-size:.68rem;font-weight:600;cursor:pointer;
+  color:var(--tx3);transition:all .13s;
+  border-bottom:2px solid transparent;
+  text-transform:uppercase;letter-spacing:.07em;text-align:center;
+}
+.ls-tab.active{color:var(--orange);border-bottom-color:var(--orange)}
+.ls-tab:hover:not(.active){color:var(--tx2)}
+
+.ls-panel{flex:1;overflow-y:auto;display:none;flex-direction:column}
+.ls-panel.active{display:flex}
+
+.ls-search{padding:10px 8px;flex-shrink:0;border-bottom:1px solid var(--border)}
+.ls-search-wrap{
+  display:flex;align-items:center;gap:7px;
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border2);border-radius:var(--r);
+  padding:6px 9px;
+}
+.ls-search-wrap svg{width:12px;height:12px;color:var(--tx3);flex-shrink:0}
+.ls-search-wrap input{
+  background:none;border:none;outline:none;
+  font-family:var(--f);font-size:.78rem;color:var(--tx);
+  width:100%;
+}
+.ls-search-wrap input::placeholder{color:var(--tx3)}
+
+.ls-section-head{
+  padding:10px 12px 4px;
+  font-size:.62rem;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--tx3);font-weight:700;
+}
+
+.node-item{
+  display:flex;align-items:center;gap:10px;
+  padding:7px 10px;cursor:grab;
+  transition:background .1s;
+  border-radius:5px;margin:1px 5px;
+}
+.node-item:hover{background:rgba(255,255,255,.06)}
+.node-item:active{cursor:grabbing}
+.ni-icon{
+  width:38px;height:38px;border-radius:9px;
+  display:grid;place-items:center;font-size:18px;flex-shrink:0;
+}
+.ni-info{flex:1;min-width:0}
+.ni-name{font-size:.78rem;font-weight:600;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ni-desc{font-size:.64rem;color:var(--tx3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* workflow list */
+.wf-item{
+  display:flex;align-items:center;gap:9px;
+  padding:9px 11px;cursor:pointer;
+  border-bottom:1px solid var(--border);
+  transition:background .1s;position:relative;
+}
+.wf-item:hover{background:rgba(255,255,255,.04)}
+.wf-item.active{background:rgba(255,109,58,.07);border-left:3px solid var(--orange);padding-left:8px}
+.wfi-icon{
+  width:33px;height:33px;border-radius:8px;
+  background:rgba(255,109,58,.12);
+  display:grid;place-items:center;font-size:15px;flex-shrink:0;
+}
+.wfi-info{flex:1;min-width:0}
+.wfi-name{font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wfi-meta{font-size:.64rem;color:var(--tx3);margin-top:2px}
+.wfi-del{
+  opacity:0;width:22px;height:22px;border-radius:4px;
+  display:grid;place-items:center;cursor:pointer;
+  font-size:11px;transition:all .12s;color:var(--tx3);
+}
+.wf-item:hover .wfi-del{opacity:1}
+.wfi-del:hover{background:var(--red-dim);color:var(--red)}
+
+.ls-add-btn{
+  margin:10px 8px;padding:8px 12px;
+  border-radius:var(--r);border:1px dashed var(--border2);
+  color:var(--tx3);text-align:center;cursor:pointer;
+  font-size:.78rem;font-weight:500;transition:all .14s;
+  background:none;width:calc(100% - 16px);
+}
+.ls-add-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-glow)}
+
+.ls-empty{padding:20px 12px;text-align:center;color:var(--tx3);font-size:.75rem;line-height:1.7}
+
+.ls-appstore-btn{
+  margin:8px 8px 10px;padding:9px 12px;
+  border-radius:var(--r);border:1px solid rgba(168,85,247,.35);
+  color:var(--purple);text-align:center;cursor:pointer;
+  font-size:.78rem;font-weight:600;transition:all .14s;
+  background:rgba(168,85,247,.08);width:calc(100% - 16px);
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.ls-appstore-btn:hover{background:rgba(168,85,247,.18);border-color:var(--purple)}
+
+/* ── App Store Modal ─────────────────────────────────────── */
+.as-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:900;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .18s}
+.as-overlay.open{opacity:1;pointer-events:all}
+.as-modal{background:#1c1c26;border:1px solid rgba(255,255,255,.1);border-radius:12px;
+  width:min(900px,96vw);max-height:84vh;display:flex;flex-direction:column;overflow:hidden;
+  transform:scale(.96);transition:transform .18s}
+.as-overlay.open .as-modal{transform:scale(1)}
+.as-header{padding:14px 18px 12px;border-bottom:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;gap:10px;flex-shrink:0;background:#1c1c26}
+.as-title{font-size:1.1rem;font-weight:700;color:#e2e2ee}
+.as-mode-badge{font-size:.75rem;padding:3px 10px;border-radius:4px;
+  background:rgba(168,85,247,.25);color:var(--purple);font-weight:600}
+.as-search-wrap{display:flex;align-items:center;gap:8px;background:#13131a;
+  border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 12px;flex:1;max-width:300px;margin-left:auto}
+.as-search-wrap svg{flex-shrink:0;color:#44445a}
+.as-search-wrap input{background:none;border:none;outline:none;color:#e2e2ee;font-size:.9rem;width:100%}
+.as-close{width:32px;height:32px;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,.1);
+  color:#7878a0;cursor:pointer;font-size:.95rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.as-close:hover{background:#2a2a38;color:#e2e2ee}
+.as-body{flex:1;overflow-y:auto;padding:16px 18px;background:#1c1c26}
+.as-category{margin-bottom:22px}
+.as-cat-title{font-size:.78rem;font-weight:700;color:#7878a0;text-transform:uppercase;
+  letter-spacing:.07em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)}
+.as-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.as-card{background:#13131a;border:1px solid rgba(255,255,255,.08);border-radius:10px;
+  padding:16px;display:flex;flex-direction:column;gap:8px;transition:border-color .14s}
+.as-card:hover{border-color:var(--blue)}
+.as-card-top{display:flex;align-items:center;gap:10px}
+.as-card-icon{width:34px;height:34px;border-radius:8px;background:rgba(77,159,255,.15);
+  display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0}
+.as-card-name{font-size:.9rem;font-weight:600;color:#e2e2ee;word-break:break-all;line-height:1.3}
+.as-card-desc{font-size:.82rem;color:#9090b0;line-height:1.5;flex:1}
+.as-card-btn{margin-top:4px;padding:9px 0;background:var(--blue);color:#fff;border:none;
+  border-radius:6px;font-size:.84rem;font-weight:600;cursor:pointer;transition:opacity .14s;width:100%}
+.as-card-btn:hover{opacity:.82}
+.as-card-btn.is-selected{background:var(--green)}
+.as-empty-msg{text-align:center;color:var(--tx3);font-size:.9rem;padding:48px 0}
+.as-card-deps{margin-top:2px;padding:9px 11px;background:rgba(245,158,11,.08);
+  border:1px solid rgba(245,158,11,.25);border-radius:6px;cursor:pointer}
+.as-card-deps-head{display:flex;align-items:center;gap:6px;font-size:.8rem;
+  font-weight:700;color:#f59e0b}
+.as-card-deps-body{display:none;margin-top:8px;font-size:.78rem;color:#a0a0b8;line-height:1.7}
+.as-card-deps.open .as-card-deps-body{display:block}
+.as-card-deps-body code{background:rgba(255,255,255,.09);padding:2px 6px;
+  border-radius:4px;font-family:var(--m,monospace);font-size:.76rem;color:#e2e2ee;
+  display:block;word-break:break-all;overflow-wrap:break-word;white-space:pre-wrap;overflow:hidden;max-width:100%;}
+.as-card-deps-body .dep-setup{margin-top:7px;padding:8px 10px;
+  background:rgba(77,159,255,.1);border-radius:5px;border-left:3px solid var(--blue)}
+.as-card-deps-row{margin-bottom:5px}
+.dep-warning{
+  margin-top:8px;padding:9px 11px;
+  background:rgba(239,68,68,.09);
+  border:1px solid rgba(239,68,68,.35);
+  border-left:3px solid #ef4444;
+  border-radius:5px;
+  font-size:.76rem;color:#f87171;line-height:1.65;
+}
+.dep-warning strong{color:#fca5a5}
+.warn-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 9px;border-radius:100px;
+  background:rgba(239,68,68,.12);
+  border:1px solid rgba(239,68,68,.3);
+  color:#f87171;font-size:.67rem;font-weight:700;
+  letter-spacing:.04em;text-transform:uppercase;
+  margin-bottom:6px;
+}
+
+/* Skill node pick button in panel */
+.skill-pick-btn{width:100%;padding:9px 12px;background:#13131a;border:1px solid rgba(255,255,255,.1);
+  border-radius:7px;color:#e2e2ee;font-size:.8rem;cursor:pointer;
+  text-align:left;display:flex;align-items:center;gap:8px;transition:border-color .15s}
+.skill-pick-btn:hover{border-color:var(--purple)}
+.skill-pick-btn .spb-icon{font-size:.9rem;flex-shrink:0}
+.skill-pick-btn .spb-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skill-pick-btn .spb-arrow{color:var(--tx3);font-size:.7rem;flex-shrink:0}
+
+/* ── Canvas ─────────────────────────────────────────────── */
+.canvas-wrap{
+  flex:1;position:relative;overflow:hidden;
+  background:var(--canvas-bg);
+  cursor:default;
+}
+/* dot grid */
+.canvas-wrap::before{
+  content:'';position:absolute;inset:0;
+  background-image:radial-gradient(circle,var(--dot) 1px,transparent 1px);
+  background-size:22px 22px;pointer-events:none;
+}
+/* subtle vignette */
+.canvas-wrap::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.4) 100%);
+  pointer-events:none;
+}
+
+#canvas{
+  position:absolute;inset:0;width:100%;height:100%;
+  transform-origin:0 0;
+}
+#svg-layer{
+  position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:none;overflow:visible;
+}
+#svg-layer path{pointer-events:stroke}
+
+/* ── Nodes ──────────────────────────────────────────────── */
+.wf-node{
+  position:absolute;
+  background:var(--node-bg);
+  border:1.5px solid rgba(255,255,255,.09);
+  border-radius:var(--r2);
+  min-width:238px;max-width:325px;
+  cursor:default;user-select:none;
+  transition:border-color .15s,box-shadow .15s;
+  z-index:10;
+}
+.wf-node:hover{border-color:rgba(255,255,255,.2);box-shadow:0 4px 24px rgba(0,0,0,.5)}
+.wf-node.selected{
+  border-color:var(--blue);
+  box-shadow:0 0 0 2.5px rgba(77,159,255,.25),0 8px 32px rgba(0,0,0,.6);
+  z-index:20;
+}
+.wf-node.running{border-color:var(--orange);box-shadow:0 0 0 2px var(--orange-glow),0 8px 32px rgba(0,0,0,.5)}
+.wf-node.success{border-color:var(--green);box-shadow:0 0 0 2px var(--green-dim)}
+.wf-node.error{border-color:var(--red);box-shadow:0 0 0 2px var(--red-dim)}
+
+/* Node color accent bar */
+.node-accent{height:3px;border-radius:var(--r2) var(--r2) 0 0}
+
+.node-head{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 12px;cursor:move;
+}
+.node-head-icon{
+  width:33px;height:33px;border-radius:8px;
+  display:grid;place-items:center;font-size:16px;flex-shrink:0;
+}
+.node-head-name{
+  flex:1;font-size:.82rem;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.node-head-actions{display:flex;gap:2px;align-items:center;opacity:0;transition:opacity .12s}
+.wf-node:hover .node-head-actions{opacity:1}
+.nha-btn{
+  width:20px;height:20px;border-radius:4px;
+  display:grid;place-items:center;cursor:pointer;
+  font-size:10px;color:var(--tx3);transition:all .1s;
+}
+.nha-btn:hover{background:rgba(255,255,255,.08);color:var(--tx)}
+.nha-del:hover{background:var(--red-dim);color:var(--red)}
+
+.node-divider{height:1px;background:rgba(255,255,255,.05);margin:0 12px}
+
+.node-body{
+  padding:8px 12px 10px;
+  font-size:.75rem;color:var(--tx2);line-height:1.5;
+  min-height:30px;overflow:hidden;
+}
+.node-body-skill{
+  display:flex;align-items:center;gap:5px;
+  color:var(--blue);font-size:.72rem;font-family:var(--m);
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
+.node-body-chat{
+  color:var(--tx2);font-size:.73rem;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;
+}
+.node-body-empty{color:var(--tx3);font-size:.72rem;font-style:italic}
+
+/* execution result stripe */
+.node-result{
+  padding:7px 12px 9px;
+  font-size:.71rem;color:var(--tx2);
+  border-top:1px solid rgba(255,255,255,.05);
+  font-family:var(--m);line-height:1.5;
+  max-height:70px;overflow-y:auto;
+  word-break:break-word;display:none;
+}
+.node-result.visible{display:block}
+.node-result.ok{color:var(--green)}
+.node-result.err{color:var(--red)}
+
+/* running spinner inside node */
+.node-spinner{
+  width:14px;height:14px;flex-shrink:0;
+  border:2px solid rgba(255,109,58,.25);
+  border-top-color:var(--orange);
+  border-radius:50%;animation:spin .65s linear infinite;display:none;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wf-node.running .node-spinner{display:block}
+
+/* ── Ports ──────────────────────────────────────────────── */
+.port{
+  position:absolute;
+  width:var(--port);height:var(--port);
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.25);
+  background:var(--node-bg);
+  cursor:crosshair;transition:all .12s;
+  z-index:30;
+}
+.port:hover{border-color:var(--orange);background:rgba(255,109,58,.2);transform:translateY(-50%) scale(1.5)!important}
+.port.in{left:-7px;top:50%;transform:translateY(-50%)}
+.port.out{right:-7px;top:50%;transform:translateY(-50%)}
+.port.in:hover{transform:translateY(-50%) scale(1.5)}
+.port.connected{border-color:var(--orange);background:var(--orange)}
+.port.in.connected{border-color:var(--blue);background:var(--blue)}
+
+/* ── Right Panel ─────────────────────────────────────────── */
+.rpanel{
+  width:388px;flex-shrink:0;
+  background:var(--panel-bg);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+  transform:translateX(100%);
+  transition:transform .22s cubic-bezier(.4,0,.2,1);
+}
+.rpanel.open{transform:none}
+
+.rp-head{
+  padding:14px 16px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+  flex-shrink:0;
+}
+.rp-icon{
+  width:43px;height:43px;border-radius:11px;
+  display:grid;place-items:center;font-size:21px;flex-shrink:0;
+}
+.rp-title-wrap{flex:1;min-width:0}
+.rp-name{font-size:.9rem;font-weight:700}
+.rp-type-tag{
+  display:inline-block;margin-top:3px;
+  padding:2px 7px;border-radius:100px;
+  font-size:.6rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+}
+.rp-close{
+  width:26px;height:26px;border-radius:5px;
+  border:none;background:none;cursor:pointer;
+  color:var(--tx3);display:grid;place-items:center;
+  font-size:17px;transition:all .12s;flex-shrink:0;
+}
+.rp-close:hover{background:rgba(255,255,255,.07);color:var(--tx)}
+
+.rp-body{
+  flex:1;overflow-y:auto;padding:16px;
+  display:flex;flex-direction:column;gap:16px;
+}
+
+.rp-field{display:flex;flex-direction:column;gap:6px}
+.rp-label{
+  font-size:.67rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.09em;color:var(--tx3);
+}
+.rp-input{
+  width:100%;padding:8px 10px;border-radius:var(--r);
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border2);
+  color:var(--tx);font-family:var(--f);font-size:.82rem;
+  outline:none;transition:border-color .12s;
+}
+.rp-input:focus{border-color:var(--blue);background:rgba(77,159,255,.04)}
+.rp-textarea{resize:vertical;min-height:80px;line-height:1.6;font-family:var(--f)}
+.rp-select{
+  width:100%;padding:8px 10px;border-radius:var(--r);
+  background:rgba(255,255,255,.05);border:1px solid var(--border2);
+  color:var(--tx);font-family:var(--f);font-size:.82rem;
+  outline:none;cursor:pointer;transition:border-color .12s;
+  -webkit-appearance:none;appearance:none;
+}
+.rp-select:focus{border-color:var(--blue)}
+.rp-select option{background:#1c1c26;color:var(--tx)}
+.rp-hint{font-size:.69rem;color:var(--tx3);line-height:1.6}
+.rp-hint code{
+  font-family:var(--m);font-size:.67rem;
+  color:var(--blue);background:var(--blue-dim);
+  padding:1px 5px;border-radius:3px;
+}
+
+.rp-separator{height:1px;background:var(--border);margin:2px 0}
+
+.rp-result-box{
+  background:rgba(0,0,0,.3);border-radius:6px;
+  padding:10px 12px;font-family:var(--m);
+  font-size:.71rem;color:var(--green);
+  white-space:pre-wrap;max-height:130px;
+  overflow-y:auto;border:1px solid var(--green-dim);
+  line-height:1.6;
+}
+
+/* Param row */
+.param-row{
+  display:flex;flex-direction:column;gap:5px;
+  padding:10px 12px;
+  background:rgba(255,255,255,.03);
+  border-radius:var(--r);border:1px solid var(--border);
+}
+.param-name{
+  font-size:.72rem;font-weight:600;
+  font-family:var(--m);color:var(--tx2);
+  display:flex;align-items:center;gap:6px;
+}
+.param-req{
+  font-size:.6rem;padding:1px 5px;border-radius:3px;
+  background:var(--red-dim);color:var(--red);
+  font-family:var(--f);font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;
+}
+.param-opt{
+  font-size:.6rem;padding:1px 5px;border-radius:3px;
+  background:rgba(255,255,255,.06);color:var(--tx3);
+  font-family:var(--f);font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;
+}
+
+/* ── Bottom Bar ──────────────────────────────────────────── */
+.bottombar{
+  height:45px;flex-shrink:0;
+  background:var(--sb-bg);border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+  padding:0 14px;font-size:.72rem;color:var(--tx3);z-index:200;
+}
+.bb-status{display:flex;align-items:center;gap:6px}
+.bb-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.bb-dot.idle{background:var(--tx3)}
+.bb-dot.thinking{background:var(--orange);animation:blink 1s ease infinite}
+.bb-dot.error{background:var(--red)}
+
+.bb-divider{width:1px;height:14px;background:var(--border2)}
+
+.zoom-wrap{display:flex;align-items:center;gap:3px;margin-left:auto}
+.z-btn{
+  width:22px;height:22px;border-radius:4px;
+  border:1px solid var(--border2);background:none;
+  cursor:pointer;color:var(--tx2);font-size:12px;
+  display:grid;place-items:center;transition:all .1s;
+}
+.z-btn:hover{background:rgba(255,255,255,.06);color:var(--tx)}
+.z-label{font-size:.7rem;color:var(--tx2);min-width:38px;text-align:center;font-family:var(--m)}
+
+/* ── Execution Log ───────────────────────────────────────── */
+.exec-log{
+  position:absolute;bottom:0;left:0;right:0;
+  height:210px;
+  background:var(--sb-bg);
+  border-top:1px solid var(--border);
+  display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform .22s ease;
+  z-index:60;
+}
+.exec-log.open{transform:none}
+.elh{
+  display:flex;align-items:center;gap:10px;
+  padding:0 14px;height:38px;
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.elh-title{font-size:.78rem;font-weight:600;display:flex;align-items:center;gap:7px}
+.elh-time{font-size:.68rem;color:var(--tx3);font-family:var(--m)}
+.elh-close{margin-left:auto;cursor:pointer;color:var(--tx3);font-size:17px;padding:3px;transition:color .1s}
+.elh-close:hover{color:var(--tx)}
+
+.el-body{
+  flex:1;overflow-y:auto;padding:8px 14px;
+  font-family:var(--m);font-size:.72rem;
+}
+.el-entry{
+  display:grid;
+  grid-template-columns:minmax(130px,160px) 28px 1fr;
+  gap:8px;padding:4px 0;
+  border-bottom:1px solid rgba(255,255,255,.025);
+  align-items:start;
+}
+.el-node{color:var(--blue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.el-status.ok{color:var(--green)}
+.el-status.err{color:var(--red)}
+.el-out{color:var(--tx2);white-space:pre-wrap;word-break:break-all;line-height:1.5}
+
+/* ── Canvas Empty State ──────────────────────────────────── */
+.canvas-empty{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  pointer-events:none;opacity:.35;
+}
+.canvas-empty-icon{font-size:56px;margin-bottom:16px}
+.canvas-empty-h{font-size:1rem;font-weight:600;color:var(--tx2)}
+.canvas-empty-sub{font-size:.78rem;color:var(--tx3);margin-top:6px}
+
+/* ── Context Menu ────────────────────────────────────────── */
+.ctx-menu{
+  position:fixed;z-index:9999;
+  background:var(--panel-bg);
+  border:1px solid var(--border2);border-radius:var(--r2);
+  overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.7);
+  min-width:160px;animation:pop .1s ease;
+}
+@keyframes pop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:none}}
+.ctx-item{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 14px;cursor:pointer;
+  font-size:.79rem;color:var(--tx2);transition:background .09s;
+}
+.ctx-item:hover{background:rgba(255,255,255,.06);color:var(--tx)}
+.ctx-item.danger{color:var(--red)}
+.ctx-item.danger:hover{background:var(--red-dim)}
+.ctx-sep{height:1px;background:var(--border);margin:4px 0}
+
+/* ── Toasts ──────────────────────────────────────────────── */
+.toast-wrap{
+  position:fixed;bottom:46px;right:18px;
+  z-index:9999;display:flex;flex-direction:column-reverse;
+  gap:6px;pointer-events:none;
+}
+.toast{
+  padding:10px 14px;border-radius:var(--r);
+  font-size:.79rem;display:flex;align-items:center;gap:8px;
+  pointer-events:auto;animation:slide-in .2s ease;
+  box-shadow:0 8px 28px rgba(0,0,0,.5);max-width:280px;
+}
+@keyframes slide-in{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+.toast.ok{background:#0f2a1c;border:1px solid rgba(34,201,124,.25);color:var(--green)}
+.toast.err{background:#2a0f0f;border:1px solid rgba(239,68,68,.25);color:#ff7070}
+.toast.info{background:var(--panel-bg);border:1px solid var(--border2);color:var(--tx)}
+
+/* ── Drag ghost ──────────────────────────────────────────── */
+.drag-ghost{
+  position:fixed;pointer-events:none;z-index:9999;
+  background:var(--node-bg);border:1.5px solid var(--orange);
+  border-radius:var(--r2);padding:8px 12px;opacity:.9;
+  display:flex;align-items:center;gap:8px;font-size:.79rem;
+  box-shadow:0 8px 28px rgba(0,0,0,.6);
+}
+
+/* ── Mini-map ────────────────────────────────────────────── */
+.minimap{
+  position:absolute;bottom:8px;right:8px;
+  width:150px;height:90px;
+  background:rgba(0,0,0,.5);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;z-index:50;
+  opacity:.7;transition:opacity .15s;
+}
+.minimap:hover{opacity:1}
+.minimap canvas{width:100%;height:100%}
+
+/* ── Sidebar toggle button ───────────────────────────────── */
+.sidebar-toggle{
+  width:20px;height:60px;
+  position:absolute;left:230px;top:50%;transform:translateY(-50%);
+  background:var(--sb-bg);border:1px solid var(--border);
+  border-left:none;border-radius:0 6px 6px 0;
+  display:grid;place-items:center;cursor:pointer;
+  color:var(--tx3);z-index:100;transition:all .2s;font-size:10px;
+}
+.sidebar-toggle:hover{color:var(--tx);background:rgba(255,255,255,.05)}
+.lsidebar.collapsed ~ .sidebar-toggle,.sidebar-toggle.collapsed{left:0;border-left:1px solid var(--border)}
+
+/* ── Provider pill ───────────────────────────────────────── */
+.provider-pill{
+  display:flex;align-items:center;gap:5px;
+  padding:3px 9px;border-radius:100px;
+  background:rgba(255,255,255,.05);border:1px solid var(--border2);
+  font-size:.7rem;font-weight:500;cursor:pointer;transition:all .12s;
+}
+.provider-pill:hover{border-color:var(--border3)}
+.pp-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+/* Tab underline fix for drag-over */
+.canvas-wrap.drag-over::before{opacity:.15}
+
+/* Connection label on hover */
+.conn-label{
+  position:absolute;pointer-events:none;
+  font-size:.65rem;color:var(--tx3);font-family:var(--m);
+  background:var(--panel-bg);padding:2px 5px;border-radius:3px;
+  border:1px solid var(--border);white-space:nowrap;z-index:40;
+}
+
+/* ── Select box ──────────────────────────────────────────── */
+.select-box{
+  position:absolute;border:1.5px solid var(--blue);
+  background:rgba(77,159,255,.06);border-radius:3px;
+  pointer-events:none;z-index:25;display:none;
+}
+
+/* ── Schedule Row ───────────────────────────────────────── */
+.sched-row{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:8px;
+  background:rgba(255,255,255,.03);border:1px solid var(--border);
+  margin-bottom:8px;
+}
+.sched-row:last-child{margin-bottom:0}
+.sched-name{flex:1;font-size:.85rem;font-weight:500;color:var(--tx)}
+.sched-info{font-size:.75rem;color:var(--tx2)}
+.sched-toggle{
+  display:flex;align-items:center;gap:7px;
+  padding:5px 12px;border-radius:6px;border:1px solid;
+  font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;
+  background:none;font-family:var(--f);
+}
+.sched-toggle.on {border-color:var(--green);color:var(--green)}
+.sched-toggle.off{border-color:var(--border2);color:var(--tx3)}
+.sched-toggle:hover.on {background:var(--green-dim)}
+.sched-toggle:hover.off{background:rgba(255,255,255,.04)}
+
+/* ── Settings Modal ─────────────────────────────────────── */
+.settings-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);
+  backdrop-filter:blur(4px);z-index:800;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.settings-overlay.open{opacity:1;pointer-events:all}
+
+.settings-modal{
+  position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-54%);
+  width:540px;max-height:84vh;
+  background:var(--panel-bg);
+  border:1px solid var(--border2);border-radius:12px;
+  z-index:801;display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s;overflow:hidden;
+}
+.settings-modal.open{
+  opacity:1;pointer-events:all;
+  transform:translate(-50%,-50%);
+}
+.sm-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  font-size:.84rem;font-weight:600;color:var(--tx);flex-shrink:0;
+}
+.sm-close{
+  background:none;border:none;color:var(--tx3);cursor:pointer;
+  font-size:13px;padding:3px 7px;border-radius:4px;transition:all .12s;
+}
+.sm-close:hover{color:var(--tx);background:rgba(255,255,255,.06)}
+
+.sm-body{
+  flex:1;overflow-y:auto;padding:14px 18px;
+  display:flex;flex-direction:column;gap:12px;
+}
+.sm-section{
+  background:rgba(255,255,255,.03);border:1px solid var(--border);
+  border-radius:var(--r2);padding:12px 14px;
+}
+.sm-section-title{
+  font-size:.65rem;font-weight:600;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--tx3);margin-bottom:10px;
+}
+.sm-active-row{display:flex;align-items:center;gap:10px}
+.sm-active-info{display:flex;align-items:center;gap:7px;font-size:.8rem;font-weight:600;color:var(--tx);min-width:110px}
+.sm-select-lg{
+  flex:1;background:var(--sb-bg);border:1px solid var(--border2);
+  color:var(--tx);border-radius:var(--r);padding:7px 10px;
+  font-size:.78rem;font-family:var(--f);cursor:pointer;
+}
+.sm-select-lg:focus{outline:none;border-color:var(--orange)}
+
+.sm-card{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;transition:border-color .15s}
+.sm-card.active{border-color:var(--orange);box-shadow:0 0 0 1px var(--orange-glow)}
+.sm-card-head{
+  display:flex;align-items:center;gap:9px;
+  padding:9px 14px;background:rgba(255,255,255,.025);
+  border-bottom:1px solid var(--border);
+}
+.sm-card-icon{font-size:.88rem}
+.sm-card-title{font-size:.79rem;font-weight:600;color:var(--tx);flex:1}
+.sm-card-badge{font-size:.63rem;padding:2px 8px;border-radius:100px;background:rgba(255,255,255,.07);color:var(--tx3)}
+.sm-card-badge.has-key{background:var(--green-dim);color:var(--green)}
+.sm-card-badge.is-active{background:var(--orange-glow);color:var(--orange);font-weight:600}
+
+.sm-card-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.sm-field{display:flex;flex-direction:column;gap:5px}
+.sm-label{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3)}
+.sm-input{
+  background:var(--sb-bg);border:1px solid var(--border2);
+  color:var(--tx);border-radius:var(--r);padding:7px 10px;
+  font-size:.78rem;font-family:var(--m);width:100%;transition:border-color .12s;
+}
+.sm-input:focus{outline:none;border-color:var(--orange)}
+.sm-key-wrap{position:relative}
+.sm-key-wrap .sm-input{padding-right:38px}
+.sm-eye{
+  position:absolute;right:7px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;
+  color:var(--tx3);font-size:.78rem;padding:2px 5px;
+  transition:color .12s;line-height:1;
+}
+.sm-eye:hover{color:var(--tx)}
+.sm-select{
+  background:var(--sb-bg);border:1px solid var(--border2);
+  color:var(--tx);border-radius:var(--r);padding:7px 10px;
+  font-size:.78rem;font-family:var(--f);width:100%;cursor:pointer;
+}
+.sm-select:focus{outline:none;border-color:var(--orange)}
+
+.sm-ollama-row{display:flex;gap:8px;align-items:flex-start}
+.sm-ollama-row .sm-select{flex:1}
+.sm-refresh-btn{
+  background:rgba(255,255,255,.06);border:1px solid var(--border2);
+  color:var(--tx2);border-radius:var(--r);padding:7px 11px;
+  font-size:.71rem;cursor:pointer;white-space:nowrap;transition:all .12s;flex-shrink:0;
+}
+.sm-refresh-btn:hover{background:rgba(255,255,255,.1);color:var(--tx)}
+
+.sm-hint{font-size:.68rem;color:var(--tx3);margin-top:3px;line-height:1.5}
+
+.sm-foot{
+  padding:12px 18px;border-top:1px solid var(--border);flex-shrink:0;
+  display:flex;justify-content:flex-end;gap:8px;
+}
+.sm-btn-cancel{
+  background:rgba(255,255,255,.05);border:1px solid var(--border2);
+  color:var(--tx2);border-radius:var(--r);padding:8px 14px;
+  font-size:.8rem;font-family:var(--f);cursor:pointer;transition:all .12s;
+}
+.sm-btn-cancel:hover{color:var(--tx);background:rgba(255,255,255,.08)}
+.sm-btn-save{
+  background:var(--orange);border:none;color:#fff;
+  border-radius:var(--r);padding:8px 18px;
+  font-size:.8rem;font-weight:600;font-family:var(--f);
+  cursor:pointer;transition:background .12s;
+}
+.sm-btn-save:hover{background:var(--orange2)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ══ TOPBAR ══ -->
+  <div class="topbar">
+    <div class="tb-logo">
+      <div class="tb-logo-mark">⚡</div>
+      <div class="tb-logo-text"><em>Ilija</em> Studio</div>
+    </div>
+
+    <!-- Page navigation -->
+    <div style="display:flex;gap:2px;margin-right:6px">
+      <button style="padding:4px 10px;border-radius:5px;border:none;background:var(--orange-glow);color:var(--orange);font-size:.74rem;font-weight:600;font-family:var(--f);cursor:default">⚡ Workflow</button>
+      <button onclick="location.href='/chat'" style="padding:4px 10px;border-radius:5px;border:none;background:none;color:var(--tx2);font-size:.74rem;font-family:var(--f);cursor:pointer;transition:all .12s" onmouseover="this.style.background='rgba(255,255,255,.06)';this.style.color='var(--tx)'" onmouseout="this.style.background='none';this.style.color='var(--tx2)'">💬 Chat</button>
+      <button onclick="location.href='/dms'" style="padding:4px 10px;border-radius:5px;border:none;background:none;color:var(--tx2);font-size:.74rem;font-family:var(--f);cursor:pointer;transition:all .12s" onmouseover="this.style.background='rgba(255,255,255,.06)';this.style.color='var(--tx)'" onmouseout="this.style.background='none';this.style.color='var(--tx2)'">🗂 DMS</button>
+      <button onclick="location.href='/local_calendar'" style="padding:4px 10px;border-radius:5px;border:none;background:none;color:var(--tx2);font-size:.74rem;font-family:var(--f);cursor:pointer;transition:all .12s" onmouseover="this.style.background='rgba(255,255,255,.06)';this.style.color='var(--tx)'" onmouseout="this.style.background='none';this.style.color='var(--tx2)'">📅 Kalender</button>
+    </div>
+
+    <!-- Workflow name -->
+    <div class="tb-wf">
+      <input id="wf-name-input" class="tb-wf-input" value="Neuer Workflow" spellcheck="false">
+      <span id="wf-badge" class="tb-badge badge-inactive">Inaktiv</span>
+    </div>
+
+    <div class="tb-sep"></div>
+
+    <!-- Center actions -->
+    <button class="tb-btn tb-btn-ghost" onclick="newWorkflow()" title="Neuer Workflow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      Neu
+    </button>
+    <button class="tb-btn tb-btn-ghost" onclick="saveWorkflow()" title="Strg+S">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Speichern
+    </button>
+    <button class="tb-btn tb-btn-ghost" onclick="importWorkflow()" title="Importieren">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Import
+    </button>
+    <button class="tb-btn tb-btn-ghost" onclick="exportWorkflow()" title="Exportieren">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Export
+    </button>
+
+    <div class="tb-gap"></div>
+
+    <!-- Schedules overview button -->
+    <button class="tb-btn tb-btn-ghost" onclick="openSchedules()" title="Alle Zeitpläne verwalten" id="schedules-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Zeitpläne
+      <span id="schedules-badge" style="display:none;background:var(--green);color:#000;font-size:.65rem;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:2px">0</span>
+    </button>
+
+    <div class="tb-sep"></div>
+
+    <!-- Provider -->
+    <div class="provider-pill" onclick="openSettings()" title="Modell & Provider wählen">
+      <span class="pp-dot" id="pp-dot"></span>
+      <span id="provider-label">Bereit</span>
+    </div>
+
+    <div class="tb-sep"></div>
+
+    <!-- Run button -->
+    <button id="run-btn" class="tb-btn tb-btn-primary" onclick="executeWorkflow()">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Ausführen
+    </button>
+  </div>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main">
+
+    <!-- Left sidebar -->
+    <div class="lsidebar" id="lsidebar">
+      <div class="ls-tabs">
+        <div class="ls-tab active" data-tab="nodes" onclick="switchTab('nodes')">Nodes</div>
+        <div class="ls-tab" data-tab="flows" onclick="switchTab('flows')">Flows</div>
+        <div class="ls-tab" data-tab="log" onclick="switchTab('log')">Log</div>
+      </div>
+
+      <!-- Nodes Panel -->
+      <div class="ls-panel active" id="tab-nodes">
+        <div class="ls-search">
+          <div class="ls-search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input placeholder="Nodes suchen…" oninput="buildNodeLibrary(this.value)" id="node-search">
+          </div>
+        </div>
+        <div id="node-library" style="flex:1;overflow-y:auto"></div>
+        <button class="ls-appstore-btn" onclick="openAppStore('add')">🛒 Skill App Store</button>
+      </div>
+
+      <!-- Flows Panel -->
+      <div class="ls-panel" id="tab-flows">
+        <button class="ls-add-btn" onclick="newWorkflow()">＋ Neuer Workflow</button>
+        <div id="wf-list" style="flex:1;overflow-y:auto"></div>
+      </div>
+
+      <!-- Log Panel -->
+      <div class="ls-panel" id="tab-log">
+        <div class="ls-search" style="border-bottom:none;padding-bottom:6px">
+          <span style="font-size:.7rem;color:var(--tx3)">Letzte Ausführungen</span>
+        </div>
+        <div id="run-history" style="flex:1;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-wrap" id="canvas-wrap"
+         ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+
+      <div id="canvas">
+        <!-- SVG connections layer -->
+        <svg id="svg-layer" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="var(--orange)" opacity=".8"/>
+            </marker>
+            <marker id="arr-dim" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,.18)"/>
+            </marker>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="2" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <g id="connections-layer"></g>
+          <path id="conn-preview" fill="none" stroke="var(--orange)" stroke-width="2"
+                stroke-dasharray="6 4" opacity=".7" d=""/>
+        </svg>
+        <!-- Nodes layer -->
+        <div id="nodes-layer"></div>
+        <!-- Selection box -->
+        <div class="select-box" id="select-box"></div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="canvas-empty" id="canvas-empty">
+        <div class="canvas-empty-icon">🧩</div>
+        <div class="canvas-empty-h">Workflow ist leer</div>
+        <div class="canvas-empty-sub">Nodes aus der Sidebar ziehen oder Doppelklick</div>
+      </div>
+
+      <!-- Execution log panel -->
+      <div class="exec-log" id="exec-log">
+        <div class="elh">
+          <div class="elh-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Ausführungsprotokoll
+          </div>
+          <span class="elh-time" id="exec-log-time"></span>
+          <span class="elh-close" onclick="closeExecLog()">✕</span>
+        </div>
+        <div class="el-body" id="exec-log-body"></div>
+      </div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="rpanel" id="rpanel">
+      <div class="rp-head">
+        <div id="rp-icon" class="rp-icon">⚡</div>
+        <div class="rp-title-wrap">
+          <div id="rp-name" class="rp-name">Node</div>
+          <span id="rp-type-tag" class="rp-type-tag"></span>
+        </div>
+        <button class="rp-close" onclick="closePanel()">✕</button>
+      </div>
+      <div class="rp-body" id="rp-body"></div>
+    </div>
+
+  </div><!-- .main -->
+
+  <!-- ══ BOTTOMBAR ══ -->
+  <div class="bottombar">
+    <div class="bb-status">
+      <div class="bb-dot idle" id="status-dot"></div>
+      <span id="status-text">Bereit</span>
+    </div>
+    <div class="bb-divider"></div>
+    <span id="node-count">0 Nodes</span>
+    <span id="conn-count">0 Verbindungen</span>
+
+    <div class="bb-divider"></div>
+    <span style="font-size:.7rem;color:var(--tx3)">Strg+S: Speichern · Doppelklick: Chat-Node · Entf: Node löschen</span>
+
+    <!-- Zoom -->
+    <div class="zoom-wrap">
+      <button class="z-btn" onclick="zoom(-0.15)" title="Verkleinern">−</button>
+      <span class="z-label" id="zoom-pct">100%</span>
+      <button class="z-btn" onclick="zoom(+0.15)" title="Vergrößern">+</button>
+      <button class="z-btn" onclick="resetView()" title="Ansicht zurücksetzen" style="font-size:9px">⊞</button>
+      <button class="z-btn" onclick="fitView()" title="Alles anzeigen" style="font-size:9px">◻</button>
+    </div>
+  </div>
+
+</div><!-- .app -->
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- Hidden file input for import -->
+<input type="file" id="import-input" accept=".json" style="display:none" onchange="handleImportFile(event)">
+
+<!-- ══ SCHEDULES MODAL ══ -->
+<div class="settings-overlay" id="schedules-overlay" onclick="closeSchedules()"></div>
+<div class="settings-modal" id="schedules-modal" style="width:min(560px,96vw)">
+  <div class="sm-head">
+    <div style="display:flex;align-items:center;gap:8px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Zeitpläne verwalten
+    </div>
+    <button class="sm-close" onclick="closeSchedules()">✕</button>
+  </div>
+  <div class="sm-body" id="schedules-body" style="padding:16px;min-height:80px">
+    <div style="color:var(--tx2);font-size:.85rem">Lädt…</div>
+  </div>
+</div>
+
+<!-- ══ SETTINGS MODAL ══ -->
+<div class="settings-overlay" id="settings-overlay" onclick="closeSettings()"></div>
+<div class="settings-modal" id="settings-modal">
+
+  <div class="sm-head">
+    <div style="display:flex;align-items:center;gap:8px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+      </svg>
+      Modell &amp; Provider
+    </div>
+    <button class="sm-close" onclick="closeSettings()">✕</button>
+  </div>
+
+  <div class="sm-body">
+
+    <!-- Aktiver Provider -->
+    <div class="sm-section">
+      <div class="sm-section-title">Standard-Provider</div>
+      <div class="sm-active-row">
+        <div class="sm-active-info">
+          <span class="pp-dot" id="sm-active-dot" style="background:var(--tx3)"></span>
+          <span id="sm-active-name" style="color:var(--tx2)">Lädt…</span>
+        </div>
+        <select class="sm-select-lg" id="sm-provider-select">
+          <option value="auto">Automatisch (beste verfügbare Option)</option>
+          <option value="claude">Claude (Anthropic)</option>
+          <option value="openai">ChatGPT (OpenAI)</option>
+          <option value="gemini">Gemini (Google)</option>
+          <option value="ollama">Ollama (lokal)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Anthropic Claude -->
+    <div class="sm-card" id="sm-card-claude">
+      <div class="sm-card-head">
+        <span class="sm-card-icon">🟠</span>
+        <span class="sm-card-title">Anthropic Claude</span>
+        <span class="sm-card-badge" id="sm-badge-claude">Kein Key</span>
+      </div>
+      <div class="sm-card-body">
+        <div class="sm-field">
+          <label class="sm-label">API-Schlüssel</label>
+          <div class="sm-key-wrap">
+            <input class="sm-input" type="password" id="key-anthropic" placeholder="sk-ant-api03-…" autocomplete="off">
+            <button class="sm-eye" onclick="toggleKey('key-anthropic')" title="Anzeigen">👁</button>
+          </div>
+          <div class="sm-hint">anthropic.com → API Keys</div>
+        </div>
+        <div class="sm-field">
+          <label class="sm-label">Modell</label>
+          <select class="sm-select" id="model-claude">
+            <option value="claude-opus-4-6">claude-opus-4-6 (Stärkste)</option>
+            <option value="claude-sonnet-4-6">claude-sonnet-4-6 (Schnell)</option>
+            <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 (Günstig)</option>
+            <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet (Bewährt)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- OpenAI ChatGPT -->
+    <div class="sm-card" id="sm-card-openai">
+      <div class="sm-card-head">
+        <span class="sm-card-icon">🟢</span>
+        <span class="sm-card-title">OpenAI ChatGPT</span>
+        <span class="sm-card-badge" id="sm-badge-openai">Kein Key</span>
+      </div>
+      <div class="sm-card-body">
+        <div class="sm-field">
+          <label class="sm-label">API-Schlüssel</label>
+          <div class="sm-key-wrap">
+            <input class="sm-input" type="password" id="key-openai" placeholder="sk-…" autocomplete="off">
+            <button class="sm-eye" onclick="toggleKey('key-openai')" title="Anzeigen">👁</button>
+          </div>
+          <div class="sm-hint">platform.openai.com → API keys</div>
+        </div>
+        <div class="sm-field">
+          <label class="sm-label">Modell</label>
+          <select class="sm-select" id="model-openai">
+            <option value="gpt-4o">gpt-4o (Stärkste)</option>
+            <option value="gpt-4o-mini">gpt-4o-mini (Schnell &amp; günstig)</option>
+            <option value="gpt-4-turbo">gpt-4-turbo</option>
+            <option value="gpt-3.5-turbo">gpt-3.5-turbo (Günstigste)</option>
+            <option value="o1-preview">o1-preview (Reasoning)</option>
+            <option value="o1-mini">o1-mini (Reasoning, günstig)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Google Gemini -->
+    <div class="sm-card" id="sm-card-gemini">
+      <div class="sm-card-head">
+        <span class="sm-card-icon">🔵</span>
+        <span class="sm-card-title">Google Gemini</span>
+        <span class="sm-card-badge" id="sm-badge-gemini">Kein Key</span>
+      </div>
+      <div class="sm-card-body">
+        <div class="sm-field">
+          <label class="sm-label">API-Schlüssel</label>
+          <div class="sm-key-wrap">
+            <input class="sm-input" type="password" id="key-gemini" placeholder="AIza…" autocomplete="off">
+            <button class="sm-eye" onclick="toggleKey('key-gemini')" title="Anzeigen">👁</button>
+          </div>
+          <div class="sm-hint">aistudio.google.com → Get API key</div>
+        </div>
+        <div class="sm-field">
+          <label class="sm-label">Modell</label>
+          <select class="sm-select" id="model-gemini">
+            <option value="gemini-2.5-flash">gemini-2.5-flash (Schnell)</option>
+            <option value="gemini-2.5-pro">gemini-2.5-pro (Stärker)</option>
+            <option value="gemini-1.5-pro">gemini-1.5-pro (Stabil)</option>
+            <option value="gemini-1.5-flash">gemini-1.5-flash (Günstig)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ollama lokal -->
+    <div class="sm-card" id="sm-card-ollama">
+      <div class="sm-card-head">
+        <span class="sm-card-icon">🦙</span>
+        <span class="sm-card-title">Ollama (lokal, kein API-Key)</span>
+        <span class="sm-card-badge" id="sm-badge-ollama">—</span>
+      </div>
+      <div class="sm-card-body">
+        <div class="sm-field">
+          <label class="sm-label">Modell</label>
+          <div class="sm-ollama-row">
+            <select class="sm-select" id="model-ollama"></select>
+            <button class="sm-refresh-btn" onclick="loadOllamaModels(true)">🔄 Laden</button>
+          </div>
+          <div class="sm-hint" id="sm-ollama-hint">
+            Ollama muss lokal laufen. Modelle mit
+            <code style="font-family:var(--m);background:rgba(255,255,255,.08);padding:1px 4px;border-radius:3px">ollama pull modellname</code>
+            installieren.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .sm-body -->
+
+  <div class="sm-foot">
+    <button class="sm-btn-cancel" onclick="closeSettings()">Abbrechen</button>
+    <button class="sm-btn-save" onclick="saveSettingsModal()">💾 Speichern &amp; Aktivieren</button>
+  </div>
+
+</div><!-- .settings-modal -->
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   ILIJA WORKFLOW STUDIO v2 — JavaScript Engine
+   ══════════════════════════════════════════════════════════ */
+
+// ── Node type registry ────────────────────────────────────
+const NODE_TYPES = {
+  trigger: {
+    label:'Manual Trigger', icon:'⚡',
+    color:'var(--orange)', bg:'rgba(255,109,58,.14)',
+    hasIn:false, hasOut:true,
+    desc:'Startet den Workflow manuell',
+    accentColor:'#ff6d3a',
+  },
+  chat: {
+    label:'Ilija Chat', icon:'💬',
+    color:'var(--purple)', bg:'rgba(168,85,247,.14)',
+    hasIn:true, hasOut:true,
+    desc:'KI-Nachricht senden',
+    accentColor:'#a855f7',
+  },
+  skill: {
+    label:'Skill', icon:'🔧',
+    color:'var(--blue)', bg:'rgba(77,159,255,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Skill direkt ausführen',
+    accentColor:'#4d9fff',
+  },
+  set: {
+    label:'Daten setzen', icon:'📝',
+    color:'var(--teal)', bg:'rgba(20,184,166,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Variablen & Konstanten',
+    accentColor:'#14b8a6',
+  },
+  condition: {
+    label:'Bedingung', icon:'🔀',
+    color:'var(--yellow)', bg:'rgba(245,158,11,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Wenn/Dann Verzweigung',
+    accentColor:'#f59e0b',
+  },
+  note: {
+    label:'Notiz', icon:'💡',
+    color:'var(--yellow)', bg:'rgba(245,158,11,.14)',
+    hasIn:false, hasOut:false,
+    desc:'Kommentar/Dokumentation',
+    accentColor:'#f59e0b',
+  },
+  http: {
+    label:'HTTP Request', icon:'🌐',
+    color:'var(--teal)', bg:'rgba(20,184,166,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Externe API aufrufen',
+    accentColor:'#14b8a6',
+  },
+  email: {
+    label:'E-Mail', icon:'📧',
+    color:'#ef4444', bg:'rgba(239,68,68,.14)',
+    hasIn:true, hasOut:true,
+    desc:'E-Mails lesen, senden & beantworten',
+    accentColor:'#ef4444',
+  },
+  telegram: {
+    label:'Telegram', icon:'✈️',
+    color:'#29b6f6', bg:'rgba(41,182,246,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Nachrichten senden & empfangen',
+    accentColor:'#29b6f6',
+  },
+  memory_window: {
+    label:'Window Memory', icon:'🧠',
+    color:'#14b8a6', bg:'rgba(20,184,166,.14)',
+    hasIn:false, hasOut:true,
+    desc:'Letzten N Interaktionen merken',
+    accentColor:'#14b8a6',
+  },
+  memory_summary: {
+    label:'Summary Memory', icon:'📋',
+    color:'var(--purple)', bg:'rgba(168,85,247,.14)',
+    hasIn:false, hasOut:true,
+    desc:'Rollende KI-Zusammenfassung',
+    accentColor:'#a855f7',
+  },
+  google_kalender: {
+    label:'Google Kalender', icon:'📅',
+    color:'#34a853', bg:'rgba(52,168,83,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Termine lesen, eintragen & löschen',
+    accentColor:'#34a853',
+  },
+  gmail: {
+    label:'Gmail', icon:'✉️',
+    color:'#ea4335', bg:'rgba(234,67,53,.14)',
+    hasIn:true, hasOut:true,
+    desc:'E-Mails lesen, senden & suchen',
+    accentColor:'#ea4335',
+  },
+  google_docs: {
+    label:'Google Docs', icon:'📄',
+    color:'#4285f4', bg:'rgba(66,133,244,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Dokumente lesen, schreiben & erstellen',
+    accentColor:'#4285f4',
+  },
+  google_sheets: {
+    label:'Google Sheets', icon:'📊',
+    color:'#0f9d58', bg:'rgba(15,157,88,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Tabellen lesen, Zeilen anhängen & Zellen schreiben',
+    accentColor:'#0f9d58',
+  },
+  google_drive: {
+    label:'Google Drive', icon:'💾',
+    color:'#fbbc04', bg:'rgba(251,188,4,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Dateien auflisten, Docs lesen & hochladen',
+    accentColor:'#fbbc04',
+  },
+  google_forms: {
+    label:'Google Forms', icon:'📋',
+    color:'#7248b9', bg:'rgba(114,72,185,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Formular-Antworten lesen & verarbeiten',
+    accentColor:'#7248b9',
+  },
+  // ── Automatisierung ──────────────────────────────────────────────
+  schedule_trigger: {
+    label:'Zeitplan Trigger', icon:'⏰',
+    color:'var(--orange)', bg:'rgba(255,109,58,.14)',
+    hasIn:false, hasOut:true,
+    desc:'Workflow automatisch zeitgesteuert starten',
+    accentColor:'#ff6d3a',
+  },
+  webhook: {
+    label:'Webhook Trigger', icon:'🔗',
+    color:'var(--teal)', bg:'rgba(20,184,166,.14)',
+    hasIn:false, hasOut:true,
+    desc:'Externe HTTP-Anfragen empfangen',
+    accentColor:'#14b8a6',
+  },
+  rss: {
+    label:'RSS Feed', icon:'📡',
+    color:'#f97316', bg:'rgba(249,115,22,.14)',
+    hasIn:false, hasOut:true,
+    desc:'RSS/Atom-Feeds lesen & überwachen',
+    accentColor:'#f97316',
+  },
+  // ── Logik & Fluss ─────────────────────────────────────────────────
+  loop: {
+    label:'Schleife', icon:'🔁',
+    color:'var(--blue)', bg:'rgba(77,159,255,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Über eine Liste iterieren (forEach)',
+    accentColor:'#4d9fff',
+  },
+  switch: {
+    label:'Switch', icon:'🔀',
+    color:'var(--yellow)', bg:'rgba(245,158,11,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Mehrstufige Bedingungen & Routing',
+    accentColor:'#f59e0b',
+  },
+  wait: {
+    label:'Warten', icon:'⏱️',
+    color:'#7878a0', bg:'rgba(120,120,160,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Pause einbauen (Sekunden)',
+    accentColor:'#7878a0',
+  },
+  sub_workflow: {
+    label:'Sub-Workflow', icon:'▶',
+    color:'var(--green)', bg:'rgba(34,201,124,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Anderen Workflow aufrufen',
+    accentColor:'#22c97c',
+  },
+  // ── Fehler ────────────────────────────────────────────────────────
+  error_handler: {
+    label:'Fehler-Handler', icon:'🚨',
+    color:'var(--red)', bg:'rgba(239,68,68,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Fehler abfangen, melden & Workflow steuern',
+    accentColor:'#ef4444',
+  },
+  // ── Code ──────────────────────────────────────────────────────────
+  code: {
+    label:'Code', icon:'💻',
+    color:'var(--purple)', bg:'rgba(168,85,247,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Python-Code direkt ausführen (voller Systemzugriff — nur eigenen Code verwenden!)',
+    accentColor:'#a855f7',
+  },
+  // ── Kommunikation ─────────────────────────────────────────────────
+  whatsapp: {
+    label:'WhatsApp', icon:'💬',
+    color:'#25D366', bg:'rgba(37,211,102,.14)',
+    hasIn:true, hasOut:true,
+    desc:'WhatsApp Business API — Nachrichten senden',
+    accentColor:'#25D366',
+  },
+  chatfilter: {
+    label:'Chat-Filter', icon:'🔍',
+    color:'#f97316', bg:'rgba(249,115,22,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Stoppt Workflow wenn keine echten Nachrichten vorhanden',
+    accentColor:'#f97316',
+  },
+};
+
+// ── Global state ──────────────────────────────────────────
+const state = {
+  nodes:        {},
+  connections:  {},
+  selected:     null,
+  viewport:     {x:100, y:80, scale:1},
+  isPanning:    false,
+  panStart:     {mx:0,my:0,vx:0,vy:0},
+  isDragging:   false,
+  dragNode:     null,
+  dragOffset:   {x:0,y:0},
+  isConnecting: false,
+  connStart:    null,
+  workflowId:   null,
+  workflowName: 'Neuer Workflow',
+  skills:       [],
+  skillsByFile: {},
+  execResults:  {},
+  runHistory:   [],
+  // multi-select
+  multiSelect:  [],
+  isBoxSelecting: false,
+  boxStart:     {x:0,y:0},
+};
+
+// ── Init ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await Promise.all([loadSkills(), loadStatus()]);
+  buildNodeLibrary();
+  loadWorkflowList();
+  setupCanvasEvents();
+  updateFooter();
+  refreshSchedulesBadge();
+
+  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('click', () => {
+    document.querySelector('.ctx-menu')?.remove();
+  });
+
+  setTimeout(() => {
+    if (!Object.keys(state.nodes).length) addNode('trigger', 100, 120);
+  }, 250);
+});
+
+// ── API ───────────────────────────────────────────────────
+async function api(path, opts={}) {
+  try {
+    const r = await fetch(path, {
+      headers:{'Content-Type':'application/json'}, ...opts
+    });
+    return r.ok ? r.json() : null;
+  } catch { return null; }
+}
+
+async function loadSkills() {
+  const skills = await api('/api/skills');
+  if (!skills) return;
+  state.skills = skills;
+  const byFile = {};
+  skills.forEach(s => {
+    const f = s.file || 'Sonstige';
+    (byFile[f] = byFile[f] || []).push(s);
+  });
+  state.skillsByFile = byFile;
+}
+
+async function loadStatus() {
+  const st = await api('/api/status');
+  if (!st) return;
+  setStatus(st.status || 'idle', st.current_task || 'Bereit');
+  if (st.active_provider) {
+    document.getElementById('provider-label').textContent = st.active_provider;
+    document.getElementById('pp-dot').style.background = 'var(--green)';
+  }
+}
+
+// ── Node Library builder ──────────────────────────────────
+function buildNodeLibrary(filter='') {
+  const lib = document.getElementById('node-library');
+  lib.innerHTML = '';
+  const fl = filter.toLowerCase();
+
+  const coreEntries = Object.entries(NODE_TYPES).filter(([k,v]) =>
+    !fl || v.label.toLowerCase().includes(fl) || v.desc.toLowerCase().includes(fl)
+  );
+
+  if (coreEntries.length) {
+    lib.appendChild(mkSectionHead('Kern-Nodes'));
+    coreEntries.forEach(([type, def]) => {
+      lib.appendChild(mkNodeItem(def.icon, def.label, def.desc, def.bg, {type}));
+    });
+  }
+
+  if (!lib.children.length) {
+    lib.innerHTML = '<div class="ls-empty">Keine Nodes gefunden</div>';
+  }
+}
+
+function mkSectionHead(txt) {
+  const el = document.createElement('div');
+  el.className = 'ls-section-head';
+  el.textContent = txt;
+  return el;
+}
+
+function mkNodeItem(icon, label, desc, bg, dragData) {
+  const el = document.createElement('div');
+  el.className = 'node-item';
+  el.draggable = true;
+  el.innerHTML = `
+    <div class="ni-icon" style="background:${bg}">${icon}</div>
+    <div class="ni-info">
+      <div class="ni-name">${esc(label)}</div>
+      <div class="ni-desc">${esc((desc||'').substring(0,42))}</div>
+    </div>
+  `;
+  el.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+    e.dataTransfer.effectAllowed = 'copy';
+
+    // Create drag ghost
+    const ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.innerHTML = `<span>${icon}</span> ${esc(label)}`;
+    ghost.style.cssText = 'position:fixed;top:-100px;left:-100px';
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, 0, 0);
+    setTimeout(() => ghost.remove(), 0);
+  });
+  return el;
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.ls-tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
+  document.querySelectorAll('.ls-panel').forEach(p => p.classList.toggle('active', p.id===`tab-${tab}`));
+  if (tab==='flows') loadWorkflowList();
+  if (tab==='log') renderRunHistory();
+}
+
+// ── Canvas drag & drop ────────────────────────────────────
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  document.getElementById('canvas-wrap').classList.add('drag-over');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('canvas-wrap').classList.remove('drag-over');
+  try {
+    const data = JSON.parse(e.dataTransfer.getData('application/json'));
+    const wrap = document.getElementById('canvas-wrap').getBoundingClientRect();
+    const x = (e.clientX - wrap.left - state.viewport.x) / state.viewport.scale;
+    const y = (e.clientY - wrap.top  - state.viewport.y) / state.viewport.scale;
+    addNode(data.type || 'skill', x - 95, y - 30, data);
+  } catch {}
+}
+
+// ── Node CRUD ─────────────────────────────────────────────
+function genId(p='n') { return p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+function addNode(type, x, y, extra={}) {
+  const id  = genId();
+  const def = NODE_TYPES[type] || NODE_TYPES.skill;
+  const node = {
+    id, type,
+    x: Math.round(x), y: Math.round(y),
+    name: extra.skillName || def.label,
+    config: {},
+  };
+  if (type==='skill' && extra.skillName) node.config.skill = extra.skillName;
+  state.nodes[id] = node;
+  renderNode(id);
+  updateFooter();
+  selectNode(id);
+  return id;
+}
+
+function renderNode(id) {
+  const node = state.nodes[id];
+  const def  = NODE_TYPES[node.type] || NODE_TYPES.skill;
+
+  document.getElementById(`node-${id}`)?.remove();
+
+  const el = document.createElement('div');
+  el.className = 'wf-node';
+  el.id = `node-${id}`;
+  el.style.cssText = `left:${node.x}px;top:${node.y}px`;
+
+  el.innerHTML = `
+    <div class="node-accent" style="background:${def.accentColor}"></div>
+    <div class="node-head" id="head-${id}">
+      <div class="node-head-icon" style="background:${def.bg}">${def.icon}</div>
+      <div class="node-head-name">${esc(node.name)}</div>
+      <div class="node-spinner" id="spin-${id}"></div>
+      <div class="node-head-actions">
+        <div class="nha-btn" onclick="duplicateNode('${id}')" title="Duplizieren">⧉</div>
+        <div class="nha-btn nha-del" onclick="deleteNode('${id}')" title="Löschen">✕</div>
+      </div>
+    </div>
+    <div class="node-divider"></div>
+    <div class="node-body" id="body-${id}">${buildNodeBodyHtml(node)}</div>
+    <div class="node-result" id="result-${id}"></div>
+    ${def.hasIn  ? `<div class="port in"  id="port-in-${id}"  data-node="${id}" data-dir="in"></div>`  : ''}
+    ${def.hasOut ? `<div class="port out" id="port-out-${id}" data-node="${id}" data-dir="out"></div>` : ''}
+  `;
+
+  // Events
+  el.querySelector('.node-head').addEventListener('mousedown', e => startDragNode(e, id));
+  el.addEventListener('click', e => { if (!state.isDragging) selectNode(id); });
+  el.addEventListener('contextmenu', e => showNodeCtx(e, id));
+  el.querySelectorAll('.port').forEach(p => {
+    p.addEventListener('mousedown', e => { e.stopPropagation(); startConnecting(e, p); });
+    p.addEventListener('mouseup',   e => { e.stopPropagation(); finishConnecting(p); });
+  });
+
+  document.getElementById('nodes-layer').appendChild(el);
+  applyViewport();
+}
+
+function buildNodeBodyHtml(node) {
+  switch (node.type) {
+    case 'skill':
+      return node.config.skill
+        ? `<div class="node-body-skill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>${esc(node.config.skill)}</div>`
+        : `<div class="node-body-empty">Skill auswählen…</div>`;
+    case 'chat':
+      const msg = node.config.message || '';
+      return msg
+        ? `<div class="node-body-chat">${esc(msg.substring(0,44))}${msg.length>44?'…':''}</div>`
+        : `<div class="node-body-empty">Nachricht eingeben…</div>`;
+    case 'trigger':
+      return `<div class="node-body-empty" style="color:var(--orange);font-style:normal;font-size:.72rem">▶ Manueller Start</div>`;
+    case 'note':
+      const t = node.config.text||'';
+      return t ? `<div class="node-body-chat">${esc(t.substring(0,60))}</div>` : `<div class="node-body-empty">Notiz schreiben…</div>`;
+    case 'set':
+      return `<div class="node-body-empty">${node.config.value ? esc(node.config.value.substring(0,40)) : 'Wert setzen…'}</div>`;
+    case 'condition':
+      return `<div class="node-body-empty">${node.config.condition ? esc(node.config.condition.substring(0,36)) : 'Bedingung eingeben…'}</div>`;
+    case 'http':
+      return `<div class="node-body-skill">${esc(node.config.method||'GET')} ${esc((node.config.url||'').substring(0,28))}</div>`;
+    case 'email': {
+      const emOp  = node.config.operation || 'read';
+      const emLbl = emOp === 'read' ? '📥 Lesen' : emOp === 'send' ? '📤 Senden' : '↩️ Antworten';
+      const emAcc = node.config.email_adresse || node.config.provider || 'nicht konfiguriert';
+      return `<div class="node-body-skill">${emLbl} · ${esc(emAcc)}</div>`;
+    }
+    case 'telegram': {
+      const tgOp = node.config.operation || 'send';
+      const tgLbl = tgOp === 'read' ? '📥 Lesen' : '📤 Senden';
+      const tgTarget = node.config.chat_id ? esc(node.config.chat_id) : 'gespeicherte ID';
+      return `<div class="node-body-skill">${tgLbl} · ${tgTarget}</div>`;
+    }
+    case 'chatfilter': {
+      const cfM = node.config.modus || 'intelligent';
+      return `<div class="node-body-skill">${cfM === 'intelligent' ? '🧠 Intelligent' : '⚡ Einfach'} · stoppt wenn kein User-Input</div>`;
+    }
+    case 'memory_window':
+      return `<div class="node-body-skill">🧠 ${esc(node.config.memory_key||'default')} · letzte ${node.config.window_size||10}</div>`;
+    case 'memory_summary':
+      return `<div class="node-body-skill">📋 ${esc(node.config.memory_key||'default')} · Zusammenfassung</div>`;
+    case 'google_kalender': {
+      const gkOp  = node.config.operation || 'slots_lesen';
+      const gkLbl = gkOp === 'slots_lesen' ? '🔍 Freie Slots' : gkOp === 'termin_eintragen' ? '➕ Eintragen' : '🗑️ Löschen';
+      const gkInfo = node.config.datum || '{{input}}';
+      return `<div class="node-body-skill">${gkLbl} · ${esc(gkInfo)}</div>`;
+    }
+    case 'gmail': {
+      const gmOp  = node.config.operation || 'read';
+      const gmLbl = gmOp === 'read' ? '📬 Lesen' : gmOp === 'send' ? '📤 Senden' : '🔍 Suchen';
+      const gmInfo = gmOp === 'send' ? (node.config.an||'{{input}}') : (node.config.query||'Posteingang');
+      return `<div class="node-body-skill">${gmLbl} · ${esc(gmInfo)}</div>`;
+    }
+    case 'google_docs': {
+      const gdOp  = node.config.operation || 'lesen';
+      const gdLbl = gdOp === 'lesen' ? '📖 Lesen' : gdOp === 'anhaengen' ? '✏️ Anhängen' : '➕ Erstellen';
+      const gdInfo = gdOp === 'erstellen' ? (node.config.titel||'Neues Dokument') : (node.config.dokument_url||'URL eingeben');
+      return `<div class="node-body-skill">${gdLbl} · ${esc(gdInfo)}</div>`;
+    }
+    case 'google_sheets': {
+      const gsOp  = node.config.operation || 'bereich_lesen';
+      const gsLbl = gsOp === 'bereich_lesen' ? '📖 Lesen' : gsOp === 'zeile_anhaengen' ? '➕ Zeile anhängen' : '✏️ Zelle schreiben';
+      const gsInfo = node.config.tabellen_url ? (node.config.tabellenblatt||'Tabelle1') : 'URL eingeben';
+      return `<div class="node-body-skill">${gsLbl} · ${esc(gsInfo)}</div>`;
+    }
+    case 'google_drive': {
+      const gdrOp  = node.config.operation || 'docs_lesen';
+      const gdrLbl = gdrOp === 'docs_lesen' ? '📚 Alle Docs lesen' : gdrOp === 'dateien_auflisten' ? '📋 Auflisten' : '⬆️ Hochladen';
+      const gdrInfo = gdrOp === 'hochladen' ? (node.config.lokaler_pfad||'Pfad eingeben') : `max. ${node.config.anzahl||10} Dateien`;
+      return `<div class="node-body-skill">${gdrLbl} · ${esc(gdrInfo)}</div>`;
+    }
+    case 'google_forms': {
+      const gfOp  = node.config.operation || 'neue_antworten';
+      const gfLbl = gfOp === 'neue_antworten' ? '🆕 Neue Antworten' : '📥 Alle Antworten';
+      const gfInfo = node.config.formular_id ? `ID: ${node.config.formular_id.substring(0,12)}…` : 'URL eingeben';
+      return `<div class="node-body-skill">${gfLbl} · ${esc(gfInfo)}</div>`;
+    }
+    case 'error_handler': {
+      const ea = node.config.aktion || 'weitergeben';
+      const label = ea==='stoppen' ? '🛑 Stoppen' : ea==='ignorieren' ? '⏭ Ignorieren' : '🚨 Weitergeben';
+      return `<div class="node-body-skill">${label}</div>`;
+    }
+    case 'schedule_trigger': {
+      const it = node.config.interval_type || 'interval';
+      let sdesc = '';
+      if (it === 'interval') {
+        const min = parseInt(node.config.minuten||0);
+        const sec = parseInt(node.config.sekunden||30);
+        const total = min*60 + sec;
+        sdesc = total >= 60
+          ? `alle ${min}m ${sec>0?sec+'s':''}`.trim()
+          : `alle ${total}s`;
+      } else if (it === 'taglich')      sdesc = `täglich ${node.config.zeit||'08:00'}`;
+      else if (it === 'woechentlich')   sdesc = `wöchentlich ${node.config.zeit||'08:00'}`;
+      return `<div class="node-body-skill">⏰ ${sdesc}</div>`;
+    }
+    case 'webhook': {
+      const wid = node.config.webhook_id || '—';
+      return `<div class="node-body-skill">🔗 /api/webhook/${esc(wid.substring(0,16))}</div>`;
+    }
+    case 'rss': {
+      const rUrl = node.config.url || '';
+      return rUrl
+        ? `<div class="node-body-skill">📡 ${esc(rUrl.replace(/https?:\/\/(www\.)?/,'').substring(0,32))}</div>`
+        : `<div class="node-body-empty">RSS-URL eingeben…</div>`;
+    }
+    case 'loop': {
+      const lSrc = (node.config.items || '{{input}}').substring(0,30);
+      const lMax = node.config.max_items || 50;
+      return `<div class="node-body-skill">🔁 max. ${lMax} Elemente · ${esc(lSrc)}</div>`;
+    }
+    case 'switch': {
+      const sc = [1,2,3,4,5].filter(i => node.config[`case${i}_bedingung`]).length;
+      return `<div class="node-body-skill">🔀 ${sc} Case(s) + Default</div>`;
+    }
+    case 'wait': {
+      const ws = node.config.sekunden || 5;
+      return `<div class="node-body-skill">⏱️ ${ws} Sekunde(n) warten</div>`;
+    }
+    case 'sub_workflow': {
+      const swid = node.config.workflow_id || '';
+      return swid
+        ? `<div class="node-body-skill">▶ Workflow: ${esc(swid.substring(0,20))}</div>`
+        : `<div class="node-body-empty">Workflow auswählen…</div>`;
+    }
+    case 'code': {
+      const cLines = (node.config.code || '').split('\n').length;
+      return node.config.code
+        ? `<div class="node-body-skill">💻 ${cLines} Zeile(n) Python</div>`
+        : `<div class="node-body-empty">Code eingeben…</div>`;
+    }
+    case 'whatsapp': {
+      const waOp = node.config.operation || 'send';
+      const waTo = node.config.to || '';
+      return `<div class="node-body-skill">💬 ${waOp === 'send' ? '📤 Senden' : waOp} · ${esc(waTo||'Nummer eingeben')}</div>`;
+    }
+    default:
+      return `<div class="node-body-empty">Konfigurieren…</div>`;
+  }
+}
+
+function refreshNodeBody(id) {
+  const el = document.getElementById(`body-${id}`);
+  if (el) el.innerHTML = buildNodeBodyHtml(state.nodes[id]);
+}
+
+function deleteNode(id) {
+  Object.keys(state.connections).forEach(cid => {
+    if (state.connections[cid].from===id || state.connections[cid].to===id)
+      delete state.connections[cid];
+  });
+  delete state.nodes[id];
+  document.getElementById(`node-${id}`)?.remove();
+  if (state.selected===id) { state.selected=null; closePanel(); }
+  updateFooter();
+  renderConnections();
+}
+
+function duplicateNode(id) {
+  const n = state.nodes[id];
+  if (!n) return;
+  const newId = addNode(n.type, n.x+40, n.y+50, {skillName:n.config?.skill});
+  const newNode = state.nodes[newId];
+  newNode.config = JSON.parse(JSON.stringify(n.config||{}));
+  newNode.name = n.name + ' (Kopie)';
+  renderNode(newId);
+  toast('Node dupliziert', 'info');
+}
+
+// ── Selection ─────────────────────────────────────────────
+function selectNode(id) {
+  if (state.selected && state.selected!==id)
+    document.getElementById(`node-${state.selected}`)?.classList.remove('selected');
+  state.selected = id;
+  document.getElementById(`node-${id}`)?.classList.add('selected');
+  openPanel(id);
+}
+
+function deselectAll() {
+  if (state.selected) {
+    document.getElementById(`node-${state.selected}`)?.classList.remove('selected');
+    state.selected = null;
+  }
+}
+
+// ── Drag nodes ────────────────────────────────────────────
+function startDragNode(e, id) {
+  if (e.button !== 0) return;
+  e.stopPropagation();
+  state.isDragging = false;
+  state.dragNode   = id;
+  const el   = document.getElementById(`node-${id}`);
+  const rect = el.getBoundingClientRect();
+  state.dragOffset = {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top,
+  };
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup',   onDragEnd);
+}
+
+function onDragMove(e) {
+  if (!state.dragNode) return;
+  state.isDragging = true;
+  const wrap = document.getElementById('canvas-wrap').getBoundingClientRect();
+  const x = (e.clientX - wrap.left - state.viewport.x) / state.viewport.scale - state.dragOffset.x / state.viewport.scale;
+  const y = (e.clientY - wrap.top  - state.viewport.y) / state.viewport.scale - state.dragOffset.y / state.viewport.scale;
+  const nx = Math.round(x), ny = Math.round(y);
+  state.nodes[state.dragNode].x = nx;
+  state.nodes[state.dragNode].y = ny;
+  const el = document.getElementById(`node-${state.dragNode}`);
+  if (el) { el.style.left = nx+'px'; el.style.top = ny+'px'; }
+  renderConnections();
+}
+
+function onDragEnd() {
+  state.dragNode = null;
+  setTimeout(() => state.isDragging = false, 10);
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup',   onDragEnd);
+}
+
+// ── Canvas pan & zoom ─────────────────────────────────────
+function setupCanvasEvents() {
+  const wrap = document.getElementById('canvas-wrap');
+
+  wrap.addEventListener('mousedown', e => {
+    const onBg = e.target===wrap
+      || e.target===document.getElementById('canvas')
+      || e.target.id==='svg-layer'
+      || e.target.closest('g#connections-layer');
+
+    if (e.button===0 && onBg) {
+      deselectAll();
+      closePanel();
+      state.isPanning = true;
+      state.panStart = {mx:e.clientX, my:e.clientY, vx:state.viewport.x, vy:state.viewport.y};
+      wrap.style.cursor = 'grabbing';
+    }
+  });
+
+  wrap.addEventListener('mousemove', e => {
+    if (state.isPanning) {
+      state.viewport.x = state.panStart.vx + (e.clientX - state.panStart.mx);
+      state.viewport.y = state.panStart.vy + (e.clientY - state.panStart.my);
+      applyViewport();
+      renderConnections();
+    }
+    if (state.isConnecting) updateConnPreview(e);
+  });
+
+  wrap.addEventListener('mouseup', e => {
+    if (state.isPanning) { state.isPanning = false; wrap.style.cursor = ''; }
+    if (state.isConnecting && (e.target===wrap || e.target===document.getElementById('canvas'))) clearConnecting();
+  });
+
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect   = wrap.getBoundingClientRect();
+    const mx     = e.clientX - rect.left;
+    const my     = e.clientY - rect.top;
+    const delta  = e.deltaY < 0 ? 0.1 : -0.1;
+    const old    = state.viewport.scale;
+    const nscale = Math.max(0.2, Math.min(2.5, old + delta));
+    state.viewport.x = mx - (mx - state.viewport.x) * (nscale / old);
+    state.viewport.y = my - (my - state.viewport.y) * (nscale / old);
+    state.viewport.scale = nscale;
+    applyViewport();
+    renderConnections();
+    document.getElementById('zoom-pct').textContent = Math.round(nscale*100) + '%';
+  }, {passive:false});
+
+  // Double click → add chat node
+  wrap.addEventListener('dblclick', e => {
+    if (e.target===wrap || e.target===document.getElementById('canvas') || e.target.closest('#svg-layer')) {
+      const rect = wrap.getBoundingClientRect();
+      const x = (e.clientX - rect.left - state.viewport.x) / state.viewport.scale;
+      const y = (e.clientY - rect.top  - state.viewport.y) / state.viewport.scale;
+      addNode('chat', x - 95, y - 30);
+    }
+  });
+
+  wrap.addEventListener('dragleave', () => wrap.classList.remove('drag-over'));
+}
+
+function applyViewport() {
+  document.getElementById('canvas').style.transform =
+    `translate(${state.viewport.x}px,${state.viewport.y}px) scale(${state.viewport.scale})`;
+}
+
+function zoom(delta) {
+  state.viewport.scale = Math.max(0.2, Math.min(2.5, state.viewport.scale + delta));
+  applyViewport();
+  renderConnections();
+  document.getElementById('zoom-pct').textContent = Math.round(state.viewport.scale*100) + '%';
+}
+
+function resetView() {
+  state.viewport = {x:100, y:80, scale:1};
+  applyViewport();
+  renderConnections();
+  document.getElementById('zoom-pct').textContent = '100%';
+}
+
+function fitView() {
+  const nodes = Object.values(state.nodes);
+  if (!nodes.length) return;
+  const wrap = document.getElementById('canvas-wrap').getBoundingClientRect();
+  const xs = nodes.map(n => n.x), ys = nodes.map(n => n.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs)+240;
+  const minY = Math.min(...ys), maxY = Math.max(...ys)+80;
+  const pad = 60;
+  const scaleX = (wrap.width - pad*2) / (maxX - minX || 1);
+  const scaleY = (wrap.height - pad*2) / (maxY - minY || 1);
+  const scale = Math.min(scaleX, scaleY, 1.5);
+  state.viewport.scale = scale;
+  state.viewport.x = pad - minX * scale;
+  state.viewport.y = pad - minY * scale;
+  applyViewport();
+  renderConnections();
+  document.getElementById('zoom-pct').textContent = Math.round(scale*100) + '%';
+}
+
+// ── Connections ───────────────────────────────────────────
+function startConnecting(e, portEl) {
+  if (portEl.dataset.dir !== 'out') return;
+  e.preventDefault();
+  state.isConnecting = true;
+  state.connStart    = {nodeId: portEl.dataset.node, portEl};
+  portEl.classList.add('connecting');
+}
+
+function finishConnecting(portEl) {
+  if (!state.isConnecting || !state.connStart) return;
+  if (portEl.dataset.dir === 'in' && portEl.dataset.node !== state.connStart.nodeId)
+    addConnection(state.connStart.nodeId, portEl.dataset.node);
+  clearConnecting();
+}
+
+function clearConnecting() {
+  state.isConnecting = false;
+  state.connStart?.portEl?.classList.remove('connecting');
+  state.connStart = null;
+  document.getElementById('conn-preview').setAttribute('d','');
+}
+
+function updateConnPreview(e) {
+  if (!state.connStart) return;
+  const portEl = document.getElementById(`port-out-${state.connStart.nodeId}`);
+  if (!portEl) return;
+  const wrap = document.getElementById('canvas-wrap').getBoundingClientRect();
+  const pr   = portEl.getBoundingClientRect();
+  const x1 = (pr.left + pr.width/2  - wrap.left - state.viewport.x) / state.viewport.scale;
+  const y1 = (pr.top  + pr.height/2 - wrap.top  - state.viewport.y) / state.viewport.scale;
+  const x2 = (e.clientX - wrap.left - state.viewport.x) / state.viewport.scale;
+  const y2 = (e.clientY - wrap.top  - state.viewport.y) / state.viewport.scale;
+  const cp = Math.max(Math.abs(x2-x1)*0.45, 40);
+  document.getElementById('conn-preview').setAttribute('d',
+    `M ${x1} ${y1} C ${x1+cp} ${y1}, ${x2-cp} ${y2}, ${x2} ${y2}`
+  );
+}
+
+function addConnection(fromId, toId) {
+  const exists = Object.values(state.connections).some(c => c.from===fromId && c.to===toId);
+  if (exists) return;
+  const id = genId('c');
+  state.connections[id] = {id, from:fromId, to:toId};
+  renderConnections();
+  updateFooter();
+}
+
+function deleteConnection(id) {
+  delete state.connections[id];
+  renderConnections();
+  updateFooter();
+}
+
+function renderConnections() {
+  const layer = document.getElementById('connections-layer');
+  layer.innerHTML = '';
+  const wrap = document.getElementById('canvas-wrap').getBoundingClientRect();
+
+  Object.values(state.connections).forEach(conn => {
+    const op = document.getElementById(`port-out-${conn.from}`);
+    const ip = document.getElementById(`port-in-${conn.to}`);
+    if (!op || !ip) return;
+
+    const r1 = op.getBoundingClientRect();
+    const r2 = ip.getBoundingClientRect();
+    const x1 = (r1.left + r1.width/2  - wrap.left - state.viewport.x) / state.viewport.scale;
+    const y1 = (r1.top  + r1.height/2 - wrap.top  - state.viewport.y) / state.viewport.scale;
+    const x2 = (r2.left + r2.width/2  - wrap.left - state.viewport.x) / state.viewport.scale;
+    const y2 = (r2.top  + r2.height/2 - wrap.top  - state.viewport.y) / state.viewport.scale;
+    const cp = Math.max(Math.abs(x2-x1)*0.45, 40);
+
+    const isDone = state.execResults[conn.from] !== undefined;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', isDone ? 'var(--orange)' : 'rgba(255,255,255,.15)');
+    path.setAttribute('stroke-width', isDone ? '2.5' : '2');
+    path.setAttribute('stroke-linecap', 'round');
+    if (isDone) {
+      path.setAttribute('marker-end', 'url(#arr-orange)');
+      path.setAttribute('filter', 'url(#glow)');
+    } else {
+      path.setAttribute('marker-end', 'url(#arr-dim)');
+    }
+    path.setAttribute('d', `M ${x1} ${y1} C ${x1+cp} ${y1}, ${x2-cp} ${y2}, ${x2} ${y2}`);
+    path.style.cursor = 'pointer';
+    path.addEventListener('contextmenu', e => { e.preventDefault(); showConnCtx(e, conn.id); });
+    layer.appendChild(path);
+  });
+
+  // update port styles
+  document.querySelectorAll('.port').forEach(p => p.classList.remove('connected'));
+  Object.values(state.connections).forEach(c => {
+    document.getElementById(`port-out-${c.from}`)?.classList.add('connected');
+    document.getElementById(`port-in-${c.to}`)?.classList.add('connected');
+  });
+}
+
+// ── Right panel ───────────────────────────────────────────
+async function openPanel(id) {
+  const node = state.nodes[id];
+  if (!node) return;
+  const def = NODE_TYPES[node.type] || NODE_TYPES.skill;
+
+  const icon = document.getElementById('rp-icon');
+  icon.textContent = def.icon;
+  icon.style.background = def.bg;
+  document.getElementById('rp-name').textContent = node.name;
+
+  const tag = document.getElementById('rp-type-tag');
+  tag.textContent = def.label;
+  tag.style.cssText = `background:${def.bg};color:${def.color}`;
+
+  const body = document.getElementById('rp-body');
+  body.innerHTML = buildPanelHtml(node, def);
+  document.getElementById('rpanel').classList.add('open');
+
+  // Bind data-cfg inputs
+  body.querySelectorAll('[data-cfg]').forEach(el => {
+    el.addEventListener('input', e => {
+      const key = e.target.dataset.cfg;
+      if (key === '__name') {
+        state.nodes[id].name = e.target.value;
+        document.getElementById('rp-name').textContent = e.target.value;
+        const hname = document.querySelector(`#node-${id} .node-head-name`);
+        if (hname) hname.textContent = e.target.value;
+      } else {
+        state.nodes[id].config[key] = e.target.value;
+      }
+      refreshNodeBody(id);
+    });
+  });
+
+  // Email operation toggle
+  const emOpSel = body.querySelector('#em-op-select');
+  if (emOpSel) {
+    const emToggle = () => {
+      const v = emOpSel.value;
+      body.querySelector('#em-read-fields').style.display  = v === 'read'  ? 'block' : 'none';
+      body.querySelector('#em-send-fields').style.display  = v === 'send'  ? 'block' : 'none';
+      body.querySelector('#em-reply-fields').style.display = v === 'reply' ? 'block' : 'none';
+    };
+    emOpSel.addEventListener('change', emToggle);
+  }
+
+  // Telegram operation toggle
+  const tgOpSel = body.querySelector('#tg-op-select');
+  if (tgOpSel) {
+    const tgToggle = () => {
+      const v = tgOpSel.value;
+      body.querySelector('#tg-send-fields').style.display = v === 'send' ? 'block' : 'none';
+      body.querySelector('#tg-read-fields').style.display = v === 'read' ? 'block' : 'none';
+    };
+    tgOpSel.addEventListener('change', tgToggle);
+  }
+
+  // Skill params (loaded when skill node already has a skill configured)
+  if (node.type === 'skill' && node.config.skill) {
+    await loadSkillParams(id, node.config.skill, body);
+  }
+}
+
+function buildPanelHtml(node, def) {
+  let h = `
+    <div class="rp-field">
+      <div class="rp-label">Node-Name</div>
+      <input class="rp-input" data-cfg="__name" value="${esc(node.name)}" placeholder="Name">
+    </div>
+    <div class="rp-separator"></div>
+  `;
+
+  if (node.type === 'trigger') {
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Start-Nachricht</div>
+        <input class="rp-input" data-cfg="startMessage"
+               value="${esc(node.config.startMessage||'')}"
+               placeholder="Workflow gestartet ✅">
+        <div class="rp-hint">Wird als Eingabe für den nächsten Node weitergegeben.</div>
+      </div>
+    `;
+  } else if (node.type === 'chat') {
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Nachricht an Ilija</div>
+        <textarea class="rp-input rp-textarea" data-cfg="message"
+                  placeholder="Nachricht… Tipp: {{input}} für vorherigen Output">${esc(node.config.message||'')}</textarea>
+        <div class="rp-hint">Nutze <code>{{input}}</code> um den Output des vorherigen Nodes einzufügen.</div>
+      </div>
+    `;
+  } else if (node.type === 'skill') {
+    const hasSkill = !!node.config.skill;
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Skill</div>
+        <button class="skill-pick-btn" id="skill-pick-btn"
+                onclick="openAppStore('select','${node.id}')">
+          <span class="spb-icon">🔧</span>
+          <span class="spb-name">${hasSkill ? esc(node.config.skill) : '— Skill aus App Store wählen —'}</span>
+          <span class="spb-arrow">🛒</span>
+        </button>
+      </div>
+      <div id="skill-params"></div>
+    `;
+  } else if (node.type === 'set') {
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Wert / Template</div>
+        <textarea class="rp-input rp-textarea" data-cfg="value"
+                  placeholder="Statischer Text oder {{input}}">${esc(node.config.value||'')}</textarea>
+        <div class="rp-hint">Nutze <code>{{input}}</code> für den vorherigen Output.</div>
+      </div>
+    `;
+  } else if (node.type === 'note') {
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Notiz</div>
+        <textarea class="rp-input rp-textarea" data-cfg="text"
+                  style="min-height:100px"
+                  placeholder="Kommentar, Beschreibung…">${esc(node.config.text||'')}</textarea>
+      </div>
+    `;
+  } else if (node.type === 'condition') {
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Bedingung</div>
+        <input class="rp-input" data-cfg="condition"
+               value="${esc(node.config.condition||'')}"
+               placeholder="z.B.: {{input}} enthält 'Fehler'">
+        <div class="rp-hint">Einfache String-Bedingung.</div>
+      </div>
+    `;
+  } else if (node.type === 'http') {
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Methode</div>
+        <select class="rp-select" data-cfg="method">
+          ${['GET','POST','PUT','DELETE','PATCH'].map(m => `<option ${node.config.method===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">URL</div>
+        <input class="rp-input" data-cfg="url" value="${esc(node.config.url||'')}" placeholder="https://api.example.com/…" style="font-family:var(--m);font-size:.79rem">
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Body (JSON, optional)</div>
+        <textarea class="rp-input rp-textarea" data-cfg="body"
+                  style="font-family:var(--m);font-size:.75rem"
+                  placeholder='{"key":"{{input}}"}'>${esc(node.config.body||'')}</textarea>
+      </div>
+    `;
+  } else if (node.type === 'email') {
+    const emOp = node.config.operation || 'read';
+    const providers = ['gmail','outlook','gmx','webde','yahoo','eigener'];
+    const emProv = node.config.provider || '';
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Operation</div>
+        <select class="rp-select" data-cfg="operation" id="em-op-select">
+          <option value="read"  ${emOp==='read'  ?'selected':''}>📥 E-Mails lesen</option>
+          <option value="send"  ${emOp==='send'  ?'selected':''}>📤 E-Mail senden</option>
+          <option value="reply" ${emOp==='reply' ?'selected':''}>↩️ E-Mail beantworten</option>
+        </select>
+      </div>
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <div class="rp-label">Provider</div>
+        <select class="rp-select" data-cfg="provider">
+          <option value="">— Leer = gespeicherte Konfig verwenden —</option>
+          ${providers.map(p => `<option value="${p}" ${emProv===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">E-Mail-Adresse</div>
+        <input class="rp-input" data-cfg="email_adresse"
+               value="${esc(node.config.email_adresse||'')}"
+               placeholder="Leer = gespeicherte Adresse">
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Passwort / App-Passwort</div>
+        <input class="rp-input" type="password" data-cfg="passwort"
+               value="${esc(node.config.passwort||'')}"
+               placeholder="Leer = gespeichertes Passwort">
+      </div>
+      <div class="rp-separator"></div>
+      <div id="em-read-fields" style="display:${emOp==='read'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Ordner</div>
+          <input class="rp-input" data-cfg="ordner"
+                 value="${esc(node.config.ordner||'INBOX')}" placeholder="INBOX">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Anzahl E-Mails</div>
+          <input class="rp-input" data-cfg="anzahl" type="number" min="1" max="50"
+                 value="${esc(String(node.config.anzahl||5))}">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Nur ungelesene</div>
+          <select class="rp-select" data-cfg="nur_ungelesen">
+            <option value="nein" ${(node.config.nur_ungelesen||'nein')==='nein'?'selected':''}>Alle anzeigen</option>
+            <option value="ja"   ${node.config.nur_ungelesen==='ja'?'selected':''}>Nur ungelesene</option>
+          </select>
+        </div>
+      </div>
+      <div id="em-send-fields" style="display:${emOp==='send'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">An (Empfänger)</div>
+          <input class="rp-input" data-cfg="an"
+                 value="${esc(node.config.an||'')}" placeholder="empfaenger@example.com">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Betreff</div>
+          <input class="rp-input" data-cfg="betreff"
+                 value="${esc(node.config.betreff||'')}" placeholder="Betreff der E-Mail">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Nachrichtentext</div>
+          <textarea class="rp-input rp-textarea" data-cfg="text"
+                    placeholder="{{input}}">${esc(node.config.text||'')}</textarea>
+          <div class="rp-hint">Leer oder <code>{{input}}</code> = Output des vorherigen Nodes.</div>
+        </div>
+      </div>
+      <div id="em-reply-fields" style="display:${emOp==='reply'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">An (Empfänger)</div>
+          <input class="rp-input" data-cfg="an"
+                 value="${esc(node.config.an||'')}" placeholder="absender@example.com">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Ursprünglicher Betreff</div>
+          <input class="rp-input" data-cfg="betreff"
+                 value="${esc(node.config.betreff||'')}" placeholder="Betreff (Re: wird automatisch hinzugefügt)">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Antworttext</div>
+          <textarea class="rp-input rp-textarea" data-cfg="antwort_text"
+                    placeholder="{{input}}">${esc(node.config.antwort_text||'')}</textarea>
+          <div class="rp-hint">Leer oder <code>{{input}}</code> = KI-Antwort aus vorherigem Chat-Node.</div>
+        </div>
+      </div>
+    `;
+  } else if (node.type === 'telegram') {
+    const op = node.config.operation || 'send';
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Operation</div>
+        <select class="rp-select" data-cfg="operation" id="tg-op-select">
+          <option value="send"  ${op==='send' ?'selected':''}>📤 Nachricht senden</option>
+          <option value="read"  ${op==='read' ?'selected':''}>📥 Nachrichten lesen</option>
+        </select>
+      </div>
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <div class="rp-label">Bot-Token</div>
+        <input class="rp-input" data-cfg="token"
+               value="${esc(node.config.token||'')}"
+               placeholder="Leer = gespeicherten Token verwenden"
+               style="font-family:var(--m);font-size:.75rem">
+        <div class="rp-hint">Leer lassen wenn <code>telegram_konfigurieren()</code> bereits ausgeführt wurde.</div>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Chat-ID</div>
+        <input class="rp-input" data-cfg="chat_id"
+               value="${esc(node.config.chat_id||'')}"
+               placeholder="Leer = gespeicherte Chat-ID verwenden"
+               style="font-family:var(--m);font-size:.79rem">
+      </div>
+      <div class="rp-separator"></div>
+      <div id="tg-send-fields" style="display:${op==='send'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Nachricht</div>
+          <textarea class="rp-input rp-textarea" data-cfg="text"
+                    placeholder="{{input}}">${esc(node.config.text||'')}</textarea>
+          <div class="rp-hint">Leer oder <code>{{input}}</code> = Output des vorherigen Nodes wird gesendet.</div>
+        </div>
+      </div>
+      <div id="tg-read-fields" style="display:${op==='read'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Anzahl Nachrichten</div>
+          <input class="rp-input" data-cfg="anzahl" type="number" min="1" max="50"
+                 value="${esc(String(node.config.anzahl||5))}">
+          <div class="rp-hint">Gibt nur <b>neue</b> Nachrichten seit dem letzten Lesen aus. Bei keinen neuen Nachrichten: <code>📭</code>-Signal ausgeben → mit <strong>Chat-Filter</strong>-Node abfangen.</div>
+        </div>
+      </div>
+    `;
+  } else if (node.type === 'google_kalender') {
+    const gkOp = node.config.operation || 'slots_lesen';
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Operation</div>
+        <select class="rp-select" data-cfg="operation" onchange="var v=this.value;['gk-slots-fields','gk-eintragen-fields','gk-loeschen-fields'].forEach(function(id,i){document.getElementById(id).style.display=(['slots_lesen','termin_eintragen','termin_loeschen'][i]===v?'block':'none');});">
+          <option value="slots_lesen"     ${gkOp==='slots_lesen'    ?'selected':''}>🔍 Freie Slots finden</option>
+          <option value="termin_eintragen"${gkOp==='termin_eintragen'?'selected':''}>➕ Termin eintragen</option>
+          <option value="termin_loeschen" ${gkOp==='termin_loeschen' ?'selected':''}>🗑️ Termin löschen</option>
+        </select>
+      </div>
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <div class="rp-label">Pfad zur credentials.json <span style="opacity:.6;font-weight:400">(optional)</span></div>
+        <input class="rp-input" data-cfg="credentials_pfad"
+               value="${esc(node.config.credentials_pfad||'')}"
+               placeholder="data/google_kalender/credentials.json">
+        <div class="rp-hint" style="margin-top:6px;padding:8px 10px;background:rgba(52,168,83,.08);border:1px solid rgba(52,168,83,.25);border-radius:5px;line-height:1.5">
+          📋 <strong>Einmalige Einrichtung:</strong><br>
+          1. <code>credentials.json</code> aus dem Repo-Ordner <code>data/google_kalender/</code> nutzen<br>
+          2. Beim ersten Workflow-Start öffnet sich kurz ein Browser-Fenster<br>
+          3. Einmal auf <strong>„Zulassen"</strong> klicken → fertig für immer ✅<br>
+          <span style="opacity:.7">Token wird automatisch gespeichert – kein Login mehr nötig.</span>
+        </div>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Zeitzone <span style="opacity:.6;font-weight:400">(optional)</span></div>
+        <input class="rp-input" data-cfg="zeitzone"
+               value="${esc(node.config.zeitzone||'')}"
+               placeholder="Europe/Berlin">
+      </div>
+      <div class="rp-separator"></div>
+
+      <div id="gk-slots-fields" style="display:${gkOp==='slots_lesen'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Datum</div>
+          <input class="rp-input" data-cfg="datum"
+                 value="${esc(node.config.datum||'')}"
+                 placeholder="TT.MM.JJJJ oder {{input}}">
+          <div class="rp-hint">Leer = heute. <code>{{input}}</code> = Datum aus vorherigem Node.</div>
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Mindest-Dauer (Minuten)</div>
+          <input class="rp-input" data-cfg="dauer_minuten" type="number" min="15" max="480"
+                 value="${esc(String(node.config.dauer_minuten||60))}">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Arbeitszeit von – bis (Stunden)</div>
+          <div style="display:flex;gap:8px">
+            <input class="rp-input" data-cfg="arbeit_von" type="number" min="0" max="23"
+                   value="${esc(String(node.config.arbeit_von||8))}" placeholder="8" style="width:50%">
+            <input class="rp-input" data-cfg="arbeit_bis" type="number" min="1" max="24"
+                   value="${esc(String(node.config.arbeit_bis||18))}" placeholder="18" style="width:50%">
+          </div>
+        </div>
+      </div>
+
+      <div id="gk-eintragen-fields" style="display:${gkOp==='termin_eintragen'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Titel</div>
+          <input class="rp-input" data-cfg="titel"
+                 value="${esc(node.config.titel||'')}"
+                 placeholder="Terminbezeichnung oder {{input}}">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Datum</div>
+          <input class="rp-input" data-cfg="datum"
+                 value="${esc(node.config.datum||'')}"
+                 placeholder="TT.MM.JJJJ">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Von – Bis (Uhrzeit)</div>
+          <div style="display:flex;gap:8px">
+            <input class="rp-input" data-cfg="uhrzeit_von"
+                   value="${esc(node.config.uhrzeit_von||'')}" placeholder="09:00" style="width:50%">
+            <input class="rp-input" data-cfg="uhrzeit_bis"
+                   value="${esc(node.config.uhrzeit_bis||'')}" placeholder="10:00" style="width:50%">
+          </div>
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Beschreibung (optional)</div>
+          <textarea class="rp-input rp-textarea" data-cfg="beschreibung"
+                    placeholder="Optionale Notiz zum Termin">${esc(node.config.beschreibung||'')}</textarea>
+        </div>
+      </div>
+
+      <div id="gk-loeschen-fields" style="display:${gkOp==='termin_loeschen'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Titel (Teilübereinstimmung)</div>
+          <input class="rp-input" data-cfg="titel"
+                 value="${esc(node.config.titel||'')}"
+                 placeholder="Terminbezeichnung oder {{input}}">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Datum</div>
+          <input class="rp-input" data-cfg="datum"
+                 value="${esc(node.config.datum||'')}"
+                 placeholder="TT.MM.JJJJ">
+        </div>
+      </div>
+    `;
+  } else if (node.type === 'gmail') {
+    const gmOp = node.config.operation || 'read';
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Operation</div>
+        <select class="rp-select" data-cfg="operation" onchange="var v=this.value;['gm-read-fields','gm-send-fields','gm-search-fields'].forEach(function(id,i){document.getElementById(id).style.display=(['read','send','search'][i]===v?'block':'none');});">
+          <option value="read"   ${gmOp==='read'  ?'selected':''}>📬 E-Mails lesen</option>
+          <option value="send"   ${gmOp==='send'  ?'selected':''}>📤 E-Mail senden</option>
+          <option value="search" ${gmOp==='search'?'selected':''}>🔍 E-Mails suchen</option>
+        </select>
+      </div>
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <div class="rp-label">Pfad zur credentials.json <span style="opacity:.6;font-weight:400">(optional)</span></div>
+        <input class="rp-input" data-cfg="credentials_pfad"
+               value="${esc(node.config.credentials_pfad||'')}"
+               placeholder="data/google_kalender/credentials.json">
+        <div class="rp-hint">Dieselbe Datei wie beim Google Kalender Node verwenden ✅</div>
+      </div>
+      <div class="rp-separator"></div>
+
+      <div id="gm-read-fields" style="display:${gmOp==='read'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Anzahl E-Mails</div>
+          <input class="rp-input" data-cfg="anzahl" type="number" min="1" max="50"
+                 value="${esc(String(node.config.anzahl||5))}">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Label / Ordner</div>
+          <input class="rp-input" data-cfg="label"
+                 value="${esc(node.config.label||'INBOX')}"
+                 placeholder="INBOX">
+          <div class="rp-hint">z.B. INBOX, SENT, SPAM oder eigene Labels</div>
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Nur ungelesene?</div>
+          <select class="rp-select" data-cfg="nur_ungelesen">
+            <option value="nein" ${(node.config.nur_ungelesen||'nein')==='nein'?'selected':''}>Alle anzeigen</option>
+            <option value="ja"   ${node.config.nur_ungelesen==='ja'?'selected':''}>Nur ungelesene</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="gm-send-fields" style="display:${gmOp==='send'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">An (E-Mail-Adresse)</div>
+          <input class="rp-input" data-cfg="an"
+                 value="${esc(node.config.an||'')}"
+                 placeholder="empfaenger@example.com oder {{input}}">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Betreff</div>
+          <input class="rp-input" data-cfg="betreff"
+                 value="${esc(node.config.betreff||'')}"
+                 placeholder="Betreff der E-Mail">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Text</div>
+          <textarea class="rp-input rp-textarea" data-cfg="text"
+                    placeholder="Nachrichtentext oder {{input}}">${esc(node.config.text||'{{input}}')}</textarea>
+        </div>
+      </div>
+
+      <div id="gm-search-fields" style="display:${gmOp==='search'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Suchbegriff (Gmail-Syntax)</div>
+          <input class="rp-input" data-cfg="query"
+                 value="${esc(node.config.query||'')}"
+                 placeholder="from:chef@firma.de oder {{input}}">
+          <div class="rp-hint">Gmail-Suche: <code>from:</code> <code>subject:</code> <code>is:unread</code> <code>after:2024/01/01</code></div>
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Anzahl Ergebnisse</div>
+          <input class="rp-input" data-cfg="anzahl" type="number" min="1" max="50"
+                 value="${esc(String(node.config.anzahl||5))}">
+        </div>
+      </div>
+    `;
+  } else if (node.type === 'google_docs') {
+    const gdOp = node.config.operation || 'lesen';
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Operation</div>
+        <select class="rp-select" data-cfg="operation" onchange="var v=this.value;['gd-lesen-fields','gd-anhaengen-fields','gd-erstellen-fields'].forEach(function(id,i){document.getElementById(id).style.display=(['lesen','anhaengen','erstellen'][i]===v?'block':'none');});">
+          <option value="lesen"     ${gdOp==='lesen'    ?'selected':''}>📖 Dokument lesen</option>
+          <option value="anhaengen" ${gdOp==='anhaengen'?'selected':''}>✏️ Text anhängen</option>
+          <option value="erstellen" ${gdOp==='erstellen'?'selected':''}>➕ Dokument erstellen</option>
+        </select>
+      </div>
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <div class="rp-label">Pfad zur credentials.json <span style="opacity:.6;font-weight:400">(optional)</span></div>
+        <input class="rp-input" data-cfg="credentials_pfad"
+               value="${esc(node.config.credentials_pfad||'')}"
+               placeholder="data/google_kalender/credentials.json">
+        <div class="rp-hint">Dieselbe Datei wie bei Google Kalender & Gmail ✅</div>
+      </div>
+      <div class="rp-separator"></div>
+
+      <div id="gd-lesen-fields" style="display:${gdOp==='lesen'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Dokument-URL oder ID</div>
+          <input class="rp-input" data-cfg="dokument_url"
+                 value="${esc(node.config.dokument_url||'')}"
+                 placeholder="https://docs.google.com/document/d/... oder {{input}}">
+          <div class="rp-hint">Die URL direkt aus dem Browser kopieren.</div>
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Max. Zeichen ausgeben</div>
+          <input class="rp-input" data-cfg="max_zeichen" type="number" min="100" max="50000"
+                 value="${esc(String(node.config.max_zeichen||5000))}">
+        </div>
+      </div>
+
+      <div id="gd-anhaengen-fields" style="display:${gdOp==='anhaengen'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Dokument-URL oder ID</div>
+          <input class="rp-input" data-cfg="dokument_url"
+                 value="${esc(node.config.dokument_url||'')}"
+                 placeholder="https://docs.google.com/document/d/...">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Text zum Anhängen</div>
+          <textarea class="rp-input rp-textarea" data-cfg="text"
+                    placeholder="Text oder {{input}}">${esc(node.config.text||'{{input}}')}</textarea>
+          <div class="rp-hint"><code>{{input}}</code> = Ausgabe des vorherigen Nodes</div>
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Trennzeile einfügen?</div>
+          <select class="rp-select" data-cfg="trennlinie">
+            <option value="ja"   ${(node.config.trennlinie||'ja')==='ja'  ?'selected':''}>Ja – Datum + Trennlinie</option>
+            <option value="nein" ${node.config.trennlinie==='nein'?'selected':''}>Nein – nur Text</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="gd-erstellen-fields" style="display:${gdOp==='erstellen'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Dokumenttitel</div>
+          <input class="rp-input" data-cfg="titel"
+                 value="${esc(node.config.titel||'')}"
+                 placeholder="Mein Dokument oder {{input}}">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Inhalt (optional)</div>
+          <textarea class="rp-input rp-textarea" data-cfg="inhalt"
+                    placeholder="Inhalt oder {{input}}">${esc(node.config.inhalt||'{{input}}')}</textarea>
+        </div>
+      </div>
+    `;
+  } else if (node.type === 'google_sheets') {
+    const gsOp = node.config.operation || 'bereich_lesen';
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Operation</div>
+        <select class="rp-select" data-cfg="operation" onchange="var v=this.value;['gs-lesen-fields','gs-anhaengen-fields','gs-zelle-fields'].forEach(function(id,i){document.getElementById(id).style.display=(['bereich_lesen','zeile_anhaengen','zelle_schreiben'][i]===v?'block':'none');});">
+          <option value="bereich_lesen"   ${gsOp==='bereich_lesen'  ?'selected':''}>📖 Bereich lesen</option>
+          <option value="zeile_anhaengen" ${gsOp==='zeile_anhaengen'?'selected':''}>➕ Zeile anhängen</option>
+          <option value="zelle_schreiben" ${gsOp==='zelle_schreiben'?'selected':''}>✏️ Zelle schreiben</option>
+        </select>
+      </div>
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <div class="rp-label">Tabellen-URL oder ID</div>
+        <input class="rp-input" data-cfg="tabellen_url"
+               value="${esc(node.config.tabellen_url||'')}"
+               placeholder="https://docs.google.com/spreadsheets/d/...">
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Tabellenblatt-Name <span style="opacity:.6;font-weight:400">(optional)</span></div>
+        <input class="rp-input" data-cfg="tabellenblatt"
+               value="${esc(node.config.tabellenblatt||'')}"
+               placeholder="Tabelle1">
+        <div class="rp-hint">Leer = erstes Tabellenblatt</div>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Pfad zur credentials.json <span style="opacity:.6;font-weight:400">(optional)</span></div>
+        <input class="rp-input" data-cfg="credentials_pfad"
+               value="${esc(node.config.credentials_pfad||'')}"
+               placeholder="data/google_kalender/credentials.json">
+        <div class="rp-hint">Dieselbe Datei wie bei allen Google Nodes ✅</div>
+      </div>
+      <div class="rp-separator"></div>
+
+      <div id="gs-lesen-fields" style="display:${gsOp==='bereich_lesen'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Bereich</div>
+          <input class="rp-input" data-cfg="bereich"
+                 value="${esc(node.config.bereich||'A1:Z100')}"
+                 placeholder="A1:D50 oder A:D">
+          <div class="rp-hint">Z.B. <code>A1:D10</code> für feste Bereiche, <code>A:D</code> für ganze Spalten</div>
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Ausgabe als</div>
+          <select class="rp-select" data-cfg="ausgabe_format">
+            <option value="text"  ${(node.config.ausgabe_format||'text')==='text' ?'selected':''}>Lesbarer Text (für KI)</option>
+            <option value="csv"   ${node.config.ausgabe_format==='csv'  ?'selected':''}>CSV (für Weiterverarbeitung)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="gs-anhaengen-fields" style="display:${gsOp==='zeile_anhaengen'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Werte (kommagetrennt)</div>
+          <input class="rp-input" data-cfg="werte"
+                 value="${esc(node.config.werte||'{{input}}')}"
+                 placeholder="Max Mustermann, 18.04.2026, Beratung">
+          <div class="rp-hint">
+            Komma = neue Spalte · <code>{{input}}</code> = komplette Ausgabe des vorherigen Nodes in eine Zelle<br>
+            Datum automatisch: <code>{{datum}}</code> · Uhrzeit: <code>{{uhrzeit}}</code>
+          </div>
+        </div>
+      </div>
+
+      <div id="gs-zelle-fields" style="display:${gsOp==='zelle_schreiben'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Zelle</div>
+          <input class="rp-input" data-cfg="zelle"
+                 value="${esc(node.config.zelle||'A1')}"
+                 placeholder="B3">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Wert</div>
+          <input class="rp-input" data-cfg="wert"
+                 value="${esc(node.config.wert||'{{input}}')}"
+                 placeholder="Wert oder {{input}}">
+        </div>
+      </div>
+    `;
+  } else if (node.type === 'google_drive') {
+    const gdrOp = node.config.operation || 'docs_lesen';
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Operation</div>
+        <select class="rp-select" data-cfg="operation" onchange="var v=this.value;['gdr-docs-fields','gdr-liste-fields','gdr-upload-fields'].forEach(function(id,i){document.getElementById(id).style.display=(['docs_lesen','dateien_auflisten','hochladen'][i]===v?'block':'none');});">
+          <option value="docs_lesen"        ${gdrOp==='docs_lesen'       ?'selected':''}>📚 Alle Docs lesen (für KI)</option>
+          <option value="dateien_auflisten" ${gdrOp==='dateien_auflisten'?'selected':''}>📋 Dateien auflisten</option>
+          <option value="hochladen"         ${gdrOp==='hochladen'        ?'selected':''}>⬆️ Datei hochladen</option>
+        </select>
+      </div>
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <div class="rp-label">Pfad zur credentials.json <span style="opacity:.6;font-weight:400">(optional)</span></div>
+        <input class="rp-input" data-cfg="credentials_pfad"
+               value="${esc(node.config.credentials_pfad||'')}"
+               placeholder="data/google_kalender/credentials.json">
+        <div class="rp-hint">Dieselbe Datei wie bei allen Google Nodes ✅</div>
+      </div>
+      <div class="rp-separator"></div>
+
+      <div id="gdr-docs-fields" style="display:${gdrOp==='docs_lesen'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Anzahl Dokumente</div>
+          <input class="rp-input" data-cfg="anzahl" type="number" min="1" max="50"
+                 value="${esc(String(node.config.anzahl||10))}">
+          <div class="rp-hint">Die N zuletzt bearbeiteten Google Docs werden gelesen.</div>
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Max. Zeichen pro Dokument</div>
+          <input class="rp-input" data-cfg="max_zeichen_pro_doc" type="number" min="100" max="10000"
+                 value="${esc(String(node.config.max_zeichen_pro_doc||2000))}">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Suche / Filter <span style="opacity:.6;font-weight:400">(optional)</span></div>
+          <input class="rp-input" data-cfg="suche"
+                 value="${esc(node.config.suche||'')}"
+                 placeholder="z.B. DSGVO oder Rechnung">
+          <div class="rp-hint">Nur Docs mit diesem Begriff im Namen lesen. Leer = alle.</div>
+        </div>
+      </div>
+
+      <div id="gdr-liste-fields" style="display:${gdrOp==='dateien_auflisten'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Dateityp</div>
+          <select class="rp-select" data-cfg="dateityp">
+            <option value="docs"   ${(node.config.dateityp||'docs')==='docs'  ?'selected':''}>📄 Google Docs</option>
+            <option value="sheets" ${node.config.dateityp==='sheets'?'selected':''}>📊 Google Sheets</option>
+            <option value="alle"   ${node.config.dateityp==='alle'  ?'selected':''}>📁 Alle Dateien</option>
+          </select>
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Anzahl</div>
+          <input class="rp-input" data-cfg="anzahl" type="number" min="1" max="100"
+                 value="${esc(String(node.config.anzahl||20))}">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Suche im Namen <span style="opacity:.6;font-weight:400">(optional)</span></div>
+          <input class="rp-input" data-cfg="suche"
+                 value="${esc(node.config.suche||'')}"
+                 placeholder="Dateiname enthält...">
+        </div>
+      </div>
+
+      <div id="gdr-upload-fields" style="display:${gdrOp==='hochladen'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Lokaler Dateipfad</div>
+          <input class="rp-input" data-cfg="lokaler_pfad"
+                 value="${esc(node.config.lokaler_pfad||'')}"
+                 placeholder="C:/Users/.../datei.pdf oder {{input}}">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Zielordner-ID <span style="opacity:.6;font-weight:400">(optional)</span></div>
+          <input class="rp-input" data-cfg="ordner_id"
+                 value="${esc(node.config.ordner_id||'')}"
+                 placeholder="Ordner-ID aus Drive-URL (leer = Hauptordner)">
+        </div>
+      </div>
+    `;
+  } else if (node.type === 'google_forms') {
+    const gfOp = node.config.operation || 'neue_antworten';
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Operation</div>
+        <select class="rp-select" data-cfg="operation" onchange="var v=this.value;document.getElementById('gf-alle-fields').style.display=(v==='alle_antworten'?'block':'none');">
+          <option value="neue_antworten" ${gfOp==='neue_antworten'?'selected':''}>🆕 Nur neue Antworten (seit letztem Abruf)</option>
+          <option value="alle_antworten" ${gfOp==='alle_antworten'?'selected':''}>📥 Alle Antworten</option>
+        </select>
+        <div class="rp-hint">
+          <strong>Neue Antworten:</strong> Merkt sich den letzten Abruf — ideal für automatische Workflows (z.B. stündlich prüfen).<br>
+          <strong>Alle Antworten:</strong> Liest immer alle Einträge — gut für Auswertungen.
+        </div>
+      </div>
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <div class="rp-label">Formular-URL oder ID</div>
+        <input class="rp-input" data-cfg="formular_id"
+               value="${esc(node.config.formular_id||'')}"
+               placeholder="https://docs.google.com/forms/d/... oder nur die ID">
+        <div class="rp-hint">URL aus dem Browser kopieren — die ID wird automatisch extrahiert.</div>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Pfad zur credentials.json <span style="opacity:.6;font-weight:400">(optional)</span></div>
+        <input class="rp-input" data-cfg="credentials_pfad"
+               value="${esc(node.config.credentials_pfad||'')}"
+               placeholder="data/google_kalender/credentials.json">
+        <div class="rp-hint">Dieselbe Datei wie bei allen Google Nodes ✅</div>
+      </div>
+
+      <div id="gf-alle-fields" style="display:${gfOp==='alle_antworten'?'block':'none'}">
+        <div class="rp-separator"></div>
+        <div class="rp-field">
+          <div class="rp-label">Max. Anzahl Antworten</div>
+          <input class="rp-input" data-cfg="anzahl" type="number" min="1" max="1000"
+                 value="${esc(String(node.config.anzahl||50))}">
+        </div>
+      </div>
+    `;
+  // ── error_handler ──────────────────────────────────────────────────
+  } else if (node.type === 'error_handler') {
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Fehler-Nachricht</div>
+        <input class="rp-input" data-cfg="message"
+               value="${esc(node.config.message||'{{input}}')}"
+               placeholder="{{input}} (zeigt den Fehler)">
+        <div class="rp-hint">Zeigt den Fehler-Text des vorherigen Nodes. Verbinde diesen Node mit einem Telegram/E-Mail-Node um Fehler zu melden.</div>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Aktion</div>
+        <select class="rp-select" data-cfg="aktion">
+          <option value="weitergeben" ${(node.config.aktion||'weitergeben')==='weitergeben'?'selected':''}>Fehler weitergeben (als Output)</option>
+          <option value="stoppen"     ${node.config.aktion==='stoppen'?'selected':''}>Workflow stoppen</option>
+          <option value="ignorieren"  ${node.config.aktion==='ignorieren'?'selected':''}>Fehler ignorieren &amp; fortfahren</option>
+        </select>
+      </div>
+    `;
+
+  // ── schedule_trigger ───────────────────────────────────────────────
+  } else if (node.type === 'schedule_trigger') {
+    const stType = node.config.interval_type || 'interval';
+    const stWf   = state.currentWorkflowId || '';
+    const stCfg  = JSON.stringify(node.config||{}).replace(/"/g,'&quot;');
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Intervall-Typ</div>
+        <select class="rp-select" data-cfg="interval_type"
+          onchange="var v=this.value;
+            document.getElementById('st-min').style.display=(v==='interval'?'flex':'none');
+            document.getElementById('st-sec').style.display=(v==='interval'?'flex':'none');
+            document.getElementById('st-time').style.display=(v!=='interval'?'flex':'none');
+            document.getElementById('st-day').style.display=(v==='woechentlich'?'flex':'none');">
+          <option value="interval"     ${stType==='interval'?'selected':''}>⏱ Alle N Minuten / Sekunden</option>
+          <option value="taglich"      ${stType==='taglich'?'selected':''}>📅 Täglich um Uhrzeit</option>
+          <option value="woechentlich" ${stType==='woechentlich'?'selected':''}>📆 Wöchentlich</option>
+        </select>
+      </div>
+      <div class="rp-field" id="st-min" style="display:${stType==='interval'?'flex':'none'}">
+        <div class="rp-label">Alle … Minuten</div>
+        <input class="rp-input" data-cfg="minuten" type="number" min="0"
+               value="${esc(String(node.config.minuten||0))}" placeholder="0">
+      </div>
+      <div class="rp-field" id="st-sec" style="display:${stType==='interval'?'flex':'none'}">
+        <div class="rp-label">… Sekunden</div>
+        <input class="rp-input" data-cfg="sekunden" type="number" min="0" max="59"
+               value="${esc(String(node.config.sekunden||30))}" placeholder="30">
+        <div class="rp-hint">Minimum 5 Sek. Beispiel: 1 Min + 30 Sek = alle 90 Sekunden.</div>
+      </div>
+      <div class="rp-field" id="st-time" style="display:${stType!=='interval'?'flex':'none'}">
+        <div class="rp-label">Uhrzeit</div>
+        <input class="rp-input" data-cfg="zeit" type="time"
+               value="${esc(node.config.zeit||'08:00')}">
+      </div>
+      <div class="rp-field" id="st-day" style="display:${stType==='woechentlich'?'flex':'none'}">
+        <div class="rp-label">Wochentag</div>
+        <select class="rp-select" data-cfg="wochentag">
+          ${['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']
+            .map((d,i)=>`<option value="${i}" ${(node.config.wochentag||0)==i?'selected':''}>${d}</option>`).join('')}
+        </select>
+      </div>
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <button onclick="activateSchedule('${stWf}',state.nodes[state.selected]?.config)"
+          style="width:100%;padding:9px;border-radius:var(--r);border:1px solid var(--green);
+          background:var(--green-dim);color:var(--green);font-size:.82rem;font-weight:600;cursor:pointer">
+          ⏰ Zeitplan aktivieren (Workflow speichern!)
+        </button>
+        <button onclick="deactivateSchedule('${stWf}')"
+          style="width:100%;padding:9px;border-radius:var(--r);border:1px solid var(--border2);
+          background:none;color:var(--tx3);font-size:.82rem;cursor:pointer;margin-top:6px">
+          ⏹ Zeitplan deaktivieren
+        </button>
+        <div class="rp-hint" style="margin-top:6px">Der Server muss laufen. Zeitplan überlebt Browser-Schließen.</div>
+      </div>
+    `;
+
+  // ── webhook ─────────────────────────────────────────────────────────
+  } else if (node.type === 'webhook') {
+    const whId  = node.config.webhook_id || (() => { const id=genId(); node.config.webhook_id=id; return id; })();
+    const whUrl = `${location.origin}/api/webhook/${whId}`;
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Webhook-URL (klicken zum Kopieren)</div>
+        <div onclick="navigator.clipboard.writeText('${whUrl}');this.style.borderColor='var(--green)';setTimeout(()=>this.style.borderColor='',1200)"
+          style="padding:8px 10px;background:rgba(255,255,255,.04);border:1px solid var(--border2);
+          border-radius:var(--r);font-family:var(--m);font-size:.71rem;color:var(--teal);
+          cursor:pointer;word-break:break-all;line-height:1.6">
+          ${esc(whUrl)}
+        </div>
+        <div class="rp-hint">POST oder GET an diese URL → Workflow startet. Body wird als <code>{{input}}</code> übergeben.</div>
+      </div>
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <div class="rp-label">Antwort-Modus</div>
+        <select class="rp-select" data-cfg="response_mode">
+          <option value="last_node" ${(node.config.response_mode||'last_node')==='last_node'?'selected':''}>Letzter Node-Output</option>
+          <option value="ack"       ${node.config.response_mode==='ack'?'selected':''}>Sofort bestätigen (async)</option>
+        </select>
+        <div class="rp-hint">Bei langen Workflows empfohlen: <strong>Sofort bestätigen</strong>.</div>
+      </div>
+    `;
+
+  // ── rss ──────────────────────────────────────────────────────────────
+  } else if (node.type === 'rss') {
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Feed-URL</div>
+        <input class="rp-input" data-cfg="url"
+               value="${esc(node.config.url||'')}"
+               placeholder="https://example.com/feed.xml">
+        <div class="rp-hint">RSS 2.0 und Atom werden unterstützt. Auch <code>{{input}}</code> möglich.</div>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Anzahl Einträge</div>
+        <input class="rp-input" data-cfg="anzahl" type="number" min="1" max="30"
+               value="${esc(String(node.config.anzahl||5))}" placeholder="5">
+      </div>
+      <div class="rp-hint" style="padding:8px 10px;background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.25);border-radius:5px">
+        💡 <strong>Tipp:</strong> Kombiniere mit <strong>Zeitplan Trigger</strong> für automatisches Feed-Monitoring — z.B. stündlich auf neue Artikel prüfen und per Telegram weiterleiten.
+      </div>
+    `;
+
+  // ── loop ─────────────────────────────────────────────────────────────
+  } else if (node.type === 'loop') {
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Elemente-Quelle</div>
+        <input class="rp-input" data-cfg="items"
+               value="${esc(node.config.items||'{{input}}')}"
+               placeholder="{{input}} oder [&quot;a&quot;,&quot;b&quot;,&quot;c&quot;]">
+        <div class="rp-hint">
+          Akzeptiert: <code>{{input}}</code> (Vorgänger-Output), JSON-Array <code>["a","b"]</code>,
+          komma- oder zeilengetrennte Liste.
+        </div>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Max. Iterationen</div>
+        <input class="rp-input" data-cfg="max_items" type="number" min="1" max="100"
+               value="${esc(String(node.config.max_items||50))}" placeholder="50">
+        <div class="rp-hint">Sicherheitslimit. Max. 100 Iterationen pro Lauf.</div>
+      </div>
+      <div class="rp-hint" style="padding:8px 10px;background:rgba(77,159,255,.07);border:1px solid rgba(77,159,255,.25);border-radius:5px">
+        💡 <strong>Verwendung:</strong> Verbinde nachfolgende Nodes — sie werden für jedes Element einzeln ausgeführt.
+        Jedes Element steht als <code>{{input}}</code> zur Verfügung.
+      </div>
+    `;
+
+  // ── switch ───────────────────────────────────────────────────────────
+  } else if (node.type === 'switch') {
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Zu prüfender Wert</div>
+        <input class="rp-input" data-cfg="wert"
+               value="${esc(node.config.wert||'{{input}}')}"
+               placeholder="{{input}}">
+        <div class="rp-hint">Der Wert der gegen die Cases geprüft wird. <code>{{input}}</code> = Vorgänger-Output.</div>
+      </div>
+      <div class="rp-separator"></div>
+      ${[1,2,3,4,5].map(i=>`
+        <div class="rp-field">
+          <div class="rp-label" style="color:var(--blue)">Case ${i}</div>
+          <input class="rp-input" data-cfg="case${i}_bedingung"
+                 value="${esc(node.config[`case${i}_bedingung`]||'')}"
+                 placeholder="Bedingung (z.B. enthält Fehler, == hoch, > 100)">
+          <input class="rp-input" data-cfg="case${i}_ausgabe" style="margin-top:4px"
+                 value="${esc(node.config[`case${i}_ausgabe`]||'{{input}}')}"
+                 placeholder="Ausgabe wenn Case zutrifft">
+        </div>
+      `).join('')}
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <div class="rp-label" style="color:var(--tx3)">Default (kein Case trifft zu)</div>
+        <input class="rp-input" data-cfg="default_ausgabe"
+               value="${esc(node.config.default_ausgabe||'{{input}}')}"
+               placeholder="{{input}}">
+      </div>
+      <div class="rp-hint">Operatoren: <code>== wert</code>, <code>!= wert</code>, <code>&gt; zahl</code>, <code>&lt; zahl</code>, <code>enthält text</code></div>
+    `;
+
+  // ── wait ─────────────────────────────────────────────────────────────
+  } else if (node.type === 'wait') {
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Wartezeit (Sekunden)</div>
+        <input class="rp-input" data-cfg="sekunden" type="number" min="0" max="300"
+               value="${esc(String(node.config.sekunden||5))}" placeholder="5">
+        <div class="rp-hint">0–300 Sekunden. Max. 5 Minuten pro Workflow-Ausführung.</div>
+      </div>
+      <div class="rp-hint" style="padding:8px 10px;background:rgba(120,120,160,.07);border:1px solid rgba(120,120,160,.25);border-radius:5px">
+        💡 <strong>Beispiele:</strong><br>
+        • E-Mail senden → 30s warten → Status prüfen<br>
+        • API aufrufen → 10s warten → Ergebnis abrufen
+      </div>
+    `;
+
+  // ── sub_workflow ──────────────────────────────────────────────────────
+  } else if (node.type === 'sub_workflow') {
+    const swOpts = Object.values(state.workflows||{}).map(w=>
+      `<option value="${w.id}" ${node.config.workflow_id===w.id?'selected':''}>${esc(w.name)}</option>`
+    ).join('');
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Sub-Workflow auswählen</div>
+        <select class="rp-select" data-cfg="workflow_id">
+          <option value="">— Workflow wählen —</option>
+          ${swOpts}
+        </select>
+        <div class="rp-hint">Der Sub-Workflow erhält den Output des Vorgänger-Nodes als Eingabe.</div>
+      </div>
+      <div class="rp-hint" style="padding:8px 10px;background:rgba(34,201,124,.07);border:1px solid rgba(34,201,124,.25);border-radius:5px">
+        💡 <strong>Tipp:</strong> Baue wiederverwendbare Workflows (z.B. "Nachricht formatieren") und rufe sie aus mehreren anderen Workflows auf.
+      </div>
+    `;
+
+  // ── code ─────────────────────────────────────────────────────────────
+  } else if (node.type === 'code') {
+    const defCode = node.config.code || '# Verwende "input" für den Vorgänger-Output\n# Setze output = ... oder print() für Ausgabe\n\nlines = input.split("\\n")\noutput = f"{len(lines)} Zeilen empfangen"';
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Python-Code</div>
+        <div style="background:rgba(234,179,8,.13);border:1px solid rgba(234,179,8,.4);
+                    border-radius:6px;padding:7px 10px;margin-bottom:8px;font-size:.72rem;
+                    color:var(--text-muted);line-height:1.5;">
+          ⚠️ <strong>Voller Systemzugriff:</strong> Code-Nodes laufen lokal auf deinem PC
+          mit den Rechten des Ilija-Prozesses. Führe nur Code aus dem du selbst geschrieben
+          oder vollständig verstanden hast.
+        </div>
+        <textarea class="rp-input rp-textarea" data-cfg="code"
+          style="min-height:180px;font-family:var(--m);font-size:.74rem;line-height:1.65;tab-size:4"
+          spellcheck="false">${esc(defCode)}</textarea>
+        <div class="rp-hint">
+          Verfügbar: <code>input</code> / <code>context</code> (Vorgänger-Output),
+          <code>json</code>, <code>datetime</code>.<br>
+          Ausgabe: <code>output = "..."</code> oder <code>print(...)</code>
+        </div>
+      </div>
+    `;
+
+  // ── whatsapp ──────────────────────────────────────────────────────────
+  } else if (node.type === 'whatsapp') {
+    h += `
+      <div style="padding:9px 11px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);
+        border-left:3px solid #ef4444;border-radius:6px;margin-bottom:4px;
+        font-size:.74rem;color:#f87171;line-height:1.65">
+        <strong style="color:#fca5a5">⚠️ Offizielle Business API</strong><br>
+        Dieser Node nutzt die <strong>WhatsApp Business API</strong> (offiziell, stabil).
+        Voraussetzung: Meta Business Account + verifizierte Telefonnummer + Token aus der
+        <a href="https://developers.facebook.com" target="_blank" style="color:#f87171">Meta Developer Console</a>.
+        Für Privatnutzer ohne Business Account → stattdessen den <strong>Skill: whatsapp_autonomer_dialog</strong> nutzen (⚠️ inoffiziell).
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Operation</div>
+        <select class="rp-select" data-cfg="operation">
+          <option value="send" ${(node.config.operation||'send')==='send'?'selected':''}>📤 Nachricht senden</option>
+        </select>
+      </div>
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <div class="rp-label">Empfänger-Nummer</div>
+        <input class="rp-input" data-cfg="to"
+               value="${esc(node.config.to||'')}"
+               placeholder="49171234567 (ohne + oder 00)">
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Nachricht</div>
+        <textarea class="rp-input rp-textarea" data-cfg="text"
+                  placeholder="{{input}}">${esc(node.config.text||'{{input}}')}</textarea>
+        <div class="rp-hint">Verwende <code>{{input}}</code> für den Output des Vorgänger-Nodes.</div>
+      </div>
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <div class="rp-label">WhatsApp Business Token</div>
+        <input class="rp-input" data-cfg="token" type="password"
+               value="${esc(node.config.token||'')}"
+               placeholder="EAAxxxxxx... (aus Meta Developer Console)">
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Phone Number ID</div>
+        <input class="rp-input" data-cfg="phone_id"
+               value="${esc(node.config.phone_id||'')}"
+               placeholder="12345678901234">
+        <div class="rp-hint">
+          Beides unter <strong>developers.facebook.com</strong> → App → WhatsApp → API Setup.<br>
+          Token + Phone-ID werden lokal in <code>data/whatsapp/</code> gespeichert.
+        </div>
+      </div>
+    `;
+
+  // ── chatfilter ───────────────────────────────────────────────────────
+  } else if (node.type === 'chatfilter') {
+    const cfModus = node.config.modus || 'intelligent';
+    h += `
+      <div style="padding:9px 11px;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.28);
+        border-left:3px solid #f97316;border-radius:6px;margin-bottom:12px;
+        font-size:.8rem;color:#fb923c;line-height:1.65">
+        <strong style="color:#fdba74">🔍 Chat-Filter</strong><br>
+        Zwischen jeden <strong>Lese-Node</strong> (Telegram, WebChat, …) und den <strong>Ilija Chat-Node</strong> setzen.
+        Lässt nur echte Benutzer-Nachrichten durch — alles andere stoppt den Workflow.
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Filter-Modus</div>
+        <select class="rp-select" data-cfg="modus">
+          <option value="intelligent" ${cfModus==='intelligent'?'selected':''}>🧠 Intelligent (KI entscheidet) — empfohlen</option>
+          <option value="einfach"     ${cfModus==='einfach'    ?'selected':''}>⚡ Einfach (schnell, nur 📭-Check)</option>
+        </select>
+        <div class="rp-hint">
+          <strong>Intelligent:</strong> Ilija analysiert ob echte Benutzer-Nachrichten vorhanden sind — erkennt auch Fehlermeldungen, System-Signale usw.<br>
+          <strong>Einfach:</strong> Nur schneller String-Check auf „📭" und leere Eingabe.
+        </div>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Bei keiner echten Nachricht</div>
+        <select class="rp-select" data-cfg="bei_leer">
+          <option value="stoppen" ${(node.config.bei_leer||'stoppen')==='stoppen'?'selected':''}>🛑 Workflow stoppen (empfohlen)</option>
+          <option value="weiter"  ${(node.config.bei_leer||'stoppen')==='weiter' ?'selected':''}>⏩ Leer weiterleiten</option>
+        </select>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label" style="color:var(--tx2)">Verwendung</div>
+        <div class="rp-hint" style="padding:8px 10px;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.2);border-radius:5px;line-height:1.6">
+          <strong>Reihenfolge:</strong><br>
+          ⏰ Zeitplan → 📥 Lesen → 🔍 <strong>Chat-Filter</strong> → 💬 Ilija Chat → 📤 Senden
+        </div>
+      </div>
+    `;
+
+  } else if (node.type === 'memory_window') {
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Memory-Schlüssel</div>
+        <input class="rp-input" data-cfg="memory_key"
+               value="${esc(node.config.memory_key||'default')}"
+               placeholder="default">
+        <div class="rp-hint">Eindeutiger Name für diesen Gesprächsspeicher. Gleicher Schlüssel = gleicher Verlauf.</div>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label">Fenstergröße (Nachrichten-Paare)</div>
+        <input class="rp-input" data-cfg="window_size" type="number" min="1" max="50"
+               value="${esc(String(node.config.window_size||10))}"
+               placeholder="10">
+        <div class="rp-hint">Wie viele Frage/Antwort-Paare im Kontext bleiben.</div>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label" style="color:var(--tx2)">Verwendung</div>
+        <div class="rp-hint" style="padding:8px 10px;background:rgba(20,184,166,.08);border:1px solid rgba(20,184,166,.25);border-radius:5px;margin-top:4px">
+          Verbinde diesen Node mit einem <strong>Chat-Node</strong>. Der Gesprächsverlauf fließt automatisch als Kontext ein — und wird nach jeder Antwort aktualisiert.
+        </div>
+      </div>
+    `;
+  } else if (node.type === 'memory_summary') {
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Memory-Schlüssel</div>
+        <input class="rp-input" data-cfg="memory_key"
+               value="${esc(node.config.memory_key||'default')}"
+               placeholder="default">
+        <div class="rp-hint">Eindeutiger Name für diese Zusammenfassung. Gleicher Schlüssel = gleiche Zusammenfassung.</div>
+      </div>
+      <div class="rp-field">
+        <div class="rp-label" style="color:var(--tx2)">Verwendung</div>
+        <div class="rp-hint" style="padding:8px 10px;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.25);border-radius:5px;margin-top:4px">
+          Verbinde diesen Node mit einem <strong>Chat-Node</strong>. Ilija fasst nach jeder Interaktion den bisherigen Gesprächsverlauf automatisch zusammen und nutzt ihn als rollenden Kontext.
+        </div>
+      </div>
+    `;
+  }
+
+  if (node._lastResult) {
+    h += `
+      <div class="rp-separator"></div>
+      <div class="rp-field">
+        <div class="rp-label">Letzte Ausgabe</div>
+        <div class="rp-result-box">${esc(node._lastResult)}</div>
+      </div>
+    `;
+  }
+
+  return h;
+}
+
+async function loadSkillParams(nodeId, skillName, panelBody) {
+  if (!skillName) return;
+  const pDiv = panelBody.querySelector('#skill-params');
+  if (!pDiv) return;
+  const sig = await api(`/api/skill/signature/${skillName}`);
+
+  if (!sig || !sig.params?.length) {
+    pDiv.innerHTML = '<div class="rp-hint" style="margin-top:4px">Keine Parameter</div>';
+    return;
+  }
+
+  const node = state.nodes[nodeId];
+  if (!node.config.params) node.config.params = {};
+
+  let h = '';
+  if (sig.doc) h += `<div class="rp-hint" style="margin-bottom:10px;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:5px;border:1px solid var(--border)">${esc(sig.doc.substring(0,160))}</div>`;
+  h += '<div class="rp-separator" style="margin-bottom:10px"></div>';
+  h += `<div class="rp-label" style="margin-bottom:8px">Parameter</div>`;
+
+  sig.params.forEach(p => {
+    const val = node.config.params[p.name] || p.default || '';
+    h += `
+      <div class="param-row" style="margin-bottom:8px">
+        <div class="param-name">
+          ${esc(p.name)}
+          <span class="${p.required?'param-req':'param-opt'}">${p.required?'Pflicht':'Optional'}</span>
+          ${p.type ? `<span style="font-size:.59rem;color:var(--tx3)">${esc(p.type)}</span>` : ''}
+        </div>
+        <input class="rp-input" style="font-family:var(--m);font-size:.77rem;margin-top:5px"
+               data-param="${esc(p.name)}"
+               value="${esc(String(val))}"
+               placeholder="${esc(p.default||'')}">
+      </div>
+    `;
+  });
+
+  pDiv.innerHTML = h;
+
+  pDiv.querySelectorAll('[data-param]').forEach(inp => {
+    inp.addEventListener('input', e => {
+      state.nodes[nodeId].config.params = state.nodes[nodeId].config.params || {};
+      state.nodes[nodeId].config.params[e.target.dataset.param] = e.target.value;
+    });
+  });
+}
+
+function closePanel() {
+  document.getElementById('rpanel').classList.remove('open');
+}
+
+// ── Context menus ─────────────────────────────────────────
+function showNodeCtx(e, id) {
+  e.preventDefault();
+  document.querySelector('.ctx-menu')?.remove();
+  const m = document.createElement('div');
+  m.className = 'ctx-menu';
+  m.style.cssText = `left:${e.clientX}px;top:${e.clientY}px`;
+  m.innerHTML = `
+    <div class="ctx-item" onclick="selectNode('${id}')">⚙ Konfigurieren</div>
+    <div class="ctx-item" onclick="duplicateNode('${id}')">⧉ Duplizieren</div>
+    <div class="ctx-item" onclick="copyNodeJson('${id}')">📋 JSON kopieren</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item danger" onclick="deleteNode('${id}')">🗑 Löschen</div>
+  `;
+  document.body.appendChild(m);
+}
+
+function showConnCtx(e, id) {
+  e.preventDefault();
+  document.querySelector('.ctx-menu')?.remove();
+  const m = document.createElement('div');
+  m.className = 'ctx-menu';
+  m.style.cssText = `left:${e.clientX}px;top:${e.clientY}px`;
+  m.innerHTML = `<div class="ctx-item danger" onclick="deleteConnection('${id}')">✕ Verbindung löschen</div>`;
+  document.body.appendChild(m);
+}
+
+function copyNodeJson(id) {
+  navigator.clipboard?.writeText(JSON.stringify(state.nodes[id], null, 2));
+  toast('Node-JSON kopiert', 'info');
+}
+
+// ── Workflow execution ─────────────────────────────────────
+async function executeWorkflow() {
+  const nodeList = Object.values(state.nodes);
+  if (!nodeList.length) { toast('Keine Nodes vorhanden!', 'err'); return; }
+
+  // Reset
+  state.execResults = {};
+  document.querySelectorAll('.wf-node').forEach(el => {
+    el.classList.remove('running','success','error');
+    const r = el.querySelector('.node-result');
+    if (r) { r.className='node-result'; r.textContent=''; }
+  });
+  renderConnections();
+
+  const runBtn = document.getElementById('run-btn');
+  runBtn.classList.add('running');
+  runBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><rect x="6" y="6" width="12" height="12"/></svg> Stopp`;
+  runBtn.onclick = () => location.reload();
+
+  const badge = document.getElementById('wf-badge');
+  badge.textContent = 'Läuft…';
+  badge.className = 'tb-badge badge-running';
+  setStatus('thinking', 'Workflow wird ausgeführt…');
+
+  const logEl   = document.getElementById('exec-log');
+  const logBody = document.getElementById('exec-log-body');
+  logBody.innerHTML = '';
+  logEl.classList.add('open');
+  document.getElementById('exec-log-time').textContent = new Date().toLocaleTimeString('de-DE');
+
+  const result = await api('/api/workflow/execute', {
+    method: 'POST',
+    body:   JSON.stringify({nodes: nodeList, connections: Object.values(state.connections)}),
+  });
+
+  runBtn.classList.remove('running');
+  runBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><polygon points="5 3 19 12 5 21 5 3"/></svg> Ausführen`;
+  runBtn.onclick = executeWorkflow;
+
+  if (!result) {
+    toast('Ausführung fehlgeschlagen — ist der Ilija-Server gestartet?', 'err');
+    badge.textContent = 'Fehler'; badge.className = 'tb-badge badge-inactive';
+    setStatus('error', 'Verbindungsfehler');
+    return;
+  }
+
+  state.execResults = result.results || {};
+  let hasError = false;
+
+  (result.order || []).forEach(nid => {
+    const nodeEl = document.getElementById(`node-${nid}`);
+    const resEl  = document.getElementById(`result-${nid}`);
+    const status = result.statuses?.[nid] || 'success';
+    const output = result.results?.[nid]  || '';
+
+    if (nodeEl) nodeEl.classList.add(status==='error' ? 'error' : 'success');
+    if (resEl && output) {
+      resEl.className = `node-result visible ${status==='error'?'err':'ok'}`;
+      resEl.textContent = output.substring(0,120) + (output.length>120?'…':'');
+    }
+    if (state.nodes[nid]) state.nodes[nid]._lastResult = output;
+    if (status==='error') hasError = true;
+
+    // Log entry
+    const entry = document.createElement('div');
+    entry.className = 'el-entry';
+    entry.innerHTML = `
+      <div class="el-node">→ ${esc(state.nodes[nid]?.name || nid)}</div>
+      <div class="el-status ${status==='error'?'err':'ok'}">${status==='error'?'✗':'✓'}</div>
+      <div class="el-out">${esc(output.substring(0,300))}</div>
+    `;
+    logBody.appendChild(entry);
+  });
+
+  renderConnections();
+
+  // Store history
+  state.runHistory.unshift({
+    time:    new Date().toISOString(),
+    name:    state.workflowName,
+    nodes:   result.order?.length || 0,
+    hasError,
+  });
+  if (state.runHistory.length > 20) state.runHistory.pop();
+
+  badge.textContent = hasError ? 'Fehler' : 'Fertig ✓';
+  badge.className = `tb-badge ${hasError?'badge-inactive':'badge-active'}`;
+  setStatus('idle', hasError ? 'Ausführung mit Fehlern' : 'Ausführung erfolgreich');
+  toast(hasError ? 'Workflow mit Fehlern beendet' : `Abgeschlossen — ${result.order?.length||0} Nodes`, hasError?'err':'ok');
+
+  if (state.selected) openPanel(state.selected);
+}
+
+// ── Schedule Helpers ──────────────────────────────────────
+async function activateSchedule(wid, config) {
+  if (!wid) { toast('Workflow zuerst speichern!', 'err'); return; }
+  const res = await api(`/api/schedules/${wid}`, {
+    method: 'POST',
+    body: JSON.stringify({ active: true, config: config || {} })
+  });
+  if (res) { toast(`⏰ Zeitplan aktiviert für "${state.workflowName||wid}"`, 'ok'); refreshSchedulesBadge(); }
+  else toast('Aktivierung fehlgeschlagen', 'err');
+}
+async function deactivateSchedule(wid) {
+  if (!wid) { toast('Kein Workflow-ID', 'err'); return; }
+  const res = await api(`/api/schedules/${wid}`, {
+    method: 'POST',
+    body: JSON.stringify({ active: false })
+  });
+  if (res) { toast('⏹ Zeitplan deaktiviert', 'ok'); refreshSchedulesBadge(); }
+}
+
+// ── Schedules Modal ────────────────────────────────────────
+async function openSchedules() {
+  document.getElementById('schedules-overlay').classList.add('open');
+  document.getElementById('schedules-modal').classList.add('open');
+  await renderSchedulesModal();
+}
+function closeSchedules() {
+  document.getElementById('schedules-overlay').classList.remove('open');
+  document.getElementById('schedules-modal').classList.remove('open');
+}
+
+async function renderSchedulesModal() {
+  const body = document.getElementById('schedules-body');
+  body.innerHTML = '<div style="color:var(--tx2);font-size:.85rem">Lädt…</div>';
+
+  // Schedules + Workflow-Namen parallel laden
+  const [scheds, wfList] = await Promise.all([
+    fetch('/api/schedules').then(r => r.json()).catch(() => ({})),
+    fetch('/api/workflows').then(r => r.json()).catch(() => []),
+  ]);
+
+  // Workflow-Namen-Map aufbauen
+  const names = {};
+  (wfList || []).forEach(w => { if (w.id) names[w.id] = w.name || w.id; });
+
+  const entries = Object.entries(scheds || {});
+  if (!entries.length) {
+    body.innerHTML = `
+      <div style="text-align:center;padding:28px 0;color:var(--tx2);font-size:.85rem">
+        ⏰ Keine gespeicherten Zeitpläne.<br>
+        <span style="font-size:.78rem;opacity:.6;margin-top:6px;display:block">
+          Workflow öffnen → Schedule-Trigger-Node klicken → „Zeitplan aktivieren"
+        </span>
+      </div>`;
+    return;
+  }
+
+  let html = '';
+  let activeCount = 0;
+  for (const [wid, entry] of entries) {
+    const isOn    = !!entry.active;
+    const cfg     = entry.config || {};
+    const name    = names[wid] || wid;
+    const itype   = cfg.intervalType || 'interval';
+    const lastRun = cfg._last_run ? new Date(cfg._last_run).toLocaleString('de-DE', {dateStyle:'short',timeStyle:'short'}) : '—';
+
+    let interval = '';
+    if (itype === 'interval') {
+      const min = parseInt(cfg.minuten || 0);
+      const sec = parseInt(cfg.sekunden || 0);
+      const total = min * 60 + sec;
+      interval = total >= 60
+        ? `alle ${min}m${sec ? ' '+sec+'s' : ''}`
+        : `alle ${total}s`;
+    } else if (itype === 'taglich') {
+      interval = `täglich ${cfg.zeit || '08:00'}`;
+    } else if (itype === 'woechentlich') {
+      const days = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+      interval = `${days[cfg.wochentag || 0]} ${cfg.zeit || '08:00'}`;
+    }
+
+    if (isOn) activeCount++;
+
+    html += `
+      <div class="sched-row" id="sched-row-${wid}">
+        <div style="flex:1;min-width:0">
+          <div class="sched-name">${esc(name)}</div>
+          <div class="sched-info">${interval}${lastRun !== '—' ? ' · zuletzt ' + lastRun : ''}</div>
+        </div>
+        <button class="sched-toggle ${isOn?'on':'off'}" onclick="toggleSchedule('${wid}',${isOn})"
+          title="${isOn ? 'Zeitplan deaktivieren' : 'Zeitplan aktivieren'}">
+          ${isOn ? '🟢 Aktiv' : '⚫ Inaktiv'}
+        </button>
+        <button onclick="deleteSchedule('${wid}')" title="Zeitplan löschen"
+          style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);
+          background:none;color:var(--tx3);cursor:pointer;font-size:.8rem"
+          onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red)'"
+          onmouseout="this.style.color='var(--tx3)';this.style.borderColor='var(--border)'">🗑</button>
+      </div>`;
+  }
+  body.innerHTML = html;
+
+  // Badge aktualisieren
+  const badge = document.getElementById('schedules-badge');
+  if (activeCount > 0) {
+    badge.style.display = 'inline';
+    badge.textContent   = activeCount;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function toggleSchedule(wid, currentlyActive) {
+  const row = document.getElementById(`sched-row-${wid}`);
+  const btn = row?.querySelector('.sched-toggle');
+  if (btn) btn.textContent = '…';
+
+  await api(`/api/schedules/${wid}`, {
+    method: 'POST',
+    body: JSON.stringify({ active: !currentlyActive })
+  });
+  toast(currentlyActive ? '⏹ Zeitplan deaktiviert' : '⏰ Zeitplan aktiviert', currentlyActive ? 'warn' : 'ok');
+  await renderSchedulesModal();
+}
+
+async function deleteSchedule(wid) {
+  if (!confirm('Zeitplan für diesen Workflow wirklich löschen?')) return;
+  await fetch(`/api/schedules/${wid}`, { method: 'DELETE' });
+  toast('🗑 Zeitplan gelöscht', 'warn');
+  await renderSchedulesModal();
+}
+
+async function refreshSchedulesBadge() {
+  try {
+    const scheds = await fetch('/api/schedules').then(r => r.json());
+    const count  = Object.values(scheds || {}).filter(e => e.active).length;
+    const badge  = document.getElementById('schedules-badge');
+    badge.style.display = count > 0 ? 'inline' : 'none';
+    badge.textContent   = count;
+  } catch {}
+}
+
+// ── Save / Load ───────────────────────────────────────────
+async function saveWorkflow() {
+  const name = document.getElementById('wf-name-input').value.trim() || 'Neuer Workflow';
+  state.workflowName = name;
+  const payload = {
+    id:          state.workflowId,
+    name,
+    nodes:       Object.values(state.nodes),
+    connections: Object.values(state.connections),
+  };
+  const res = await api('/api/workflows', {method:'POST', body:JSON.stringify(payload)});
+  if (res) {
+    state.workflowId         = res.id;
+    state.currentWorkflowId  = res.id;   // für Schedule-Panel
+    toast(`"${name}" gespeichert`, 'ok');
+    loadWorkflowList();
+  } else {
+    toast('Speichern fehlgeschlagen — Server erreichbar?', 'err');
+  }
+}
+
+async function loadWorkflowList() {
+  const wfs = await api('/api/workflows');
+  const el  = document.getElementById('wf-list');
+  if (!wfs?.length) {
+    el.innerHTML = '<div class="ls-empty">Keine gespeicherten Workflows</div>';
+    return;
+  }
+  el.innerHTML = wfs.map(wf => `
+    <div class="wf-item ${wf.id===state.workflowId?'active':''}" onclick="loadWorkflow('${wf.id}')">
+      <div class="wfi-icon">⚡</div>
+      <div class="wfi-info">
+        <div class="wfi-name">${esc(wf.name)}</div>
+        <div class="wfi-meta">${wf.nodes} Node${wf.nodes!==1?'s':''} · ${new Date(wf.updated).toLocaleDateString('de-DE')}</div>
+      </div>
+      <div class="wfi-del" onclick="event.stopPropagation();deleteWorkflowFile('${wf.id}')" title="Löschen">✕</div>
+    </div>
+  `).join('');
+}
+
+async function loadWorkflow(id) {
+  const wf = await api(`/api/workflows/${id}`);
+  if (!wf) { toast('Laden fehlgeschlagen', 'err'); return; }
+  newWorkflow(false);
+  state.workflowId   = wf.id;
+  state.workflowName = wf.name;
+  document.getElementById('wf-name-input').value = wf.name;
+  (wf.nodes||[]).forEach(n => { state.nodes[n.id] = n; renderNode(n.id); });
+  (wf.connections||[]).forEach(c => { state.connections[c.id] = c; });
+  renderConnections();
+  updateFooter();
+  fitView();
+  toast(`"${wf.name}" geladen`, 'ok');
+  loadWorkflowList();
+}
+
+async function deleteWorkflowFile(id) {
+  if (!confirm('Workflow wirklich löschen?')) return;
+  await api(`/api/workflows/${id}`, {method:'DELETE'});
+  if (state.workflowId===id) newWorkflow();
+  loadWorkflowList();
+  toast('Workflow gelöscht', 'info');
+}
+
+function newWorkflow(clear=true) {
+  if (!clear) return;
+  state.nodes       = {};
+  state.connections = {};
+  state.selected    = null;
+  state.workflowId  = null;
+  state.execResults = {};
+  document.getElementById('nodes-layer').innerHTML    = '';
+  document.getElementById('connections-layer').innerHTML = '';
+  document.getElementById('wf-name-input').value = 'Neuer Workflow';
+  document.getElementById('wf-badge').textContent = 'Inaktiv';
+  document.getElementById('wf-badge').className   = 'tb-badge badge-inactive';
+  closePanel();
+  closeExecLog();
+  updateFooter();
+  addNode('trigger', 100, 120);
+}
+
+// ── Import / Export ───────────────────────────────────────
+function importWorkflow() {
+  document.getElementById('import-input').click();
+}
+
+function handleImportFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const wf = JSON.parse(ev.target.result);
+      newWorkflow(false);
+      state.workflowId   = wf.id || null;
+      state.workflowName = wf.name || 'Importiert';
+      document.getElementById('wf-name-input').value = state.workflowName;
+      (wf.nodes||[]).forEach(n => { state.nodes[n.id] = n; renderNode(n.id); });
+      (wf.connections||[]).forEach(c => { state.connections[c.id] = c; });
+      renderConnections(); updateFooter(); fitView();
+      toast(`"${state.workflowName}" importiert`, 'ok');
+    } catch { toast('Ungültiges JSON', 'err'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function exportWorkflow() {
+  const name = document.getElementById('wf-name-input').value.trim() || 'workflow';
+  const data = JSON.stringify({
+    id:          state.workflowId,
+    name,
+    nodes:       Object.values(state.nodes),
+    connections: Object.values(state.connections),
+    exported:    new Date().toISOString(),
+  }, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name.replace(/\s+/g,'_') + '.json';
+  a.click();
+  toast('Workflow exportiert', 'ok');
+}
+
+// ── Provider switch ───────────────────────────────────────
+async function switchProvider() {
+  const providers = await api('/api/providers');
+  if (!providers?.length) { toast('Keine Provider verfügbar', 'err'); return; }
+  // Simple cycle
+  const st = await api('/api/status');
+  const cur = st?.active_provider || '';
+  const idx = providers.indexOf(cur);
+  const next = providers[(idx+1) % providers.length];
+  const res = await api('/api/switch', {method:'POST', body: JSON.stringify({provider:next})});
+  if (res) {
+    document.getElementById('provider-label').textContent = res.provider;
+    toast(`Provider: ${res.provider}`, 'info');
+  }
+}
+
+// ── Run History ───────────────────────────────────────────
+function renderRunHistory() {
+  const el = document.getElementById('run-history');
+  if (!state.runHistory.length) {
+    el.innerHTML = '<div class="ls-empty">Noch keine Ausführungen</div>';
+    return;
+  }
+  el.innerHTML = state.runHistory.map(r => `
+    <div style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:.74rem">
+      <div style="display:flex;align-items:center;gap:7px">
+        <span style="color:${r.hasError?'var(--red)':'var(--green)'}">${r.hasError?'✗':'✓'}</span>
+        <span style="font-weight:600;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px">${esc(r.name)}</span>
+        <span style="color:var(--tx3);font-size:.67rem">${r.nodes} Nodes</span>
+      </div>
+      <div style="color:var(--tx3);font-size:.67rem;margin-top:3px;font-family:var(--m)">${new Date(r.time).toLocaleTimeString('de-DE')}</div>
+    </div>
+  `).join('');
+}
+
+// ── Utils ─────────────────────────────────────────────────
+function updateFooter() {
+  const nc = Object.keys(state.nodes).length;
+  const cc = Object.keys(state.connections).length;
+  document.getElementById('node-count').textContent = nc + ' Node' + (nc!==1?'s':'');
+  document.getElementById('conn-count').textContent = cc + ' Verbindung' + (cc!==1?'en':'');
+  document.getElementById('canvas-empty').style.display = nc ? 'none' : 'flex';
+}
+
+function setStatus(type, text) {
+  document.getElementById('status-dot').className = 'bb-dot ' + type;
+  document.getElementById('status-text').textContent = text;
+}
+
+function closeExecLog() {
+  document.getElementById('exec-log').classList.remove('open');
+}
+
+function toast(msg, type='info') {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span style="font-size:.9rem">${type==='ok'?'✓':type==='err'?'✗':'i'}</span>${esc(msg)}`;
+  wrap.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(), 300); }, 3500);
+}
+
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Settings Modal ────────────────────────────────────────
+async function openSettings() {
+  document.getElementById('settings-overlay').classList.add('open');
+  document.getElementById('settings-modal').classList.add('open');
+  await loadSettingsData();
+  loadOllamaModels(false);
+}
+
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('open');
+  document.getElementById('settings-modal').classList.remove('open');
+}
+
+async function loadSettingsData() {
+  const d = await api('/api/settings');
+  if (!d) return;
+
+  // Aktiver Provider anzeigen
+  const dotColor = {
+    'Claude':'var(--orange)','ChatGPT':'var(--green)',
+    'Gemini':'var(--blue)','Ollama':'var(--purple)',
+  };
+  document.getElementById('sm-active-dot').style.background = dotColor[d.active_provider] || 'var(--tx3)';
+  document.getElementById('sm-active-name').textContent = d.active_provider || '—';
+
+  // Standard-Provider-Auswahl
+  const sel = document.getElementById('sm-provider-select');
+  sel.value = d.default_provider || 'auto';
+
+  // Gespeicherte Modelle eintragen
+  const m = d.models || {};
+  if (m.claude) smSetSelect('model-claude', m.claude);
+  if (m.openai) smSetSelect('model-openai', m.openai);
+  if (m.gemini) smSetSelect('model-gemini', m.gemini);
+
+  // API-Key-Felder: Platzhalter mit maskiertem Wert füllen, Eingabe leer lassen
+  smSetKeyPlaceholder('key-anthropic', d.has_keys?.anthropic, d.keys?.anthropic);
+  smSetKeyPlaceholder('key-openai',    d.has_keys?.openai,    d.keys?.openai);
+  smSetKeyPlaceholder('key-gemini',    d.has_keys?.gemini,    d.keys?.gemini);
+
+  // Badges
+  smUpdateBadge('claude', d.has_keys?.anthropic, d.active_provider === 'Claude');
+  smUpdateBadge('openai', d.has_keys?.openai,    d.active_provider === 'ChatGPT');
+  smUpdateBadge('gemini', d.has_keys?.gemini,    d.active_provider === 'Gemini');
+
+  // Aktive Karte hervorheben
+  const activeMap = {Claude:'claude', ChatGPT:'openai', Gemini:'gemini', Ollama:'ollama'};
+  const activeCard = activeMap[d.active_provider] || '';
+  ['claude','openai','gemini','ollama'].forEach(p =>
+    document.getElementById(`sm-card-${p}`)?.classList.toggle('active', p === activeCard)
+  );
+
+  // Ollama-Badge vorab setzen
+  const ob = document.getElementById('sm-badge-ollama');
+  if (d.active_provider === 'Ollama') {
+    ob.textContent = '✓ Aktiv'; ob.className = 'sm-card-badge is-active';
+  } else {
+    ob.textContent = 'Lokal'; ob.className = 'sm-card-badge has-key';
+  }
+}
+
+function smSetKeyPlaceholder(inputId, hasKey, maskedVal) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  el.value = '';
+  el.placeholder = hasKey ? (maskedVal || '(gespeichert)') : el.placeholder;
+}
+
+function smSetSelect(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (![...el.options].some(o => o.value === value)) {
+    const opt = document.createElement('option');
+    opt.value = opt.textContent = value;
+    el.appendChild(opt);
+  }
+  el.value = value;
+}
+
+function smUpdateBadge(provider, hasKey, isActive) {
+  const el = document.getElementById(`sm-badge-${provider}`);
+  if (!el) return;
+  if (isActive) {
+    el.textContent = '✓ Aktiv'; el.className = 'sm-card-badge is-active';
+  } else if (hasKey) {
+    el.textContent = 'Key gespeichert'; el.className = 'sm-card-badge has-key';
+  } else {
+    el.textContent = 'Kein Key'; el.className = 'sm-card-badge';
+  }
+}
+
+async function loadOllamaModels(showFeedback = true) {
+  const btn  = document.querySelector('.sm-refresh-btn');
+  const sel  = document.getElementById('model-ollama');
+  const hint = document.getElementById('sm-ollama-hint');
+  const badge = document.getElementById('sm-badge-ollama');
+  if (btn) btn.textContent = '⏳ Laden…';
+
+  const models = await api('/api/ollama/models');
+
+  if (btn) btn.textContent = '🔄 Laden';
+
+  if (!models || !models.length) {
+    sel.innerHTML = '<option value="">Keine Modelle gefunden (Ollama läuft?)</option>';
+    if (hint) hint.style.color = 'var(--yellow)';
+    if (showFeedback) toast('Ollama: keine Modelle gefunden', 'info');
+    return;
+  }
+
+  // Aktuell gespeichertes Modell ermitteln
+  const d = await api('/api/settings');
+  const current = d?.models?.ollama || '';
+
+  sel.innerHTML = models.map(m =>
+    `<option value="${esc(m)}" ${m === current ? 'selected' : ''}>${esc(m)}</option>`
+  ).join('');
+
+  if (hint) hint.style.color = 'var(--tx3)';
+  if (badge && badge.className !== 'sm-card-badge is-active') {
+    badge.textContent = models.length + ' Modell' + (models.length !== 1 ? 'e' : '');
+    badge.className = 'sm-card-badge has-key';
+  }
+  if (showFeedback) toast(`Ollama: ${models.length} Modell(e) gefunden`, 'ok');
+}
+
+function toggleKey(inputId) {
+  const el = document.getElementById(inputId);
+  if (el) el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+async function saveSettingsModal() {
+  const provider = document.getElementById('sm-provider-select').value;
+  const keys = {
+    anthropic: document.getElementById('key-anthropic').value.trim(),
+    openai:    document.getElementById('key-openai').value.trim(),
+    gemini:    document.getElementById('key-gemini').value.trim(),
+  };
+  const models = {
+    claude: document.getElementById('model-claude').value,
+    openai: document.getElementById('model-openai').value,
+    gemini: document.getElementById('model-gemini').value,
+    ollama: document.getElementById('model-ollama').value,
+  };
+
+  const btn = document.querySelector('.sm-btn-save');
+  if (btn) { btn.textContent = '⏳ Speichern…'; btn.disabled = true; }
+
+  const res = await api('/api/settings', {
+    method: 'POST',
+    body: JSON.stringify({provider, keys, models}),
+  });
+
+  if (btn) { btn.textContent = '💾 Speichern & Aktivieren'; btn.disabled = false; }
+
+  if (res) {
+    toast('Einstellungen gespeichert — Provider wird neu gestartet', 'ok');
+    closeSettings();
+    // Provider-Status nach kurzer Pause aktualisieren
+    setTimeout(async () => {
+      const st = await api('/api/status');
+      if (st?.active_provider) {
+        document.getElementById('provider-label').textContent = st.active_provider;
+        document.getElementById('pp-dot').style.background = 'var(--green)';
+      }
+    }, 1800);
+  } else {
+    toast('Fehler beim Speichern — Server erreichbar?', 'err');
+  }
+}
+
+function onKeyDown(e) {
+  const active = document.activeElement;
+  const typing = active.matches?.('input,textarea,select');
+
+  if ((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); saveWorkflow(); }
+  if ((e.ctrlKey||e.metaKey) && e.key==='z') { e.preventDefault(); toast('Undo noch nicht implementiert', 'info'); }
+  if (e.key==='Delete'||e.key==='Backspace') {
+    if (!typing && state.selected) { deleteNode(state.selected); }
+  }
+  if (e.key==='Escape') { closePanel(); clearConnecting(); deselectAll(); }
+  if ((e.ctrlKey||e.metaKey) && e.key==='a' && !typing) {
+    e.preventDefault();
+    Object.keys(state.nodes).forEach(id => document.getElementById(`node-${id}`)?.classList.add('selected'));
+  }
+  if ((e.ctrlKey||e.metaKey) && e.key==='d' && !typing) {
+    e.preventDefault();
+    if (state.selected) duplicateNode(state.selected);
+  }
+  if (e.key==='Enter' && !typing) {
+    // Run with Enter when canvas is focused
+    if (document.activeElement===document.body) executeWorkflow();
+  }
+}
+
+// ── Skill-Abhängigkeiten ──────────────────────────────────
+// Schlüssel = Dateiname des Skills (s.file), Wert = Anforderungsinfo
+// Nur Skills bei denen der User selbst aktiv werden muss.
+// Skills deren Abhängigkeiten automatisch vom eigenen Installer erledigt werden
+// (OpenPhoenix ERP, Net Fire Monitor) brauchen hier nur den Setup-Befehl.
+const SKILL_DEPS = {
+  'net_fire_monitor_skill.py': {
+    label: 'Einmalige Einrichtung erforderlich',
+    pip:   [],   // alles via NFM install.sh bereits installiert
+    software: 'Net Fire Monitor muss installiert und gestartet sein.',
+    setup: 'nfm_pfad_einrichten(pfad="/pfad/zur/nfm/installation")',
+    hinweis: 'Ilija einmalig mitteilen wo Net Fire Monitor installiert ist. Alle Python-Abhängigkeiten werden beim NFM-Install automatisch mitinstalliert.',
+  },
+  'openphoenix_erp.py': {
+    label: 'Einmalige Einrichtung erforderlich',
+    pip:   [],   // alles via ERP install.sh bereits installiert
+    software: 'OpenPhoenix ERP muss installiert sein.',
+    setup: 'erp_pfad_setzen(pfad="/pfad/zur/erp/datenbank")',
+    hinweis: 'Ilija einmalig mitteilen wo die ERP-Datenbankdatei liegt. Alle Python-Abhängigkeiten werden beim ERP-Install automatisch mitinstalliert.',
+  },
+  'browser_oeffnen.py': {
+    label: 'Einmalige Einrichtung erforderlich',
+    pip:   ['selenium', 'webdriver-manager'],
+    software: 'Google Chrome muss installiert sein.',
+    setup: null,
+    hinweis: 'Chrome wird von Ilija automatisch gefunden. Kein Pfad nötig.',
+  },
+  'whatsapp_autonomer_dialog.py': {
+    label: 'Einmalige Einrichtung erforderlich',
+    pip:   ['selenium', 'webdriver-manager'],
+    software: 'Google Chrome + WhatsApp-Konto (web.whatsapp.com).',
+    setup: null,
+    hinweis: 'Beim ersten Start öffnet Ilija Chrome mit WhatsApp Web — QR-Code einmalig scannen, danach läuft alles automatisch.',
+    warnung: '⚠️ INOFFIZIELLER WORKAROUND: Meta/WhatsApp bietet keine offenen APIs für Privatnutzer. Dieser Skill steuert daher den Browser (Selenium/Web-Scraping). Durch die protektionistische Plattform-Politik von Meta kann dieser Skill nach UI-Updates von WhatsApp vorübergehend nicht funktionieren und muss dann neu angepasst werden. Für zuverlässige Automatisierungen empfehlen wir den Gmail- oder Telegram-Node, da diese offizielle Schnittstellen nutzen.',
+  },
+  'gedaechtnis.py': {
+    label: 'Einmalige Einrichtung erforderlich',
+    pip:   ['chromadb', 'sentence-transformers'],
+    software: null,
+    setup: null,
+    hinweis: 'Beim ersten Aufruf lädt Ilija automatisch ein Sprachmodell herunter (~90 MB). Kein weiterer Setup-Schritt nötig.',
+  },
+  'dms.py': {
+    label: 'Einmalige Einrichtung erforderlich',
+    pip:   ['Pillow', 'pytesseract', 'pdf2image'],
+    software: 'Tesseract OCR (für automatische Texterkennung in Scans/Fotos).',
+    setup: 'dms_pfad_setzen(archiv_pfad="/pfad/zum/archiv", import_pfad="/pfad/zum/import")',
+    hinweis: 'Tesseract installieren: sudo apt install tesseract-ocr (Linux) bzw. tesseract-ocr.github.io (Windows). Danach Ilija einmalig die Ordner mitteilen.',
+  },
+  'telegram_skill.py': {
+    label: 'Einmalige Einrichtung erforderlich',
+    pip:   ['pyTelegramBotAPI'],
+    software: 'Telegram-Konto + Bot über @BotFather erstellen.',
+    setup: 'telegram_konfigurieren(token="DEIN_TOKEN", chat_id="DEINE_CHAT_ID")',
+    hinweis: '1. @BotFather in Telegram öffnen → /newbot → Token kopieren.  2. Dem neuen Bot eine Nachricht schicken.  3. Setup-Befehl einmalig ausführen.',
+  },
+  'email_skill.py': {
+    label: 'Einmalige Einrichtung erforderlich',
+    pip:   [],
+    software: 'E-Mail-Konto (Gmail, Outlook, GMX …). Bei Gmail: App-Passwort nötig.',
+    setup: 'email_konfigurieren(provider="gmail", email_adresse="du@gmail.com", passwort="app-passwort")',
+    hinweis: 'Setup-Befehl einmalig ausführen. Gmail App-Passwort erstellen unter: myaccount.google.com → Sicherheit → App-Passwörter.',
+  },
+  'outlook_kalender.py': {
+    label: 'Einmalige Einrichtung erforderlich',
+    pip:   ['selenium', 'webdriver-manager'],
+    software: 'Google Chrome + Microsoft-Konto (outlook.com oder Office 365).',
+    setup: null,
+    hinweis: 'Beim ersten Start öffnet Ilija Chrome mit Outlook Web — einmalig anmelden, danach automatisch.',
+    warnung: '⚠️ INOFFIZIELLER WORKAROUND: Microsoft sperrt zunehmend den direkten API-Zugriff für Privatnutzer (ohne teure Azure-Lizenz). Dieser Skill nutzt daher Browser-Fernsteuerung (Selenium). Das bedeutet: Ändert Microsoft die Outlook-Weboberfläche, kann der Skill temporär nicht funktionieren. Für zuverlässige Kalender-Automatisierungen empfehlen wir dringend den Google Kalender-Node — dieser nutzt die offizielle OAuth2-API und ist dauerhaft stabil.',
+  },
+};
+
+// ── App Store ─────────────────────────────────────────────
+let _asMode   = 'add';
+let _asNodeId = null;
+
+function openAppStore(mode='add', nodeId=null) {
+  _asMode   = mode;
+  _asNodeId = nodeId;
+  document.getElementById('as-search').value = '';
+  document.getElementById('as-mode-badge').style.display = mode === 'select' ? '' : 'none';
+  buildAppStore('');
+  document.getElementById('as-overlay').classList.add('open');
+}
+
+function closeAppStore(e) {
+  if (e && e.target !== document.getElementById('as-overlay')) return;
+  document.getElementById('as-overlay').classList.remove('open');
+}
+
+function buildAppStore(filter='') {
+  const body = document.getElementById('as-body');
+  const fl   = filter.toLowerCase();
+  body.innerHTML = '';
+
+  const byFile = state.skillsByFile;
+  if (!Object.keys(byFile).length) {
+    body.innerHTML = '<div class="as-empty-msg">Keine Skills geladen.</div>';
+    return;
+  }
+
+  let anyVisible = false;
+  Object.entries(byFile).forEach(([file, skills]) => {
+    const filtered = skills.filter(s =>
+      !fl || s.name.toLowerCase().includes(fl) || (s.doc||'').toLowerCase().includes(fl)
+    );
+    if (!filtered.length) return;
+    anyVisible = true;
+
+    const catEl = document.createElement('div');
+    catEl.className = 'as-category';
+    const catName = file.replace('.py','').replace(/_/g,' ');
+    catEl.innerHTML = `<div class="as-cat-title">📦 ${esc(catName)}</div>`;
+
+    const grid = document.createElement('div');
+    grid.className = 'as-grid';
+
+    filtered.forEach(s => {
+      const isSel = (_asMode === 'select' && _asNodeId && state.nodes[_asNodeId]?.config?.skill === s.name);
+      const deps  = SKILL_DEPS[s.file] || null;
+      const card  = document.createElement('div');
+      card.className = 'as-card';
+      const btnLabel = _asMode === 'select'
+        ? (isSel ? '✓ Ausgewählt' : 'Auswählen')
+        : '＋ Hinzufügen';
+
+      // Abhängigkeits-Block aufbauen
+      let depsHtml = '';
+      if (deps) {
+        const pipHtml = deps.pip?.length
+          ? `<div class="as-card-deps-row">📦 <strong>pip install:</strong> <code>${deps.pip.join(' ')}</code></div>`
+          : '';
+        const swHtml = deps.software
+          ? `<div class="as-card-deps-row">💿 <strong>Software:</strong> ${esc(deps.software)}</div>`
+          : '';
+        const setupHtml = deps.setup
+          ? `<div class="dep-setup">🔧 <strong>Ilija einrichten:</strong><br><code>${esc(deps.setup)}</code><br><span style="font-size:.74rem;color:#7878a0;margin-top:4px;display:block">${esc(deps.hinweis||'')}</span></div>`
+          : (deps.hinweis ? `<div class="dep-setup" style="border-left-color:#f59e0b">💡 ${esc(deps.hinweis)}</div>` : '');
+        // Prominente Warnung für Selenium/Scraping-Skills (oben sichtbar, immer ausgeklappt)
+        const warnHtml = deps.warnung
+          ? `<div class="dep-warning"><strong>⚠️ Wichtiger Hinweis</strong><br>${esc(deps.warnung)}</div>`
+          : '';
+        // Label-Icon: Warnung-Skills bekommen roten Indikator
+        const depsIcon = deps.warnung ? '⚠️' : '🔧';
+        const depsColor = deps.warnung ? 'color:#f87171' : '';
+        depsHtml = `
+          <div class="as-card-deps" onclick="this.classList.toggle('open')">
+            <div class="as-card-deps-head" style="${depsColor}">${depsIcon} ${esc(deps.label)} <span style="margin-left:auto;font-size:.6rem;color:#7878a0">▼ Details</span></div>
+            <div class="as-card-deps-body">${warnHtml}${pipHtml}${swHtml}${setupHtml}</div>
+          </div>`;
+      }
+
+      const warnBadge = deps?.warnung
+        ? `<span class="warn-pill">⚠️ Inoffizieller Workaround</span>`
+        : '';
+      card.innerHTML = `
+        <div class="as-card-top">
+          <div class="as-card-icon">${deps?.warnung ? '⚠️' : '🔧'}</div>
+          <div class="as-card-name">${esc(s.name)}</div>
+        </div>
+        ${warnBadge}
+        <div class="as-card-desc">${esc((s.doc||'Keine Beschreibung').substring(0,90))}</div>
+        ${depsHtml}
+        <button class="as-card-btn ${isSel?'is-selected':''}"
+                onclick="pickSkillFromStore('${esc(s.name)}')">${btnLabel}</button>
+      `;
+      grid.appendChild(card);
+    });
+
+    catEl.appendChild(grid);
+    body.appendChild(catEl);
+  });
+
+  if (!anyVisible) {
+    body.innerHTML = '<div class="as-empty-msg">Kein Skill gefunden.</div>';
+  }
+}
+
+async function pickSkillFromStore(skillName) {
+  if (_asMode === 'select' && _asNodeId) {
+    const node = state.nodes[_asNodeId];
+    if (!node) return;
+    node.config.skill = skillName;
+    node.name = skillName;
+    document.getElementById('rp-name').textContent = skillName;
+    const hname = document.querySelector(`#node-${_asNodeId} .node-head-name`);
+    if (hname) hname.textContent = skillName;
+    refreshNodeBody(_asNodeId);
+    const panelBody = document.getElementById('rp-body');
+    const btn = panelBody.querySelector('#skill-pick-btn');
+    if (btn) btn.querySelector('.spb-name').textContent = skillName;
+    await loadSkillParams(_asNodeId, skillName, panelBody);
+    document.getElementById('as-overlay').classList.remove('open');
+  } else {
+    const cx = (window.innerWidth  / 2 - state.viewport.x) / state.viewport.scale - 95;
+    const cy = (window.innerHeight / 2 - state.viewport.y) / state.viewport.scale - 30;
+    const id = addNode('skill', cx, cy, {skillName});
+    selectNode(id);
+    document.getElementById('as-overlay').classList.remove('open');
+    toast(`"${skillName}" hinzugefügt`, 'success');
+  }
+  buildAppStore(document.getElementById('as-search').value);
+}
+</script>
+
+<!-- App Store Modal -->
+<div class="as-overlay" id="as-overlay" onclick="closeAppStore(event)">
+  <div class="as-modal" onclick="event.stopPropagation()">
+    <div class="as-header">
+      <div class="as-title">🛒 Skill App Store</div>
+      <span class="as-mode-badge" id="as-mode-badge" style="display:none">Skill auswählen</span>
+      <div class="as-search-wrap">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="as-search" placeholder="Skill suchen…" oninput="buildAppStore(this.value)">
+      </div>
+      <button class="as-close" onclick="document.getElementById('as-overlay').classList.remove('open')">✕</button>
+    </div>
+    <div class="as-body" id="as-body"></div>
+  </div>
+</div>
+</body>
+</html>

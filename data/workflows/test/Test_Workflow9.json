@@ -1,0 +1,68 @@
+{
+  "id": "wf_test09",
+  "name": "Webhook-to-Telegram Alert",
+  "nodes": [
+    {
+      "id": "n_t09_01",
+      "type": "webhook",
+      "x": 50,
+      "y": 100,
+      "name": "Webhook Eingang",
+      "config": {
+        "webhook_id": "wh_alert01",
+        "method": "POST"
+      }
+    },
+    {
+      "id": "n_t09_02",
+      "type": "chat",
+      "x": 300,
+      "y": 100,
+      "name": "Nachricht analysieren",
+      "config": {
+        "message": "Analysiere diese eingehende Nachricht und formuliere eine klare Benachrichtigung: {{input}}"
+      }
+    },
+    {
+      "id": "n_t09_03",
+      "type": "telegram",
+      "x": 550,
+      "y": 100,
+      "name": "Telegram senden",
+      "config": {
+        "message": "{{input}}"
+      }
+    },
+    {
+      "id": "n_t09_04",
+      "type": "email",
+      "x": 550,
+      "y": 250,
+      "name": "E-Mail senden",
+      "config": {
+        "to": "user@example.com",
+        "subject": "Webhook Alert",
+        "body": "{{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t09_01",
+      "from": "n_t09_01",
+      "to": "n_t09_02"
+    },
+    {
+      "id": "c_t09_02",
+      "from": "n_t09_02",
+      "to": "n_t09_03"
+    },
+    {
+      "id": "c_t09_03",
+      "from": "n_t09_02",
+      "to": "n_t09_04"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}

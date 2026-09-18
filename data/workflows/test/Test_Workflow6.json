@@ -1,0 +1,68 @@
+{
+  "id": "wf_test06",
+  "name": "Wetter-Alarm",
+  "nodes": [
+    {
+      "id": "n_t06_01",
+      "type": "schedule_trigger",
+      "x": 50,
+      "y": 100,
+      "name": "Täglich 06:30",
+      "config": {
+        "interval": "daily",
+        "time": "06:30",
+        "active": false
+      }
+    },
+    {
+      "id": "n_t06_02",
+      "type": "skill",
+      "x": 300,
+      "y": 100,
+      "name": "Wetter abrufen",
+      "config": {
+        "skill": "wetter_offenburg_abfragen"
+      }
+    },
+    {
+      "id": "n_t06_03",
+      "type": "condition",
+      "x": 550,
+      "y": 100,
+      "name": "Regen prüfen",
+      "config": {
+        "operator": "enthält",
+        "value": "Regen"
+      }
+    },
+    {
+      "id": "n_t06_04",
+      "type": "telegram",
+      "x": 800,
+      "y": 100,
+      "name": "Regenwarnung senden",
+      "config": {
+        "message": "☔ Regenwarnung: {{input}}"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_t06_01",
+      "from": "n_t06_01",
+      "to": "n_t06_02"
+    },
+    {
+      "id": "c_t06_02",
+      "from": "n_t06_02",
+      "to": "n_t06_03"
+    },
+    {
+      "id": "c_t06_03",
+      "from": "n_t06_03",
+      "to": "n_t06_04"
+    }
+  ],
+  "updated": "2026-04-18T12:00:00",
+  "created": "2026-04-18T12:00:00"
+}
