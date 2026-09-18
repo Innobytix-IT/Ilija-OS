@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" translate="no">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="google" content="notranslate">
+<meta http-equiv="Content-Language" content="de">
 <title>Ilija · Einstellungen</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -191,42 +193,42 @@ input[type=number]{max-width:90px}
   <!-- ── Sidebar (Settings-Modus) ──────────────────────── -->
   <aside class="sidebar" id="sidebar">
     <div class="sb-label">KI & Dienste</div>
-    <button class="sb-item active" onclick="scrollTo('sec-ki')" id="sb-ki">
+    <button class="sb-item active" onclick="scrollToSection('sec-ki')" id="sb-ki">
       <span class="sb-icon">🤖</span> KI-Anbieter
       <span class="sb-chip chip-warn" id="chip-ki">Offen</span>
     </button>
-    <button class="sb-item" onclick="scrollTo('sec-email')" id="sb-email">
+    <button class="sb-item" onclick="scrollToSection('sec-email')" id="sb-email">
       <span class="sb-icon">📧</span> E-Mail
       <span class="sb-chip chip-warn" id="chip-email">Offen</span>
     </button>
-    <button class="sb-item" onclick="scrollTo('sec-telegram')" id="sb-telegram">
+    <button class="sb-item" onclick="scrollToSection('sec-telegram')" id="sb-telegram">
       <span class="sb-icon">✈</span> Telegram
       <span class="sb-chip chip-warn" id="chip-telegram">Offen</span>
     </button>
-    <button class="sb-item" onclick="scrollTo('sec-google')" id="sb-google">
+    <button class="sb-item" onclick="scrollToSection('sec-google')" id="sb-google">
       <span class="sb-icon">🔵</span> Google
       <span class="sb-chip chip-warn" id="chip-google">Offen</span>
     </button>
     <div class="sb-label">Kalender</div>
-    <button class="sb-item" onclick="scrollTo('sec-kalender')">
+    <button class="sb-item" onclick="scrollToSection('sec-kalender')">
       <span class="sb-icon">📅</span> Kalender & Sync
     </button>
     <div class="sb-label">Eingangskanäle</div>
-    <button class="sb-item" onclick="scrollTo('sec-telefon')">
+    <button class="sb-item" onclick="scrollToSection('sec-telefon')">
       <span class="sb-icon">📞</span> Telefon
       <span class="sb-chip chip-warn" id="chip-phone">Offen</span>
     </button>
-    <button class="sb-item" onclick="scrollTo('sec-wa')">
+    <button class="sb-item" onclick="scrollToSection('sec-wa')">
       <span class="sb-icon">💬</span> WhatsApp
     </button>
     <div class="sb-label">System</div>
-    <button class="sb-item" onclick="scrollTo('sec-fritzbox')">
+    <button class="sb-item" onclick="scrollToSection('sec-fritzbox')">
       <span class="sb-icon">☎</span> FritzBox SIP
     </button>
-    <button class="sb-item" onclick="scrollTo('sec-dms')">
+    <button class="sb-item" onclick="scrollToSection('sec-dms')">
       <span class="sb-icon">🗂</span> DMS
     </button>
-    <button class="sb-item" onclick="scrollTo('sec-server')">
+    <button class="sb-item" onclick="scrollToSection('sec-server')">
       <span class="sb-icon">🖥</span> Server
     </button>
     <div style="margin-top:auto;padding-top:16px">
@@ -1047,8 +1049,9 @@ async function uploadGoogle(file) {
 }
 
 // ── Sidebar scroll highlight ──────────────────────────────────
-function scrollTo(id) {
-  document.getElementById(id)?.scrollIntoView({behavior:'smooth', block:'start'});
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
   document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
   const sec = id.replace('sec-','');
   document.getElementById('sb-'+sec)?.classList.add('active');
