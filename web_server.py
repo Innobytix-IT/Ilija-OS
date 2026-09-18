@@ -336,7 +336,22 @@ def whatsapp_page():
 
 # ── WhatsApp Bridge State (im RAM) ────────────────────────
 import time as _time
-_wa_state = {"status": "disconnected", "qr": "", "connected_since": None, "msg_count": 0}
+
+_WA_AUTO_REPLY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "whatsapp", "auto_reply.json")
+
+def _load_auto_reply() -> bool:
+    try:
+        with open(_WA_AUTO_REPLY_PATH, "r", encoding="utf-8") as f:
+            return json.load(f).get("enabled", True)
+    except Exception:
+        return True
+
+def _save_auto_reply(enabled: bool):
+    os.makedirs(os.path.dirname(_WA_AUTO_REPLY_PATH), exist_ok=True)
+    with open(_WA_AUTO_REPLY_PATH, "w", encoding="utf-8") as f:
+        json.dump({"enabled": enabled}, f)
+
+_wa_state = {"status": "disconnected", "qr": "", "connected_since": None, "msg_count": 0, "auto_reply": _load_auto_reply()}
 _wa_lock  = threading.Lock()
 
 
@@ -344,6 +359,16 @@ _wa_lock  = threading.Lock()
 def whatsapp_status():
     with _wa_lock:
         return jsonify(dict(_wa_state))
+
+@app.route("/api/whatsapp/auto-reply", methods=["POST"])
+def toggle_auto_reply():
+    data = request.get_json(silent=True) or {}
+    enabled = bool(data.get("enabled", True))
+    _save_auto_reply(enabled)
+    with _wa_lock:
+        _wa_state["auto_reply"] = enabled
+    state = "aktiviert" if enabled else "pausiert"
+    return jsonify({"ok": True, "enabled": enabled, "message": f"Autonomer Dialog {state}."})
 
 
 @app.route("/api/whatsapp/connection-status", methods=["POST"])
@@ -790,6 +815,11 @@ def whatsapp_bridge():
     text       = (data.get("text") or "").strip()
 
     if not text:
+        return jsonify({"reply": ""}), 200
+
+    with _wa_lock:
+        auto_reply_on = _wa_state.get("auto_reply", True)
+    if not auto_reply_on:
         return jsonify({"reply": ""}), 200
 
     try:

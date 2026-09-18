@@ -74,6 +74,23 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
 .qr-hint{font-size:.78rem;color:var(--tx2);line-height:1.5}
 .qr-hint strong{color:var(--tx)}
 
+/* ── Auto-Reply Toggle ──────────────────────────────────── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;
+  background:var(--s1);border:1px solid var(--bdr);border-radius:10px;
+  padding:14px 16px;margin-bottom:20px}
+.toggle-left{}
+.toggle-label{font-size:.84rem;font-weight:600;color:var(--tx);margin-bottom:2px}
+.toggle-hint{font-size:.72rem;color:var(--tx3)}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.t-track{position:absolute;inset:0;border-radius:12px;background:var(--s4);cursor:pointer;transition:background .2s}
+.toggle input:checked + .t-track{background:var(--green)}
+.t-thumb{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.toggle input:checked ~ .t-thumb{transform:translateX(20px)}
+.toggle-state{font-size:.72rem;font-weight:600;margin-top:4px;text-align:right;transition:color .2s}
+.toggle-state.on{color:var(--green)}
+.toggle-state.off{color:var(--tx3)}
+
 /* ── Connected Info ─────────────────────────────────────── */
 #connected-section{display:none}
 .info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bdr)}
@@ -147,6 +164,22 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
       </div>
     </div>
 
+    <!-- Auto-Reply Toggle (immer sichtbar wenn verbunden) -->
+    <div class="toggle-row" id="auto-reply-row" style="display:none">
+      <div class="toggle-left">
+        <div class="toggle-label">Autonomer Dialog</div>
+        <div class="toggle-hint">Ilija antwortet selbstständig auf WhatsApp-Nachrichten</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <label class="toggle">
+          <input type="checkbox" id="auto-reply-toggle" onchange="setAutoReply(this.checked)">
+          <div class="t-track"></div>
+          <div class="t-thumb"></div>
+        </label>
+        <div class="toggle-state off" id="toggle-state-label">Pausiert</div>
+      </div>
+    </div>
+
     <!-- Verbunden -->
     <div id="connected-section">
       <div class="info-row">
@@ -192,6 +225,16 @@ function setStatus(state, data) {
   badge.className = 'status-badge ' + state
   qrSec.style.display = conSec.style.display = disSec.style.display = 'none'
 
+  // Auto-Reply Toggle sichtbar schalten wenn verbunden
+  const arRow = document.getElementById('auto-reply-row')
+  arRow.style.display = (state === 'connected') ? 'flex' : 'none'
+  if (state === 'connected') {
+    const enabled = data.auto_reply !== false
+    const cb = document.getElementById('auto-reply-toggle')
+    cb.checked = enabled
+    updateToggleLabel(enabled)
+  }
+
   if (state === 'connected') {
     txt.textContent = 'WhatsApp verbunden'
     conSec.style.display = 'block'
@@ -228,6 +271,24 @@ async function poll() {
     }
   } catch(_) {}
   _pollTimer = setTimeout(poll, 2000)
+}
+
+function updateToggleLabel(enabled) {
+  const el = document.getElementById('toggle-state-label')
+  if (!el) return
+  el.textContent = enabled ? 'Aktiv' : 'Pausiert'
+  el.className = 'toggle-state ' + (enabled ? 'on' : 'off')
+}
+
+async function setAutoReply(enabled) {
+  updateToggleLabel(enabled)
+  try {
+    await fetch('/api/whatsapp/auto-reply', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({enabled})
+    })
+  } catch(_) {}
 }
 
 poll()
