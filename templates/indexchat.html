@@ -484,6 +484,7 @@ function setChatMode(m){
   chatMode=m;
   try{localStorage.setItem('ilija_chat_mode',m);}catch(e){}
   applyChatMode();
+  loadWorkspace();
   loadSessions();
   document.getElementById('ta').focus();
 }
@@ -504,7 +505,7 @@ function applyChatMode(){
   }
 }
 function loadWorkspace(){
-  fetch('/api/agent/workspace').then(r=>r.json()).then(d=>{
+  fetch('/api/agent/workspace?mode='+encodeURIComponent(chatMode)).then(r=>r.json()).then(d=>{
     if(d.workspace)document.getElementById('codingWs').textContent='📂 '+d.workspace;
   }).catch(()=>{});
 }
@@ -546,7 +547,7 @@ function saveWorkspace(){
   const path=inp.value.trim();
   if(!path){err.textContent='Bitte einen Pfad angeben.';err.style.display='block';return;}
   fetch('/api/agent/workspace',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({path})})
+        body:JSON.stringify({path, mode:chatMode})})
     .then(r=>r.json()).then(d=>{
       if(d.error){err.textContent=d.error;err.style.display='block';return;}
       document.getElementById('codingWs').textContent='📂 '+d.workspace;

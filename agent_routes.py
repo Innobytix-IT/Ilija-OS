@@ -161,12 +161,14 @@ def register_agent_routes(app):
     def agent_workspace():
         if request.method == "POST":
             data = request.get_json() or {}
+            mode = data.get("mode", "coding")
             try:
-                ws = agent_core.set_workspace(data.get("path", ""))
+                ws = agent_core.set_workspace(data.get("path", ""), mode)
                 return jsonify({"workspace": ws})
             except Exception as e:
                 return jsonify({"error": str(e)}), 400
-        return jsonify(agent_core.workspace_info())
+        mode = request.args.get("mode", "coding")
+        return jsonify(agent_core.workspace_info(mode))
 
     @app.route("/api/agent/upload", methods=["POST"])
     def agent_upload():
@@ -177,4 +179,4 @@ def register_agent_routes(app):
             if f and f.filename:
                 saved.append(agent_core.save_upload(f.filename, f.read()))
         return jsonify({"anzahl": len(saved), "dateien": saved,
-                        "workspace": agent_core.workspace_info()["workspace"]})
+                        "workspace": agent_core.workspace_info("coding")["workspace"]})

@@ -29,7 +29,8 @@ import subprocess
 from providers import select_provider
 
 # ── Workspace (Sandbox) ───────────────────────────────────────────────────────
-DEFAULT_WORKSPACE = "/srv/ilija-ablage/Coding"
+DEFAULT_WORKSPACE           = "/srv/ilija-ablage/Coding"
+DEFAULT_WORKSPACE_COWORKING = "/srv/ilija-ablage/Coworking"
 _MAX_STEPS        = 14
 _MAX_READ_BYTES   = 60_000
 _SHELL_TIMEOUT    = 60
@@ -85,30 +86,49 @@ def set_shell_enabled(on: bool) -> bool:
 
 
 # ── Workspace-Helfer ──────────────────────────────────────────────────────────
-_WS_STORE = os.path.join("data", "agent", "workspace.txt")
+_DATA_AGENT_DIR = os.path.join("data", "agent")
+_WS_STORE       = os.path.join(_DATA_AGENT_DIR, "workspace.txt")          # Legacy
+_WS_STORES      = {
+    "coding":    os.path.join(_DATA_AGENT_DIR, "workspace_coding.txt"),
+    "coworking": os.path.join(_DATA_AGENT_DIR, "workspace_coworking.txt"),
+}
+_WS_DEFAULTS = {
+    "coding":    DEFAULT_WORKSPACE,
+    "coworking": DEFAULT_WORKSPACE_COWORKING,
+}
 # Systemordner, die NICHT als Arbeitsordner erlaubt sind
 _REFUSED_ROOTS = {"/", "/etc", "/usr", "/bin", "/sbin", "/boot", "/dev", "/proc",
                   "/sys", "/lib", "/lib64", "/root", "/var", "/opt", "/run"}
 
 
-def _read_stored_ws():
+def _read_stored_ws(mode: str = "coding") -> str | None:
+    store = _WS_STORES.get(mode, _WS_STORES["coding"])
     try:
-        with open(_WS_STORE, encoding="utf-8") as f:
+        with open(store, encoding="utf-8") as f:
             return f.read().strip() or None
     except Exception:
-        return None
+        pass
+    # Migration: altes workspace.txt nur für coding lesen
+    if mode == "coding":
+        try:
+            with open(_WS_STORE, encoding="utf-8") as f:
+                return f.read().strip() or None
+        except Exception:
+            pass
+    return None
 
 
-def _workspace() -> str:
-    ws = (_read_stored_ws() or os.environ.get("ILIJA_CODING_WORKSPACE")
-          or DEFAULT_WORKSPACE)
+def _workspace(mode: str = "coding") -> str:
+    ws = (_read_stored_ws(mode)
+          or (os.environ.get("ILIJA_CODING_WORKSPACE") if mode == "coding" else None)
+          or _WS_DEFAULTS.get(mode, DEFAULT_WORKSPACE))
     ws = os.path.abspath(os.path.expanduser(ws))
     os.makedirs(ws, exist_ok=True)
     return ws
 
 
-def set_workspace(path: str) -> str:
-    """Setzt den Arbeitsordner (legt ihn bei Bedarf an) und merkt ihn dauerhaft."""
+def set_workspace(path: str, mode: str = "coding") -> str:
+    """Setzt den Arbeitsordner für den angegebenen Modus und merkt ihn dauerhaft."""
     if not path or not path.strip():
         raise ValueError("Kein Pfad angegeben.")
     p = os.path.abspath(os.path.expanduser(path.strip()))
@@ -117,8 +137,9 @@ def set_workspace(path: str) -> str:
     if os.path.exists(p) and not os.path.isdir(p):
         raise ValueError(f"Pfad ist eine Datei, kein Ordner: {p}")
     os.makedirs(p, exist_ok=True)
-    os.makedirs(os.path.dirname(_WS_STORE) or ".", exist_ok=True)
-    with open(_WS_STORE, "w", encoding="utf-8") as f:
+    store = _WS_STORES.get(mode, _WS_STORES["coding"])
+    os.makedirs(os.path.dirname(store) or ".", exist_ok=True)
+    with open(store, "w", encoding="utf-8") as f:
         f.write(p)
     return p
 
@@ -343,8 +364,8 @@ def clear_history(sid: str = "default"):
     return "Verlauf gelöscht."
 
 
-def workspace_info():
-    return {"workspace": _workspace()}
+def workspace_info(mode: str = "coding"):
+    return {"workspace": _workspace(mode)}
 
 
 def save_upload(filename: str, data: bytes) -> str:
