@@ -604,11 +604,30 @@ function buildKiCard() {
       <input type="password" id="ki-openai" placeholder="sk-proj-…" value="${k.openai||''}">
     </div>
     <div class="row row-wide">
-      <div class="row-label" style="color:var(--tx2)">Modell-Auswahl <span style="color:var(--tx3);font-weight:400">(optional)</span></div>
-      <div class="inline-pair">
-        <label>Claude:</label><input type="text" id="ki-m-claude" placeholder="claude-opus-4-6" value="${m.claude||''}">
-        <label>Gemini:</label><input type="text" id="ki-m-gemini" placeholder="gemini-2.5-flash" value="${m.gemini||''}">
-        <label>GPT:</label><input type="text" id="ki-m-openai" placeholder="gpt-4o" value="${m.openai||''}">
+      <div class="row-label" style="color:var(--tx2)">Modell-Namen <span style="color:var(--tx3);font-weight:400">(leer = Standard)</span>
+        <button onclick="loadKiModels()" style="margin-left:8px;background:var(--s3);border:1px solid var(--bdr2);border-radius:5px;color:var(--tx3);font-size:.7rem;padding:2px 8px;cursor:pointer;font-family:var(--f)">↻ Modelle laden</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:.72rem;color:var(--tx3);width:52px;flex-shrink:0">Claude</span>
+          <select id="ki-m-claude-sel" style="flex:1;font-size:.75rem" onchange="if(this.value)document.getElementById('ki-m-claude').value=this.value"><option value="">— verfügbare Modelle —</option></select>
+          <input type="text" id="ki-m-claude" placeholder="claude-opus-4-6" value="${m.claude||''}" style="flex:1">
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:.72rem;color:var(--tx3);width:52px;flex-shrink:0">Gemini</span>
+          <select id="ki-m-gemini-sel" style="flex:1;font-size:.75rem" onchange="if(this.value)document.getElementById('ki-m-gemini').value=this.value"><option value="">— verfügbare Modelle —</option></select>
+          <input type="text" id="ki-m-gemini" placeholder="gemini-2.5-flash" value="${m.gemini||''}" style="flex:1">
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:.72rem;color:var(--tx3);width:52px;flex-shrink:0">GPT</span>
+          <select id="ki-m-openai-sel" style="flex:1;font-size:.75rem" onchange="if(this.value)document.getElementById('ki-m-openai').value=this.value"><option value="">— verfügbare Modelle —</option></select>
+          <input type="text" id="ki-m-openai" placeholder="gpt-4o" value="${m.openai||''}" style="flex:1">
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:.72rem;color:var(--tx3);width:52px;flex-shrink:0">Ollama</span>
+          <select id="ki-m-ollama-sel" style="flex:1;font-size:.75rem" onchange="if(this.value)document.getElementById('ki-m-ollama').value=this.value"><option value="">— verfügbare Modelle —</option></select>
+          <input type="text" id="ki-m-ollama" placeholder="qwen2.5:7b" value="${m.ollama||''}" style="flex:1">
+        </div>
       </div>
     </div>
   </div>`;
@@ -886,6 +905,7 @@ function buildServerCard() {
 // ── Build all cards in settings mode ─────────────────────────
 function buildAllCards() {
   document.getElementById('ki-card').innerHTML     = buildKiCard().replace('<div class="card">','').replace(/<\/div>$/,'');
+  loadKiModels();
   document.getElementById('email-card').innerHTML  = buildEmailCard().replace('<div class="card">','').replace(/<\/div>$/,'');
   document.getElementById('tg-card').innerHTML     = buildTgCard().replace('<div class="card">','').replace(/<\/div>$/,'');
   document.getElementById('google-card').innerHTML = buildGoogleCard();
@@ -904,12 +924,35 @@ async function saveKi() {
   const data = {
     provider: gv('ki-provider') || 'auto',
     keys:   {anthropic: gv('ki-anthropic'), openai: gv('ki-openai'), gemini: gv('ki-gemini')},
-    models: {claude: gv('ki-m-claude'), openai: gv('ki-m-openai'), gemini: gv('ki-m-gemini')},
+    models: {claude: gv('ki-m-claude'), openai: gv('ki-m-openai'), gemini: gv('ki-m-gemini'), ollama: gv('ki-m-ollama')},
   };
   const r = await post('/api/settings', data);
   msg('ki-msg', r.ok !== false);
   if (r.ok !== false) { allData.settings = await api('/api/settings'); updateChips(); }
   return r;
+}
+
+async function loadKiModels() {
+  let av = {};
+  try { av = await api('/api/models/available'); } catch(e) { return; }
+  const map = [
+    ['anthropic', 'ki-m-claude-sel', 'ki-m-claude'],
+    ['gemini',    'ki-m-gemini-sel', 'ki-m-gemini'],
+    ['openai',    'ki-m-openai-sel', 'ki-m-openai'],
+    ['ollama',    'ki-m-ollama-sel', 'ki-m-ollama'],
+  ];
+  for (const [key, selId, inpId] of map) {
+    const sel = document.getElementById(selId);
+    const inp = document.getElementById(inpId);
+    if (!sel) continue;
+    const list = av[key] || [];
+    if (!list.length) { sel.style.display = 'none'; continue; }
+    sel.style.display = '';
+    const cur = inp?.value?.trim() || '';
+    sel.innerHTML = '<option value="">— verfügbare Modelle —</option>' +
+      list.map(m => `<option value="${esc(m)}"${m===cur?' selected':''}>${esc(m)}</option>`).join('');
+  }
+  toast('Modelle geladen', 'ok');
 }
 
 async function saveEmail() {
