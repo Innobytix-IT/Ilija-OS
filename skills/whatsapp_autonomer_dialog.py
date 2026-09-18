@@ -432,6 +432,11 @@ def _hole_chats_mit_ungelesenen(driver):
 def _oeffne_kontakt_per_suche(driver, name):
     """Öffnet Chat per Suchfeld – mehrere XPath-Fallbacks."""
     SEARCH_XPATHS = [
+        # Neue WhatsApp-Struktur (2024+): echtes <input> statt contenteditable div
+        '//input[@data-tab="3"][@role="textbox"]',
+        '//input[contains(@aria-label,"Suchen") or contains(@aria-label,"Search")]',
+        '//input[contains(@placeholder,"Suchen") or contains(@placeholder,"Search")]',
+        # Fallback: alte Struktur (contenteditable div)
         '//div[@contenteditable="true"][@data-tab="3"]',
         '//div[@id="side"]//div[@contenteditable="true"]',
         '//div[@contenteditable="true"][contains(@aria-label,"Suche")]',
@@ -487,12 +492,17 @@ def _oeffne_kontakt_per_suche(driver, name):
 def _sende_nachricht(driver, text):
     # data-tab ändert sich mit jedem WhatsApp-Update → mehrere Fallbacks
     EINGABE_XPATHS = [
+        # testid ist stabilster Selektor
+        '//div[@data-testid="conversation-compose-box-input"]',
+        # contenteditable div (klassische Struktur)
         '//div[@contenteditable="true"][@role="textbox"][@data-tab="10"]',
         '//div[@contenteditable="true"][@role="textbox"][@data-tab="6"]',
-        '//div[@data-testid="conversation-compose-box-input"]',
         '//footer//div[@contenteditable="true"][@role="textbox"]',
         '//div[@contenteditable="true"][@role="textbox"]'
         '[not(contains(@aria-label,"uchen")) and not(contains(@aria-label,"earch"))]',
+        # Fallback: beliebiges input/textarea im footer
+        '//footer//input[@role="textbox"]',
+        '//footer//textarea',
     ]
     try:
         wait = WebDriverWait(driver, 15)
