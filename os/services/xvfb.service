@@ -1,0 +1,12 @@
+[Unit]
+Description=X Virtual Frame Buffer (Xvfb)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/Xvfb :1 -screen 0 1280x1024x24 -nolisten tcp
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

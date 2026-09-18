@@ -1,0 +1,18 @@
+[Unit]
+Description=Ilija OS - Ilija AI Agent (Public Edition v2.0) Web-Oberflaeche
+After=network-online.target xvfb.service
+Wants=network-online.target
+Requires=xvfb.service
+
+[Service]
+Type=simple
+User=ilija
+Group=ilija
+Environment=PORT=5001
+WorkingDirectory=/opt/ilija-os/ilija
+ExecStart=/opt/ilija-os/ilija/start.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
