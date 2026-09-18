@@ -10,17 +10,19 @@ cat > "$SHORTCUT" <<'EOF'
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Ilija Einstellungen
-Comment=Kalender und Sync konfigurieren
-Exec=xdg-open http://localhost:5001/einstellungen
-Icon=preferences-system
+Name=Einstellungen
+GenericName=Ilija OS
+Comment=Einstellungen – Ilija OS
+Exec=/usr/local/bin/ilija-app http://localhost:5001/einstellungen ilija-einstellungen
+Icon=/usr/share/ilija-os/branding/assets/ilija-app-icon.png
 Terminal=false
-StartupNotify=false
+Categories=Settings;
+StartupWMClass=ilija-einstellungen
+StartupNotify=true
 EOF
 
 chmod +x "$SHORTCUT"
 chown manuel:manuel "$SHORTCUT"
-# GNOME: Shortcut als vertrauenswürdig markieren
 sudo -u manuel gio set "$SHORTCUT" metadata::trusted true 2>/dev/null || true
 
 echo "✅ Shortcut erstellt: $SHORTCUT"
