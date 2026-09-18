@@ -259,6 +259,7 @@ body.mode-coworking .coding-bar{display:flex}
         <div class="mm-o" id="mo-openai" onclick="setProvider('openai')">◈ ChatGPT<span class="mm-b">OpenAI</span></div>
         <div class="mm-o" id="mo-gemini" onclick="setProvider('gemini')">◎ Gemini<span class="mm-b">Google</span></div>
         <div class="mm-o" id="mo-ollama" onclick="setProvider('ollama')">⬡ Ollama<span class="mm-b">lokal</span></div>
+        <div class="mm-o" id="mo-custom" onclick="setProvider('custom')">⚙ Eigener Endpunkt<span class="mm-b">Netzwerk</span></div>
       </div>
     </div>
     <button class="btn btn-g" onclick="clearChat()">↺ Neu</button>
@@ -526,7 +527,7 @@ function applyCodingMode(){
 // aktuellen Provider aus dem Modell-Label ableiten (sonst 'auto')
 function currentProvider(){
   const p=(document.getElementById('mLabel').textContent||'').toLowerCase();
-  return ['claude','openai','gemini','ollama'].includes(p)?p:'auto';
+  return ['claude','openai','gemini','ollama','custom'].includes(p)?p:'auto';
 }
 
 // ── Input ─────────────────────────────────────────────────────
@@ -743,10 +744,11 @@ async function loadModelInfo(){
     const d=await (await fetch('/api/model')).json();
     document.getElementById('mLabel').textContent=d.current_provider||'auto';
     const av=(d.available||[]).map(p=>p.toLowerCase());
-    ['claude','openai','gemini','ollama'].forEach(p=>{
+    ['claude','openai','gemini','ollama','custom'].forEach(p=>{
       const el=document.getElementById('mo-'+p);
       if(el){
-        if(av.includes(p)||av.includes(p.charAt(0).toUpperCase()+p.slice(1))){
+        const pCheck = p==='custom' ? ['eigener endpunkt','custom'] : [p, p.charAt(0).toUpperCase()+p.slice(1)];
+        if(pCheck.some(x=>av.map(a=>a.toLowerCase()).includes(x.toLowerCase()))){
           el.classList.remove('off');
         }else{
           el.classList.add('off');
