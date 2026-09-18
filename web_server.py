@@ -248,7 +248,8 @@ def get_settings():
             "openai":    bool(oai_key),
             "gemini":    bool(gem_key),
         },
-        "ollama_models": ollama_models,
+        "ollama_models":    ollama_models,
+        "skills_enabled":   cfg.get("skills_enabled", True),
     })
 
 
@@ -304,6 +305,8 @@ def save_settings():
 
     provider = data.get("provider", "auto")
     cfg["default_provider"] = provider
+    if "skills_enabled" in data:
+        cfg["skills_enabled"] = bool(data["skills_enabled"])
     if models:
         cfg.setdefault("models", {}).update({k: v for k, v in models.items() if v})
 

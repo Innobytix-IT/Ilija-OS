@@ -177,6 +177,14 @@ class Kernel:
         if not matches:
             return response
 
+        # Globales Skills-Gate prüfen
+        try:
+            with open("models_config.json", "r") as _f:
+                if not json.load(_f).get("skills_enabled", True):
+                    return re.sub(r'\s*SKILL:\w+\([^)]*\)', '', response).strip()
+        except Exception:
+            pass
+
         result = response
         for skill_name, params_str in matches:
             self.state.set_status(AgentStatus.EXECUTING, skill_name)

@@ -589,6 +589,7 @@ function buildKiCard() {
   const m  = s.models   || {};
   const hk = s.has_keys || {};
   const dp = s.default_provider || 'auto';
+  const se = s.skills_enabled !== false;
   const c  = allData.custom || {};
 
   const modelVal = {
@@ -615,6 +616,10 @@ function buildKiCard() {
           ${['auto','claude','openai','gemini','ollama','custom'].map(v=>`<option value="${v}"${dp===v?' selected':''}>${{auto:'Automatisch',claude:'Claude (Anthropic)',openai:'ChatGPT (OpenAI)',gemini:'Gemini (Google)',ollama:'Ollama (lokal)',custom:'Eigener Endpunkt'}[v]}</option>`).join('')}
         </select>
       </div>
+    </div>
+    <div class="row">
+      <div class="row-left"><div class="row-label">Skills verwenden</div><div class="row-hint">Erlaubt Ilija, Funktionen automatisch aufzurufen (Kalender, E-Mail, WhatsApp …)</div></div>
+      <div class="row-control"><label class="toggle"><input type="checkbox" id="ki-skills-enabled"${se?' checked':''}><div class="t-track"></div><div class="t-thumb"></div></label></div>
     </div>
     <div class="row row-wide">
       <div class="row-label">Claude API Key <span style="color:var(--tx3);font-weight:400">(console.anthropic.com)</span></div>
@@ -976,6 +981,7 @@ async function saveKi() {
 
   const data = {
     provider: gv('ki-provider') || 'auto',
+    skills_enabled: document.getElementById('ki-skills-enabled')?.checked !== false,
     keys:   {anthropic: gv('ki-anthropic'), openai: gv('ki-openai'), gemini: gv('ki-gemini')},
     models: {claude: gv('ki-m-claude'), openai: gv('ki-m-openai'), gemini: gv('ki-m-gemini'), ollama: gv('ki-m-ollama')},
   };
