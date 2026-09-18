@@ -453,6 +453,7 @@ input[type=number]{max-width:90px}
 <div id="toast"></div>
 
 <script>
+{% raw %}
 // ── State ─────────────────────────────────────────────────────
 let wizardStep = 0;
 let allData = {};   // cached API data
@@ -1086,6 +1087,7 @@ function msg(id, ok) {
 
 // ── Start ─────────────────────────────────────────────────────
 init();
+{% endraw %}
 </script>
 </body>
 </html>
