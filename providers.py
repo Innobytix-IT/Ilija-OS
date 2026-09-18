@@ -147,6 +147,45 @@ class OllamaProvider(Provider):
         return response["message"]["content"]
 
 
+def _load_custom_endpoint_cfg() -> dict:
+    import os, json
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "custom_endpoint.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+class CustomEndpointProvider(Provider):
+    """OpenAI-kompatibler Endpunkt – für Ollama im Netzwerk, LM Studio, vLLM, etc."""
+    def __init__(self):
+        cfg   = _load_custom_endpoint_cfg()
+        url   = cfg.get("url", "").rstrip("/")
+        key   = cfg.get("api_key") or "custom"   # OpenAI-SDK braucht einen nicht-leeren String
+        model = cfg.get("model") or _model_for("custom", "CUSTOM_MODEL", "")
+        if not url:
+            raise ValueError("Kein Endpunkt-URL konfiguriert")
+        super().__init__(f"Eigener Endpunkt ({url})")
+        from openai import OpenAI
+        self.client = OpenAI(base_url=url, api_key=key)
+        self.model  = model
+
+    def chat(self, messages: list, system: str = None,
+             max_tokens: int = None, temperature: float = None) -> str:
+        msgs = []
+        if system:
+            msgs.append({"role": "system", "content": system})
+        msgs.extend(messages)
+        kwargs = {"model": self.model, "messages": msgs}
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+        response = self.client.chat.completions.create(**kwargs)
+        return response.choices[0].message.content
+
+
 def select_provider(mode: str = "auto") -> tuple:
     """
     Wählt den besten verfügbaren Provider.
@@ -185,6 +224,14 @@ def select_provider(mode: str = "auto") -> tuple:
             if mode == "gemini":
                 raise
 
+    if mode == "custom" or (mode == "auto" and _load_custom_endpoint_cfg().get("url")):
+        try:
+            p = CustomEndpointProvider()
+            return "Eigener Endpunkt", p
+        except Exception:
+            if mode == "custom":
+                raise
+
     # Ollama als letzter Fallback
     try:
         import ollama
@@ -212,4 +259,6 @@ def get_available_providers() -> list:
         available.append("Ollama")
     except Exception:
         pass
+    if _load_custom_endpoint_cfg().get("url"):
+        available.append("Eigener Endpunkt")
     return available

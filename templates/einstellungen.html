@@ -459,6 +459,7 @@ input[type=number]{max-width:90px}
 // ── State ─────────────────────────────────────────────────────
 let wizardStep = 0;
 let allData = {};   // cached API data
+// allData.custom wird separat geladen
 
 const EMAIL_PROVIDERS = {
   gmail:   {imap_host:'imap.gmail.com',   imap_port:993, smtp_host:'smtp.gmail.com',         smtp_port:587},
@@ -487,7 +488,7 @@ async function init() {
 }
 
 async function loadAllData() {
-  const [settings, email, tg, fritz, server, kanale, kal, google, dms] = await Promise.allSettled([
+  const [settings, email, tg, fritz, server, kanale, kal, google, dms, custom] = await Promise.allSettled([
     api('/api/settings'),
     api('/api/email-settings'),
     api('/api/telegram-settings'),
@@ -497,6 +498,7 @@ async function loadAllData() {
     api('/api/kalender-settings'),
     api('/api/google-status'),
     api('/api/dms-settings'),
+    api('/api/custom-endpoint'),
   ]);
   allData.settings = settings.value || {};
   allData.email    = (email.value || {}).config || {};
@@ -507,6 +509,7 @@ async function loadAllData() {
   allData.kal      = kal.value || {};
   allData.google   = google.value || {};
   allData.dms      = dms.value || {};
+  allData.custom   = custom.value || {};
   updateChips();
 }
 
@@ -582,6 +585,7 @@ function buildKiCard() {
   const m  = s.models   || {};
   const hk = s.has_keys || {};
   const dp = s.default_provider || 'auto';
+  const c  = allData.custom || {};
 
   const modelVal = {
     'ki-m-claude': m.claude||'', 'ki-m-gemini': m.gemini||'',
@@ -604,7 +608,7 @@ function buildKiCard() {
       <div class="row-left"><div class="row-label">Standard-Provider</div><div class="row-hint">Welchen KI-Dienst Ilija bevorzugt</div></div>
       <div class="row-control">
         <select id="ki-provider">
-          ${['auto','claude','openai','gemini','ollama'].map(v=>`<option value="${v}"${dp===v?' selected':''}>${{auto:'Automatisch',claude:'Claude (Anthropic)',openai:'ChatGPT (OpenAI)',gemini:'Gemini (Google)',ollama:'Ollama (lokal)'}[v]}</option>`).join('')}
+          ${['auto','claude','openai','gemini','ollama','custom'].map(v=>`<option value="${v}"${dp===v?' selected':''}>${{auto:'Automatisch',claude:'Claude (Anthropic)',openai:'ChatGPT (OpenAI)',gemini:'Gemini (Google)',ollama:'Ollama (lokal)',custom:'Eigener Endpunkt'}[v]}</option>`).join('')}
         </select>
       </div>
     </div>
@@ -633,6 +637,31 @@ function buildKiCard() {
       </div>
     </div>` : `
     <div class="row"><div class="row-left"><div class="row-hint" style="color:var(--tx3);font-size:.74rem">💡 Nach dem Speichern eines API-Keys erscheint hier die Modell-Auswahl</div></div></div>`}
+    <div class="row" style="background:var(--s1);border-top:1px solid var(--bdr)">
+      <div class="row-left">
+        <div class="row-label" style="color:var(--g)">🔌 Eigener Endpunkt</div>
+        <div class="row-hint">OpenAI-kompatibler Server — Ollama im Netzwerk, LM Studio, vLLM, eigener VPS&hellip;</div>
+      </div>
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">URL <span style="color:var(--tx3);font-weight:400">(z.B. http://192.168.1.50:11434/v1)</span></div>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="custom-url" placeholder="http://192.168.1.50:11434/v1" value="${esc(c.url||'')}" style="flex:1">
+        <button onclick="testCustom()" class="btn btn-teal btn-sm" style="white-space:nowrap">Testen</button>
+      </div>
+      <div id="custom-test-result" style="font-size:.73rem;margin-top:4px;display:none"></div>
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">API-Key <span style="color:var(--tx3);font-weight:400">(optional — leer lassen wenn nicht benötigt)</span></div>
+      <input type="password" id="custom-key" placeholder="Leer lassen wenn nicht benötigt" value="${c.api_key||''}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Modell</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="ki-m-custom-sel" style="flex:1;font-size:.75rem" onchange="if(this.value)document.getElementById('custom-model').value=this.value"><option value="">— Modelle laden —</option></select>
+        <input type="text" id="custom-model" placeholder="llama3.2" value="${esc(c.model||'')}" style="flex:1">
+      </div>
+    </div>
   </div>`;
 }
 
@@ -924,6 +953,13 @@ function buildAllCards() {
 
 // ── Save functions ────────────────────────────────────────────
 async function saveKi() {
+  // Custom Endpoint separat speichern
+  const customUrl = gv('custom-url');
+  if (customUrl !== undefined) {
+    const cr = await post('/api/custom-endpoint', {url: customUrl, api_key: gv('custom-key'), model: gv('custom-model')});
+    if (cr.ok) allData.custom = await api('/api/custom-endpoint');
+  }
+
   const data = {
     provider: gv('ki-provider') || 'auto',
     keys:   {anthropic: gv('ki-anthropic'), openai: gv('ki-openai'), gemini: gv('ki-gemini')},
@@ -934,7 +970,6 @@ async function saveKi() {
   if (r.ok !== false) {
     allData.settings = await api('/api/settings');
     updateChips();
-    // Karte neu bauen damit Modellzeilen für neu hinzugefügte Keys erscheinen
     const card = document.getElementById('ki-card');
     if (card) {
       card.innerHTML = buildKiCard().replace('<div class="card">','').replace(/<\/div>$/,'');
@@ -942,6 +977,18 @@ async function saveKi() {
     }
   }
   return r;
+}
+
+async function testCustom() {
+  const url = gv('custom-url');
+  const key = gv('custom-key');
+  const res = document.getElementById('custom-test-result');
+  if (!url) { if(res){res.textContent='Bitte URL eingeben.';res.style.color='var(--yellow)';res.style.display='block';} return; }
+  if (res) { res.textContent='⏳ Verbinde…'; res.style.color='var(--tx3)'; res.style.display='block'; }
+  try {
+    const r = await post('/api/custom-endpoint/test', {url, api_key: key});
+    if (res) { res.textContent = r.ok ? `✅ ${r.message}` : `❌ ${r.message}`; res.style.color = r.ok ? 'var(--green)' : 'var(--red)'; }
+  } catch(e) { if(res){res.textContent='❌ Verbindungsfehler';res.style.color='var(--red)';} }
 }
 
 async function loadKiModels() {
@@ -952,6 +999,7 @@ async function loadKiModels() {
     ['gemini',    'ki-m-gemini-sel', 'ki-m-gemini'],
     ['openai',    'ki-m-openai-sel', 'ki-m-openai'],
     ['ollama',    'ki-m-ollama-sel', 'ki-m-ollama'],
+    ['custom',    'ki-m-custom-sel', 'custom-model'],
   ];
   for (const [key, selId, inpId] of map) {
     const sel = document.getElementById(selId);

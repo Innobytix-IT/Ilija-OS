@@ -64,12 +64,33 @@ def _ollama_models():
         return []
 
 
+def _custom_models():
+    from providers import _load_custom_endpoint_cfg
+    cfg = _load_custom_endpoint_cfg()
+    url = cfg.get("url", "").rstrip("/")
+    if not url:
+        return []
+    try:
+        key = cfg.get("api_key") or "custom"
+        r = requests.get(f"{url}/models",
+                         headers={"Authorization": f"Bearer {key}"},
+                         timeout=8)
+        data = r.json()
+        ids = [m.get("id", "") for m in data.get("data", [])]
+        return sorted([i for i in ids if i])
+    except Exception:
+        # Fallback: konfigurierten Modellnamen als einzigen Eintrag
+        m = cfg.get("model", "")
+        return [m] if m else []
+
+
 def register_agent_routes(app):
 
     @app.route("/api/models/available")
     def models_available():
         return jsonify({"gemini": _gemini_models(), "openai": _openai_models(),
-                        "anthropic": _anthropic_models(), "ollama": _ollama_models()})
+                        "anthropic": _anthropic_models(), "ollama": _ollama_models(),
+                        "custom": _custom_models()})
 
     @app.route("/api/agent/coding", methods=["POST"])
     def agent_coding():

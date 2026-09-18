@@ -661,6 +661,57 @@ def save_fritzbox_settings():
     _save_env_keys(patch)
     return jsonify({"ok": True, "message": "FritzBox-Einstellungen gespeichert."})
 
+# ── Eigener Endpunkt ─────────────────────────────────────────
+_CUSTOM_EP_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "custom_endpoint.json")
+
+@app.route("/api/custom-endpoint", methods=["GET"])
+def get_custom_endpoint():
+    try:
+        with open(_CUSTOM_EP_PATH, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+    except Exception:
+        cfg = {"url": "", "api_key": "", "model": ""}
+    if cfg.get("api_key"):
+        cfg["api_key"] = "****"
+    return jsonify(cfg)
+
+@app.route("/api/custom-endpoint", methods=["POST"])
+def save_custom_endpoint():
+    global kernel
+    data = request.get_json() or {}
+    try:
+        with open(_CUSTOM_EP_PATH, "r", encoding="utf-8") as f:
+            old = json.load(f)
+    except Exception:
+        old = {}
+    cfg = {
+        "url":     old.get("url", "") if "****" in str(data.get("url", "")) else data.get("url", "").strip(),
+        "api_key": old.get("api_key", "") if "****" in str(data.get("api_key", "")) else data.get("api_key", "").strip(),
+        "model":   data.get("model", "").strip(),
+    }
+    os.makedirs(os.path.dirname(_CUSTOM_EP_PATH), exist_ok=True)
+    with open(_CUSTOM_EP_PATH, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+    with kernel_lock:
+        kernel = None
+    return jsonify({"ok": True, "message": "Eigener Endpunkt gespeichert."})
+
+@app.route("/api/custom-endpoint/test", methods=["POST"])
+def test_custom_endpoint():
+    data = request.get_json() or {}
+    url  = (data.get("url") or "").strip().rstrip("/")
+    key  = (data.get("api_key") or "custom").strip() or "custom"
+    if not url:
+        return jsonify({"ok": False, "message": "Kein URL angegeben."})
+    try:
+        import requests as req
+        r = req.get(f"{url}/models", headers={"Authorization": f"Bearer {key}"}, timeout=6)
+        count = len(r.json().get("data", []))
+        return jsonify({"ok": True, "message": f"Verbunden ✓ – {count} Modell(e) gefunden"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": f"Nicht erreichbar: {e}"})
+
+
 @app.route("/api/fritzbox-test", methods=["POST"])
 def test_fritzbox():
     import socket

@@ -578,6 +578,9 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
             <div class="fg" id="fg-ollama"><label class="fl">Ollama (lokal)</label>
               <select class="fi" id="mOllamaSel" onchange="document.getElementById('mOllama').value=this.value" style="display:none;margin-bottom:6px"></select>
               <input class="fi" id="mOllama" placeholder="qwen2.5:7b"></div>
+            <div class="fg" id="fg-custom" style="display:none"><label class="fl">Eigener Endpunkt</label>
+              <select class="fi" id="mCustomSel" onchange="document.getElementById('mCustom').value=this.value" style="display:none;margin-bottom:6px"></select>
+              <input class="fi" id="mCustom" placeholder="llama3.2"></div>
             <div id="fg-no-keys" style="display:none;font-size:.74rem;color:var(--tx3);font-family:var(--m);padding:4px 0">
               💡 API-Key in den Einstellungen hinterlegen um Modelle auszuwählen
             </div>
@@ -1073,19 +1076,27 @@ async function loadAvailableModels(){
   try{ av=await (await fetch('/api/models/available')).json(); }catch(e){ return; }
   try{ const s=await (await fetch('/api/settings')).json(); hk=s.has_keys||{}; }catch(e){}
 
+  // Custom Endpoint Config laden für fg-custom Sichtbarkeit
+  let customCfg={};
+  try{ customCfg=await (await fetch('/api/custom-endpoint')).json(); }catch(e){}
+  const hasCustom=!!(customCfg.url);
+
   // Form-Groups nur anzeigen wenn Key vorhanden
   const fgMap={claude:'fg-claude', openai:'fg-openai', gemini:'fg-gemini'};
-  let anyKey=hk.anthropic||hk.openai||hk.gemini;
+  let anyKey=hk.anthropic||hk.openai||hk.gemini||hasCustom;
   for(const[prov,fgId] of Object.entries(fgMap)){
     const fg=document.getElementById(fgId);
     if(fg) fg.style.display=(hk[prov==='claude'?'anthropic':prov])?'':'none';
   }
+  const fgCustom=document.getElementById('fg-custom');
+  if(fgCustom) fgCustom.style.display=hasCustom?'':'none';
   const noKeys=document.getElementById('fg-no-keys');
   if(noKeys) noKeys.style.display=anyKey?'none':'block';
 
   // Dropdowns befüllen
   const map=[['gemini','mGeminiSel','mGemini'],['claude','mClaudeSel','mClaude'],
-             ['openai','mOpenAISel','mOpenAI'],['ollama','mOllamaSel','mOllama']];
+             ['openai','mOpenAISel','mOpenAI'],['ollama','mOllamaSel','mOllama'],
+             ['custom','mCustomSel','mCustom']];
   for(const[prov,selId,inpId] of map){
     const sel=document.getElementById(selId), inp=document.getElementById(inpId);
     if(!sel||!inp)continue;
@@ -1144,6 +1155,12 @@ async function saveModels(){
     // und setzt den Kernel zurück; Provider wird beibehalten.
     await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({provider:window._curProv||'auto',models,keys:{}})});
+    // Custom-Endpunkt Modell separat speichern (nur Modell-Feld, URL/Key bleibt unverändert)
+    const customModel=(document.getElementById('mCustom')||{}).value||'';
+    if(customModel){
+      await fetch('/api/custom-endpoint',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({url:'****', api_key:'****', model:customModel})});
+    }
     toast('Modelle gespeichert ✓','success');
     loadModelInfo();
   }catch(e){ toast('Fehler beim Speichern','error'); }
