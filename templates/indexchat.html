@@ -94,7 +94,10 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
 /* ── Session-Liste ────────────────────────────────────────── */
 .sb-sess-wrap{border-bottom:1px solid var(--bdr);flex-shrink:0}
 .sb-sess-hd{display:flex;align-items:center;padding:10px 10px 4px}
-.sb-sess-new{margin-left:auto;width:20px;height:20px;border-radius:50%;background:var(--s3);border:1px solid var(--bdr2);color:var(--tx2);font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:all .14s;flex-shrink:0}
+.sb-sess-save-toggle{margin-left:auto;width:20px;height:20px;border-radius:50%;background:none;border:none;font-size:13px;cursor:pointer;display:grid;place-items:center;transition:opacity .14s;flex-shrink:0;opacity:.5}
+.sb-sess-save-toggle:hover{opacity:1}
+.sb-sess-save-toggle.off{opacity:.25;filter:grayscale(1)}
+.sb-sess-new{width:20px;height:20px;border-radius:50%;background:var(--s3);border:1px solid var(--bdr2);color:var(--tx2);font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:all .14s;flex-shrink:0}
 .sb-sess-new:hover{background:var(--g);color:var(--bg);border-color:var(--g)}
 .sb-sess-list{overflow-y:auto;max-height:220px;padding-bottom:4px}
 .sb-sess-item{display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:6px;margin:1px 4px;cursor:pointer;transition:background .13s}
@@ -292,6 +295,7 @@ body.mode-coworking .coding-bar{display:flex}
     <div class="sb-sess-wrap">
       <div class="sb-sess-hd">
         <span class="sb-head" style="padding:0">Unterhaltungen</span>
+        <button class="sb-sess-save-toggle" id="sessSaveBtn" onclick="toggleSessSave()" title="Gespräche speichern an/aus">💾</button>
         <button class="sb-sess-new" onclick="newSession()" title="Neue Unterhaltung">＋</button>
       </div>
       <div class="sb-sess-list" id="sb-sess-list">
@@ -440,9 +444,10 @@ let _sid='default';                              // Sitzungs-ID (Verlauf pro Fen
 const CODING_LABEL={auto:'Auto',manuell:'Manuell',acceptEdits:'Bearbeitungen auto',plan:'Plan',bypass:'Berechtigungen umgehen'};
 
 // ── Session-Persistenz ────────────────────────────────────────
-let _sessId   = null;    // aktive Session-ID
-let _sessLog  = [];      // [{role, content}] Verlaufssicherung
-let _lastUser = '';      // letzte Nutzernachricht (für Auto-Save)
+let _sessId      = null;   // aktive Session-ID
+let _sessLog     = [];     // [{role, content}] Verlaufssicherung
+let _lastUser    = '';     // letzte Nutzernachricht (für Auto-Save)
+let _sessSaveOn  = true;   // Gespräche speichern an/aus
 
 // ── Init ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
@@ -451,11 +456,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   try{
     chatMode=localStorage.getItem('ilija_chat_mode')||'coworking';
     codingMode=localStorage.getItem('ilija_coding_mode')||'auto';
+    _sessSaveOn=localStorage.getItem('ilija_sess_save')!=='off';
     _sid=localStorage.getItem('ilija_coding_sid')||'';
     if(!_sid){_sid=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'s'+Date.now()+Math.random().toString(36).slice(2);localStorage.setItem('ilija_coding_sid',_sid);}
   }catch(e){ _sid='s'+Date.now(); }
   applyChatMode();
   applyCodingMode();
+  applySessSave();
   loadSessions();
   loadWorkspace();
   loadShell();
@@ -739,6 +746,19 @@ function scrollDown(){const a=document.getElementById('msgs');a.scrollTop=a.scro
 function setLoading(v){loading=v;document.getElementById('sendBtn').disabled=v}
 
 // ── Session-Persistenz ────────────────────────────────────────
+function applySessSave(){
+  const btn=document.getElementById('sessSaveBtn');
+  if(!btn)return;
+  btn.classList.toggle('off',!_sessSaveOn);
+  btn.title=_sessSaveOn?'Gespräche speichern: AN (klicken zum Deaktivieren)':'Gespräche speichern: AUS (klicken zum Aktivieren)';
+}
+
+function toggleSessSave(){
+  _sessSaveOn=!_sessSaveOn;
+  try{localStorage.setItem('ilija_sess_save',_sessSaveOn?'on':'off');}catch(e){}
+  applySessSave();
+}
+
 async function loadSessions(){
   try{
     const r=await fetch('/api/sessions?mode='+encodeURIComponent(chatMode));
@@ -768,7 +788,7 @@ function renderSessList(sessions){
 }
 
 async function sessAutoSave(userMsg, assistantMsg){
-  if(!userMsg||!assistantMsg)return;
+  if(!_sessSaveOn||!userMsg||!assistantMsg)return;
   _sessLog.push({role:'user',content:userMsg});
   _sessLog.push({role:'assistant',content:assistantMsg});
   const title=_sessLog[0]?.content?.slice(0,60)||'Unterhaltung';
