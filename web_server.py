@@ -329,6 +329,28 @@ def get_ollama_models():
         return jsonify([])
 
 
+@app.route("/api/whatsapp", methods=["POST"])
+def whatsapp_bridge():
+    """Empfängt WhatsApp-Nachrichten vom Baileys-Bridge und gibt Ilijas Antwort zurück."""
+    data = request.get_json(silent=True) or {}
+    sender_jid = (data.get("from") or "").strip()
+    name       = (data.get("name") or sender_jid or "Unbekannt").strip()
+    text       = (data.get("text") or "").strip()
+
+    if not text:
+        return jsonify({"reply": ""}), 200
+
+    try:
+        from skills.whatsapp_bridge_skill import verarbeite_whatsapp_nachricht
+        k = get_kernel()
+        antwort = verarbeite_whatsapp_nachricht(sender_jid, name, text, k.provider)
+        return jsonify({"reply": antwort}), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e), "reply": ""}), 500
+
+
 if __name__ == "__main__":
     port  = int(os.getenv("PORT", 5000))
     debug = os.getenv("DEBUG", "false").lower() == "true"

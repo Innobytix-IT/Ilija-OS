@@ -1,0 +1,15 @@
+{
+  "name": "ilija-whatsapp-bridge",
+  "version": "1.0.0",
+  "description": "Baileys WhatsApp Bridge fuer Ilija OS",
+  "main": "bridge.js",
+  "scripts": {
+    "start": "node bridge.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.0",
+    "axios": "^1.7.0",
+    "pino": "^8.21.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

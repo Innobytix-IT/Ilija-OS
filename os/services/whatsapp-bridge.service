@@ -1,0 +1,20 @@
+[Unit]
+Description=Ilija WhatsApp Bridge (Baileys)
+After=network-online.target ilija.service
+Wants=network-online.target
+Requires=ilija.service
+
+[Service]
+Type=simple
+User=ilija
+Group=ilija
+WorkingDirectory=/opt/ilija-os/ilija/baileys-bridge
+Environment=ILIJA_API=http://localhost:5001/api/whatsapp
+Environment=AUTH_DIR=/opt/ilija-os/ilija/baileys-bridge/auth_info
+Environment=LOG_LEVEL=silent
+ExecStart=/usr/bin/node bridge.js
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

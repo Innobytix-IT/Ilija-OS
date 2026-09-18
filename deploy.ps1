@@ -21,6 +21,6 @@ if ($status) {
 git -C $repo push
 
 Write-Host "==> EliteBook: git pull + restart" -ForegroundColor Cyan
-Invoke-Expression "$ssh 'sudo -u ilija git -C /opt/ilija-os/ilija pull && sudo systemctl restart ilija.service && echo OK'"
+Invoke-Expression "$ssh 'sudo -u ilija git -C /opt/ilija-os/ilija pull && sudo systemctl restart ilija.service && (sudo systemctl is-active --quiet whatsapp-bridge.service && sudo systemctl restart whatsapp-bridge.service || true) && echo OK'"
 
 Write-Host "==> Fertig." -ForegroundColor Green
