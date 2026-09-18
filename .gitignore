@@ -7,3 +7,6 @@ data/notizen/
 data/outlook_profil/
 *.log
 venv/
+*.bak
+*.pre-*.bak
+memory/
