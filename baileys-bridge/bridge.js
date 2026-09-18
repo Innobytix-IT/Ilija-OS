@@ -54,6 +54,8 @@ async function startBridge() {
     sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
         if (qr) {
             console.log('[Bridge] QR-Code erschienen – mit WhatsApp scannen')
+            // QR auch explizit drucken falls printQRInTerminal unterdrückt wird
+            try { require('qrcode-terminal').generate(qr, { small: true }) } catch (_) {}
         }
         if (connection === 'open') {
             console.log('[Bridge] ✅ WhatsApp verbunden')
@@ -61,6 +63,10 @@ async function startBridge() {
         if (connection === 'close') {
             const code   = lastDisconnect?.error?.output?.statusCode
             const logout = code === DisconnectReason.loggedOut
+            // Vollständigen Fehler ausgeben für Diagnose
+            if (lastDisconnect?.error) {
+                console.error('[Bridge] Disconnect-Fehler:', JSON.stringify(lastDisconnect.error, null, 2))
+            }
             console.log(`[Bridge] Verbindung getrennt (Code ${code}). Wiederverbinden: ${!logout}`)
             if (!logout) {
                 setTimeout(startBridge, 3000)
