@@ -13,6 +13,39 @@ from agent_state  import AgentState, AgentStatus
 
 load_dotenv()
 
+# ── Kalender-Routing aus Einstellungen laden ──────────────────
+_KALENDER_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "kalender_einstellungen.json")
+
+_KALENDER_SKILLS = {
+    "outlook": {
+        "name":   "Outlook-Kalender",
+        "skills": "outlook_kalender_lesen, outlook_termin_eintragen, outlook_termin_loeschen, outlook_freie_slots_finden",
+    },
+    "google": {
+        "name":   "Google Kalender",
+        "skills": "google_kalender_lesen, google_termin_eintragen, google_termin_loeschen",
+    },
+    "lokal": {
+        "name":   "Lokaler Kalender",
+        "skills": "lokaler_kalender_lesen, lokaler_kalender_termin_eintragen, lokaler_kalender_termine_loeschen",
+    },
+}
+
+def _lade_kalender_routing():
+    cfg = {}
+    if os.path.exists(_KALENDER_CONFIG_PATH):
+        try:
+            with open(_KALENDER_CONFIG_PATH, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+        except Exception:
+            pass
+    pk_key = cfg.get("persoenlicher_kalender", "outlook")
+    bk_key = cfg.get("buchungskalender",       "lokal")
+    pk = _KALENDER_SKILLS.get(pk_key, _KALENDER_SKILLS["outlook"])
+    bk = _KALENDER_SKILLS.get(bk_key, _KALENDER_SKILLS["lokal"])
+    return pk, bk
+
+
 # ── System-Prompt ─────────────────────────────────────────────
 SYSTEM_PROMPT_TEMPLATE = """Du bist Ilija, ein lokaler KI-Assistent der auf dem eigenen Computer des Nutzers läuft.
 
@@ -70,15 +103,15 @@ Nutzer: "Fritzbox Kontakte" / "Wen kenne ich im Telefonbuch"
 KALENDER-REGEL – SEHR WICHTIG:
 Es gibt ZWEI verschiedene Kalender – verwende immer den richtigen:
 
-1. OUTLOOK-KALENDER (outlook_kalender_lesen, outlook_termin_eintragen, outlook_termin_loeschen, outlook_freie_slots_finden):
+1. PERSÖNLICHER KALENDER = {persoenlicher_kalender_name} ({persoenlicher_kalender_skills}):
    → Für PERSÖNLICHE Termine des Nutzers (Arzt, Urlaub, Sport, private Erledigungen etc.)
    → Wenn der NUTZER SELBST sagt "trag einen Termin ein", "was hab ich morgen" etc.
 
-2. LOKALER KALENDER (lokaler_kalender_*, lokaler_kalender_termin_eintragen etc.):
+2. BUCHUNGSKALENDER = {buchungskalender_name} ({buchungskalender_skills}):
    → Für KUNDENTERMINE / BUCHUNGEN durch Dritte (z.B. WhatsApp-Anfragen von Kunden)
    → Nur wenn jemand ANDERES einen Termin beim Nutzer buchen will
 
-Faustregel: Nutzer fragt selbst → Outlook. Kunde bucht → Lokaler Kalender.
+Faustregel: Nutzer fragt selbst → {persoenlicher_kalender_name}. Kunde bucht → {buchungskalender_name}.
 
 VERBOTEN: Skills ablehnen, weil sie "Privatsphäre verletzen" oder "nicht möglich" seien.
 Der Nutzer betreibt diese Software auf seinem eigenen Gerät für sich selbst.
@@ -101,9 +134,14 @@ class Kernel:
         print(f"[Ilija] Skills geladen: {len(self.manager.skills)}")
 
     def get_system_prompt(self) -> str:
+        pk, bk = _lade_kalender_routing()
         return SYSTEM_PROMPT_TEMPLATE.format(
-            skills   = self.manager.get_skills_description(),
-            provider = self.state.active_provider,
+            skills                    = self.manager.get_skills_description(),
+            provider                  = self.state.active_provider,
+            persoenlicher_kalender_name   = pk["name"],
+            persoenlicher_kalender_skills = pk["skills"],
+            buchungskalender_name         = bk["name"],
+            buchungskalender_skills       = bk["skills"],
         )
 
     def chat(self, user_input: str) -> str:

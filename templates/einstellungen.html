@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ilija · Einstellungen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B1520;
+  --s1:#10202D;--s2:#16293A;--s3:#1E3547;--s4:#274257;
+  --bdr:rgba(255,255,255,.055);--bdr2:rgba(255,255,255,.1);
+  --g:#E0A82E;--g2:#C8871B;--gd:rgba(224,168,46,.07);--gg:rgba(224,168,46,.12);
+  --tx:#E6EEF5;--tx2:#8FA6B8;--tx3:#4A6072;
+  --green:#22c97c;--green-dim:rgba(34,201,124,.12);
+  --red:#ef4444;--red-dim:rgba(239,68,68,.1);
+  --blue:#60a5fa;--blue-dim:rgba(96,165,250,.1);
+  --f:'Inter',sans-serif;--m:'JetBrains Mono',monospace;
+  --r:9px;
+}
+html{font-size:16px;color-scheme:dark}
+body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--s4);border-radius:2px}
+
+/* ── Topbar ─────────────────────────────────────────────── */
+.topbar{display:flex;align-items:center;gap:0;height:52px;padding:0 20px;background:var(--s1);border-bottom:1px solid var(--bdr);flex-shrink:0;position:relative;z-index:100;overflow-x:auto}
+.topbar::-webkit-scrollbar{height:0}
+.logo{display:flex;align-items:center;gap:9px;text-decoration:none;flex-shrink:0}
+.logo-gem{width:30px;height:30px;background:var(--g);border-radius:7px;display:grid;place-items:center;font-family:var(--m);font-weight:500;font-size:14px;color:var(--bg)}
+.logo-name{font-size:.9rem;font-weight:500;color:var(--tx)}
+.logo-name em{font-style:italic;color:var(--g)}
+.tb-sep{width:1px;height:20px;background:var(--bdr2);margin:0 12px;flex-shrink:0}
+.tab-group{display:flex;gap:2px;flex-shrink:0}
+.tab{padding:5px 12px;border-radius:5px;font-size:.78rem;font-weight:500;cursor:pointer;transition:all .14s;color:var(--tx2);border:none;background:none;font-family:var(--f);white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center}
+.tab:hover{background:var(--s3);color:var(--tx)}
+.tab.active{background:var(--gd);color:var(--g);border:1px solid var(--gg)}
+
+/* ── Layout ─────────────────────────────────────────────── */
+.page{flex:1;overflow-y:auto;padding:32px 20px 60px}
+.page-inner{max-width:640px;margin:0 auto}
+.page-title{font-size:1.25rem;font-weight:600;color:var(--tx);margin-bottom:4px}
+.page-sub{font-size:.82rem;color:var(--tx3);margin-bottom:32px}
+
+/* ── Section ────────────────────────────────────────────── */
+.section{margin-bottom:28px}
+.section-title{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--bdr)}
+
+/* ── Card ───────────────────────────────────────────────── */
+.card{background:var(--s2);border:1px solid var(--bdr2);border-radius:12px;overflow:hidden}
+
+/* ── Row ────────────────────────────────────────────────── */
+.row{display:flex;align-items:center;padding:14px 20px;border-bottom:1px solid var(--bdr);gap:16px}
+.row:last-child{border:none}
+.row-left{flex:1;min-width:0}
+.row-label{font-size:.85rem;font-weight:500;color:var(--tx);margin-bottom:2px}
+.row-hint{font-size:.75rem;color:var(--tx3);line-height:1.4}
+.row-control{flex-shrink:0}
+
+/* ── Select ─────────────────────────────────────────────── */
+select{
+  appearance:none;
+  background:var(--s3) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234A6072'/%3E%3C/svg%3E") no-repeat right 10px center;
+  border:1px solid var(--bdr2);
+  border-radius:7px;
+  color:var(--tx);
+  font-family:var(--f);
+  font-size:.82rem;
+  padding:7px 30px 7px 11px;
+  cursor:pointer;
+  transition:border-color .13s;
+  min-width:160px;
+}
+select:focus{outline:none;border-color:var(--g)}
+select:hover{border-color:var(--s4)}
+
+/* ── Toggle ─────────────────────────────────────────────── */
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;border-radius:11px;background:var(--s4);cursor:pointer;transition:background .2s}
+.toggle input:checked + .toggle-track{background:var(--g)}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;pointer-events:none}
+.toggle input:checked ~ .toggle-thumb{transform:translateX(18px)}
+
+/* ── Toast ──────────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--s2);border:1px solid var(--bdr2);border-radius:8px;
+  padding:10px 20px;font-size:.82rem;color:var(--tx);
+  opacity:0;transition:all .25s;pointer-events:none;z-index:9999;
+  white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:rgba(34,201,124,.3);color:var(--green)}
+#toast.err{border-color:rgba(239,68,68,.3);color:var(--red)}
+
+/* ── Info Box ───────────────────────────────────────────── */
+.info-box{background:var(--blue-dim);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:12px 16px;font-size:.78rem;color:var(--blue);line-height:1.55;margin-top:14px}
+.info-box strong{color:var(--tx)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="logo">
+    <div class="logo-gem">I</div>
+    <span class="logo-name">Ilija<em>PE</em></span>
+  </a>
+  <div class="tb-sep"></div>
+  <nav class="tab-group">
+    <a href="/" class="tab">⚡ Workflow</a>
+    <a href="/chat" class="tab">💬 Chat</a>
+    <a href="/dms" class="tab">🗂 DMS</a>
+    <a href="/local_calendar" class="tab">📅 Kalender</a>
+    <a href="/cloud" class="tab">☁ Cloud</a>
+    <a href="/whatsapp" class="tab">📱 WhatsApp</a>
+    <a href="/einstellungen" class="tab active">⚙ Einstellungen</a>
+  </nav>
+</div>
+
+<div class="page">
+  <div class="page-inner">
+    <div class="page-title">Einstellungen</div>
+    <div class="page-sub">Konfiguriere Ilija für deine Arbeitsweise</div>
+
+    <!-- Kalender-Sektion -->
+    <div class="section">
+      <div class="section-title">Kalender</div>
+      <div class="card">
+
+        <div class="row">
+          <div class="row-left">
+            <div class="row-label">Persönlicher Kalender</div>
+            <div class="row-hint">Für eigene Termine — wenn du Ilija sagst "trag einen Termin ein" oder "was hab ich morgen"</div>
+          </div>
+          <div class="row-control">
+            <select id="sel-persoenlich">
+              <option value="outlook">Microsoft Outlook</option>
+              <option value="google">Google Kalender</option>
+              <option value="lokal">Lokaler Kalender</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-left">
+            <div class="row-label">Buchungskalender</div>
+            <div class="row-hint">Für Kundentermine — wenn jemand per WhatsApp einen Termin bei dir bucht</div>
+          </div>
+          <div class="row-control">
+            <select id="sel-buchung">
+              <option value="lokal">Lokaler Kalender</option>
+              <option value="outlook">Microsoft Outlook</option>
+              <option value="google">Google Kalender</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Sync-Sektion -->
+    <div class="section">
+      <div class="section-title">Kalender-Synchronisation</div>
+      <div class="card">
+
+        <div class="row">
+          <div class="row-left">
+            <div class="row-label">Synchronisieren mit</div>
+            <div class="row-hint">Hält den lokalen Kalender mit einem Cloud-Dienst in Sync</div>
+          </div>
+          <div class="row-control">
+            <select id="sel-sync-provider">
+              <option value="keiner">Kein Sync</option>
+              <option value="outlook">Microsoft Outlook</option>
+              <option value="google">Google Kalender</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" id="row-intervall">
+          <div class="row-left">
+            <div class="row-label">Abruf-Intervall</div>
+            <div class="row-hint">Wie oft externe Termine in den lokalen Kalender importiert werden</div>
+          </div>
+          <div class="row-control">
+            <select id="sel-intervall">
+              <option value="manuell">Nur manuell</option>
+              <option value="3x_taeglich">3× täglich</option>
+              <option value="stuendlich">Stündlich</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" id="row-autopush">
+          <div class="row-left">
+            <div class="row-label">Automatisch hochladen</div>
+            <div class="row-hint">Neue Buchungen werden sofort in den Cloud-Kalender übertragen</div>
+          </div>
+          <div class="row-control">
+            <label class="toggle">
+              <input type="checkbox" id="tog-autopush" checked>
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="info-box" id="sync-hint" style="display:none">
+        <strong>Hinweis:</strong> Für die Synchronisation mit Outlook oder Google muss der entsprechende Skill
+        im Skill-Store eingerichtet und autorisiert sein. Gehe dazu in den <a href="/cloud" style="color:var(--blue)">Cloud-Bereich</a>.
+      </div>
+    </div>
+
+    <!-- Speichern-Button -->
+    <button class="save-btn" onclick="speichern()">Einstellungen speichern</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<style>
+.save-btn{
+  background:var(--g);color:var(--bg);border:none;border-radius:8px;
+  font-family:var(--f);font-size:.85rem;font-weight:600;
+  padding:11px 28px;cursor:pointer;transition:background .13s;
+}
+.save-btn:hover{background:var(--g2)}
+</style>
+
+<script>
+let cfg = {};
+
+async function laden() {
+  try {
+    const res = await fetch('/api/kalender-settings');
+    cfg = await res.json();
+    anwenden(cfg);
+  } catch(e) {
+    toast('Konnte Einstellungen nicht laden', 'err');
+  }
+}
+
+function anwenden(c) {
+  setVal('sel-persoenlich', c.persoenlicher_kalender || 'outlook');
+  setVal('sel-buchung',     c.buchungskalender       || 'lokal');
+  setVal('sel-sync-provider', c.sync_provider        || 'keiner');
+  setVal('sel-intervall',   c.sync_intervall          || '3x_taeglich');
+  document.getElementById('tog-autopush').checked = c.sync_auto_push !== false;
+  syncHinweis();
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  for (const opt of el.options) {
+    if (opt.value === val) { opt.selected = true; return; }
+  }
+}
+
+function syncHinweis() {
+  const p = document.getElementById('sel-sync-provider').value;
+  const noSync = p === 'keiner';
+  document.getElementById('row-intervall').style.opacity = noSync ? '.35' : '1';
+  document.getElementById('row-autopush').style.opacity  = noSync ? '.35' : '1';
+  document.getElementById('sync-hint').style.display    = noSync ? 'none' : 'block';
+}
+
+document.getElementById('sel-sync-provider').addEventListener('change', syncHinweis);
+
+async function speichern() {
+  const payload = {
+    persoenlicher_kalender: document.getElementById('sel-persoenlich').value,
+    buchungskalender:       document.getElementById('sel-buchung').value,
+    sync_provider:          document.getElementById('sel-sync-provider').value,
+    sync_intervall:         document.getElementById('sel-intervall').value,
+    sync_auto_push:         document.getElementById('tog-autopush').checked,
+  };
+  try {
+    const res = await fetch('/api/kalender-settings', {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.ok) toast('✓ Gespeichert', 'ok');
+    else         toast(data.message || 'Fehler', 'err');
+  } catch(e) {
+    toast('Verbindungsfehler', 'err');
+  }
+}
+
+let _toastT = null;
+function toast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(_toastT);
+  _toastT = setTimeout(() => el.className = '', 2800);
+}
+
+laden();
+</script>
+</body>
+</html>

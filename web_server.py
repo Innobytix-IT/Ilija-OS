@@ -365,6 +365,74 @@ def whatsapp_connection_status():
     return jsonify({"ok": True})
 
 
+@app.route("/einstellungen")
+def einstellungen_page():
+    return render_template("einstellungen.html")
+
+
+# ── Kalender-Einstellungen ────────────────────────────────────
+_KALENDER_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "kalender_einstellungen.json")
+_KALENDER_DEFAULTS = {
+    "persoenlicher_kalender": "outlook",
+    "buchungskalender": "lokal",
+    "sync_provider": "keiner",
+    "sync_intervall": "3x_taeglich",
+    "sync_auto_push": True,
+}
+
+
+def _lade_kalender_einstellungen() -> dict:
+    if os.path.exists(_KALENDER_CONFIG_PATH):
+        try:
+            with open(_KALENDER_CONFIG_PATH, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            return {**_KALENDER_DEFAULTS, **cfg}
+        except Exception:
+            pass
+    return dict(_KALENDER_DEFAULTS)
+
+
+def _speichere_kalender_einstellungen(cfg: dict):
+    os.makedirs(os.path.dirname(_KALENDER_CONFIG_PATH), exist_ok=True)
+    with open(_KALENDER_CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+
+
+@app.route("/api/kalender-settings", methods=["GET"])
+def get_kalender_settings():
+    return jsonify(_lade_kalender_einstellungen())
+
+
+@app.route("/api/kalender-settings", methods=["POST"])
+def save_kalender_settings():
+    global kernel
+    data = request.get_json() or {}
+    cfg  = _lade_kalender_einstellungen()
+
+    allowed = {"persoenlicher_kalender", "buchungskalender", "sync_provider", "sync_intervall", "sync_auto_push"}
+    for key in allowed:
+        if key in data:
+            cfg[key] = data[key]
+    _speichere_kalender_einstellungen(cfg)
+
+    # Kalender-Sync-Config ebenfalls aktualisieren (sync_provider / intervall / auto_push)
+    try:
+        from skills.kalender_sync_skill import _lade_config as _lade_sync, _speichere_config as _speichere_sync
+        sync_cfg = _lade_sync()
+        sync_cfg["provider"]       = cfg.get("sync_provider", "keiner")
+        sync_cfg["pull_intervall"] = cfg.get("sync_intervall", "3x_taeglich")
+        sync_cfg["auto_push"]      = cfg.get("sync_auto_push", True)
+        _speichere_sync(sync_cfg)
+    except Exception as e:
+        print(f"[KalenderSettings] Sync-Config-Update Fehler: {e}")
+
+    # Kernel zurücksetzen → System-Prompt wird beim nächsten Chat neu gebaut
+    with kernel_lock:
+        kernel = None
+
+    return jsonify({"ok": True, "message": "Kalender-Einstellungen gespeichert."})
+
+
 @app.route("/api/whatsapp", methods=["POST"])
 def whatsapp_bridge():
     """Empfängt WhatsApp-Nachrichten vom Baileys-Bridge und gibt Ilijas Antwort zurück."""
