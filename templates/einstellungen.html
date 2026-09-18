@@ -104,6 +104,9 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
 .row-left{flex:1;min-width:0}
 .row-label{font-size:.84rem;font-weight:500;color:var(--tx);margin-bottom:2px}
 .row-hint{font-size:.73rem;color:var(--tx3);line-height:1.45}
+.ki-tip-anchor{position:relative;cursor:default;font-size:.8rem;opacity:.6;user-select:none}
+.ki-tip-anchor:hover .ki-tooltip,.ki-tip-anchor:focus .ki-tooltip{opacity:1;pointer-events:auto;transform:translateY(0)}
+.ki-tooltip{position:absolute;left:0;top:calc(100% + 6px);width:280px;background:var(--s2);border:1px solid var(--bdr2);border-radius:8px;padding:12px 14px;font-size:.76rem;line-height:1.6;color:var(--tx2);z-index:999;opacity:0;pointer-events:none;transform:translateY(-4px);transition:opacity .15s,transform .15s;box-shadow:0 8px 24px rgba(0,0,0,.3)}
 .row-control{flex-shrink:0;min-width:170px;text-align:right}
 .row-wide{flex-direction:column;align-items:stretch;gap:8px}
 .row-wide .row-label{margin-bottom:0}
@@ -639,7 +642,17 @@ function buildKiCard() {
     <div class="row"><div class="row-left"><div class="row-hint" style="color:var(--tx3);font-size:.74rem">💡 Nach dem Speichern eines API-Keys erscheint hier die Modell-Auswahl</div></div></div>`}
     <div class="row" style="background:var(--s1);border-top:1px solid var(--bdr)">
       <div class="row-left">
-        <div class="row-label" style="color:var(--g)">🔌 Eigener Endpunkt</div>
+        <div class="row-label" style="color:var(--g);display:flex;align-items:center;gap:6px">
+          🔌 Eigener Endpunkt
+          <span class="ki-tip-anchor" tabindex="0">ℹ️
+            <span class="ki-tooltip">
+              <strong>Hinweis zur Modellwahl</strong><br><br>
+              Für zuverlässiges Skill-Calling (WhatsApp, Kalender, E-Mail) empfehlen wir Modelle die speziell für <strong>Tool Use</strong> trainiert wurden — z.B. Llama&nbsp;3.1/3.3 ab 8B — auf ausreichend schneller Hardware.<br><br>
+              Generische Modelle unter 13B neigen dazu, ungebetene Skills aufzurufen oder halluzinierte Skill-Namen zu verwenden.<br><br>
+              Für einfache Gespräche ohne Skill-Nutzung reichen auch kleinere Modelle (3B–7B).
+            </span>
+          </span>
+        </div>
         <div class="row-hint">OpenAI-kompatibler Server — Ollama im Netzwerk, LM Studio, vLLM, eigener VPS&hellip;</div>
       </div>
     </div>
