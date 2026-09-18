@@ -44,7 +44,7 @@ async function startBridge() {
         version,
         auth:               state,
         logger,
-        printQRInTerminal:  true,
+        printQRInTerminal:  false,
         browser:            ['Ilija OS', 'Chrome', '1.0'],
         syncFullHistory:    false,
     })
