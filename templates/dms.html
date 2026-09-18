@@ -566,18 +566,21 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
 
           <div class="set-card">
             <h3>🤖 KI-Modell-Namen</h3>
-            <div class="fg"><label class="fl">Claude (Anthropic)</label>
+            <div class="fg" id="fg-claude" style="display:none"><label class="fl">Claude (Anthropic)</label>
               <select class="fi" id="mClaudeSel" onchange="document.getElementById('mClaude').value=this.value" style="display:none;margin-bottom:6px"></select>
               <input class="fi" id="mClaude" placeholder="claude-opus-4-6"></div>
-            <div class="fg"><label class="fl">ChatGPT (OpenAI)</label>
+            <div class="fg" id="fg-openai" style="display:none"><label class="fl">ChatGPT (OpenAI)</label>
               <select class="fi" id="mOpenAISel" onchange="document.getElementById('mOpenAI').value=this.value" style="display:none;margin-bottom:6px"></select>
               <input class="fi" id="mOpenAI" placeholder="gpt-4o"></div>
-            <div class="fg"><label class="fl">Gemini (Google)</label>
+            <div class="fg" id="fg-gemini" style="display:none"><label class="fl">Gemini (Google)</label>
               <select class="fi" id="mGeminiSel" onchange="document.getElementById('mGemini').value=this.value" style="display:none;margin-bottom:6px"></select>
               <input class="fi" id="mGemini" placeholder="gemini-2.5-flash"></div>
-            <div class="fg"><label class="fl">Ollama (lokal)</label>
+            <div class="fg" id="fg-ollama"><label class="fl">Ollama (lokal)</label>
               <select class="fi" id="mOllamaSel" onchange="document.getElementById('mOllama').value=this.value" style="display:none;margin-bottom:6px"></select>
               <input class="fi" id="mOllama" placeholder="qwen2.5:7b"></div>
+            <div id="fg-no-keys" style="display:none;font-size:.74rem;color:var(--tx3);font-family:var(--m);padding:4px 0">
+              💡 API-Key in den Einstellungen hinterlegen um Modelle auszuwählen
+            </div>
             <div class="fa"><button class="btn btn-p" onclick="saveModels()">Speichern</button></div>
             <div id="mMsg" style="margin-top:8px;font-size:.74rem;font-family:var(--m)"></div>
           </div>
@@ -1066,14 +1069,27 @@ async function loadSettingsData(){
 
 // Dropdowns mit den WIRKLICH verfügbaren Modellen des Schlüssels füllen
 async function loadAvailableModels(){
-  let av={};
+  let av={}, hk={};
   try{ av=await (await fetch('/api/models/available')).json(); }catch(e){ return; }
+  try{ const s=await (await fetch('/api/settings')).json(); hk=s.has_keys||{}; }catch(e){}
+
+  // Form-Groups nur anzeigen wenn Key vorhanden
+  const fgMap={claude:'fg-claude', openai:'fg-openai', gemini:'fg-gemini'};
+  let anyKey=hk.anthropic||hk.openai||hk.gemini;
+  for(const[prov,fgId] of Object.entries(fgMap)){
+    const fg=document.getElementById(fgId);
+    if(fg) fg.style.display=(hk[prov==='claude'?'anthropic':prov])?'':'none';
+  }
+  const noKeys=document.getElementById('fg-no-keys');
+  if(noKeys) noKeys.style.display=anyKey?'none':'block';
+
+  // Dropdowns befüllen
   const map=[['gemini','mGeminiSel','mGemini'],['claude','mClaudeSel','mClaude'],
              ['openai','mOpenAISel','mOpenAI'],['ollama','mOllamaSel','mOllama']];
   for(const[prov,selId,inpId] of map){
     const sel=document.getElementById(selId), inp=document.getElementById(inpId);
     if(!sel||!inp)continue;
-    const list=av[prov]||[];
+    const list=av[prov==='claude'?'anthropic':prov]||[];
     if(!list.length){ sel.style.display='none'; continue; }
     const cur=inp.value.trim();
     let opts='<option value="">— verfügbare Modelle —</option>';
@@ -1082,7 +1098,6 @@ async function loadAvailableModels(){
       if(name===cur)found=true;
       opts+=`<option value="${name}"${name===cur?' selected':''}>${name}</option>`;
     }
-    // aktueller Wert nicht in der Liste? als eigenen Eintrag zeigen
     if(cur && !found) opts+=`<option value="${cur}" selected>${cur} (eingetragen)</option>`;
     sel.innerHTML=opts;
     sel.style.display='';
