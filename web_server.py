@@ -329,6 +329,42 @@ def get_ollama_models():
         return jsonify([])
 
 
+@app.route("/whatsapp")
+def whatsapp_page():
+    return render_template("whatsapp.html")
+
+
+# ── WhatsApp Bridge State (im RAM) ────────────────────────
+import time as _time
+_wa_state = {"status": "disconnected", "qr": "", "connected_since": None, "msg_count": 0}
+_wa_lock  = threading.Lock()
+
+
+@app.route("/api/whatsapp/status")
+def whatsapp_status():
+    with _wa_lock:
+        return jsonify(dict(_wa_state))
+
+
+@app.route("/api/whatsapp/connection-status", methods=["POST"])
+def whatsapp_connection_status():
+    """Empfängt Status-Updates von der Baileys-Bridge (qr / connected / disconnected)."""
+    data = request.get_json(silent=True) or {}
+    status = data.get("status", "disconnected")
+    with _wa_lock:
+        _wa_state["status"] = status
+        if status == "qr":
+            _wa_state["qr"] = data.get("qr", "")
+            _wa_state["connected_since"] = None
+        elif status == "connected":
+            _wa_state["qr"] = ""
+            _wa_state["connected_since"] = _wa_state["connected_since"] or _time.time()
+        else:
+            _wa_state["qr"] = ""
+            _wa_state["connected_since"] = None
+    return jsonify({"ok": True})
+
+
 @app.route("/api/whatsapp", methods=["POST"])
 def whatsapp_bridge():
     """Empfängt WhatsApp-Nachrichten vom Baileys-Bridge und gibt Ilijas Antwort zurück."""
@@ -344,6 +380,8 @@ def whatsapp_bridge():
         from skills.whatsapp_bridge_skill import verarbeite_whatsapp_nachricht
         k = get_kernel()
         antwort = verarbeite_whatsapp_nachricht(sender_jid, name, text, k.provider)
+        with _wa_lock:
+            _wa_state["msg_count"] = _wa_state.get("msg_count", 0) + 1
         return jsonify({"reply": antwort}), 200
     except Exception as e:
         import traceback

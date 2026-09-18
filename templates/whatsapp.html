@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ilija · WhatsApp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B1520;
+  --s1:#10202D;--s2:#16293A;--s3:#1E3547;--s4:#274257;
+  --bdr:rgba(255,255,255,.055);--bdr2:rgba(255,255,255,.1);
+  --g:#E0A82E;--g2:#C8871B;--gd:rgba(224,168,46,.07);--gg:rgba(224,168,46,.12);
+  --tx:#E6EEF5;--tx2:#8FA6B8;--tx3:#4A6072;
+  --green:#22c97c;--green-dim:rgba(34,201,124,.12);
+  --yellow:#f59e0b;--yellow-dim:rgba(245,158,11,.1);
+  --red:#ef4444;--red-dim:rgba(239,68,68,.1);
+  --f:'Inter',sans-serif;--m:'JetBrains Mono',monospace;
+  --r:9px;
+}
+html{font-size:16px;color-scheme:dark}
+body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--s4);border-radius:2px}
+
+/* ── Topbar ─────────────────────────────────────────────── */
+.topbar{display:flex;align-items:center;gap:0;height:52px;padding:0 20px;background:var(--s1);border-bottom:1px solid var(--bdr);flex-shrink:0;position:relative;z-index:100;overflow-x:auto}
+.topbar::-webkit-scrollbar{height:0}
+.logo{display:flex;align-items:center;gap:9px;text-decoration:none;flex-shrink:0}
+.logo-gem{width:30px;height:30px;background:var(--g);border-radius:7px;display:grid;place-items:center;font-family:var(--m);font-weight:500;font-size:14px;color:var(--bg)}
+.logo-name{font-size:.9rem;font-weight:500;color:var(--tx)}
+.logo-name em{font-style:italic;color:var(--g)}
+.tb-sep{width:1px;height:20px;background:var(--bdr2);margin:0 12px;flex-shrink:0}
+.tab-group{display:flex;gap:2px;flex-shrink:0}
+.tab{padding:5px 12px;border-radius:5px;font-size:.78rem;font-weight:500;cursor:pointer;transition:all .14s;color:var(--tx2);border:none;background:none;font-family:var(--f);white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center}
+.tab:hover{background:var(--s3);color:var(--tx)}
+.tab.active{background:var(--gd);color:var(--g);border:1px solid var(--gg)}
+
+/* ── Content ────────────────────────────────────────────── */
+.page{flex:1;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px}
+.card{background:var(--s2);border:1px solid var(--bdr2);border-radius:16px;padding:36px;width:100%;max-width:520px}
+
+.card-title{font-size:1.1rem;font-weight:600;color:var(--tx);margin-bottom:6px}
+.card-sub{font-size:.8rem;color:var(--tx3);margin-bottom:28px}
+
+/* ── Status Badge ───────────────────────────────────────── */
+.status-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 16px;border-radius:30px;
+  font-size:.82rem;font-weight:600;margin-bottom:28px;
+  transition:all .3s;
+}
+.status-badge.connected{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,201,124,.25)}
+.status-badge.qr{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,158,11,.25)}
+.status-badge.disconnected{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.connected .status-dot{background:var(--green);animation:pulse 2s ease infinite}
+.qr .status-dot{background:var(--yellow);animation:pulse 1s ease infinite}
+.disconnected .status-dot{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ── QR Box ─────────────────────────────────────────────── */
+#qr-section{display:none;text-align:center}
+#qr-box{
+  display:inline-block;
+  background:#fff;
+  border-radius:12px;
+  padding:16px;
+  margin:0 auto 16px;
+}
+#qr-box canvas,#qr-box img{display:block}
+.qr-hint{font-size:.78rem;color:var(--tx2);line-height:1.5}
+.qr-hint strong{color:var(--tx)}
+
+/* ── Connected Info ─────────────────────────────────────── */
+#connected-section{display:none}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bdr)}
+.info-row:last-child{border:none}
+.info-label{font-size:.78rem;color:var(--tx3)}
+.info-val{font-size:.82rem;color:var(--tx);font-family:var(--m)}
+
+/* ── Disconnected ───────────────────────────────────────── */
+#disconnected-section{display:none;padding-top:8px}
+.disc-hint{font-size:.82rem;color:var(--tx2);line-height:1.6}
+
+/* ── Action ─────────────────────────────────────────────── */
+.btn-row{margin-top:24px;display:flex;gap:8px}
+.btn{padding:9px 18px;border-radius:7px;font-size:.8rem;font-weight:500;cursor:pointer;border:none;font-family:var(--f);transition:all .13s}
+.btn-prim{background:var(--g);color:var(--bg)}
+.btn-prim:hover{background:var(--g2)}
+.btn-ghost{background:var(--s3);color:var(--tx2);border:1px solid var(--bdr2)}
+.btn-ghost:hover{color:var(--tx);border-color:var(--bdr2)}
+
+/* ── Setup-Karte ────────────────────────────────────────── */
+.setup-card{margin-top:20px;background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:16px}
+.setup-title{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:10px}
+.setup-step{display:flex;gap:10px;align-items:flex-start;font-size:.8rem;color:var(--tx2);margin-bottom:8px;line-height:1.45}
+.step-n{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--s3);border:1px solid var(--bdr2);font-size:.65rem;font-weight:600;color:var(--tx3);display:grid;place-items:center}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="logo">
+    <div class="logo-gem">I</div>
+    <span class="logo-name">Ilija<em>PE</em></span>
+  </a>
+  <div class="tb-sep"></div>
+  <nav class="tab-group">
+    <a href="/" class="tab">⚡ Workflow</a>
+    <a href="/chat" class="tab">💬 Chat</a>
+    <a href="/dms" class="tab">🗂 DMS</a>
+    <a href="/local_calendar" class="tab">📅 Kalender</a>
+    <a href="/cloud" class="tab">☁ Cloud</a>
+    <a href="/whatsapp" class="tab active">📱 WhatsApp</a>
+  </nav>
+</div>
+
+<div class="page">
+  <div class="card">
+    <div class="card-title">WhatsApp-Verbindung</div>
+    <div class="card-sub">Ilija antwortet automatisch auf eingehende Nachrichten</div>
+
+    <div id="status-badge" class="status-badge disconnected">
+      <div class="status-dot"></div>
+      <span id="status-text">Wird geladen…</span>
+    </div>
+
+    <!-- QR-Code -->
+    <div id="qr-section">
+      <div id="qr-box"></div>
+      <div class="qr-hint">
+        <strong>So verbinden:</strong><br>
+        WhatsApp öffnen → Einstellungen →<br>
+        Verknüpfte Geräte → Gerät hinzufügen<br>
+        → QR-Code scannen
+      </div>
+      <div class="setup-card">
+        <div class="setup-title">Schritt-für-Schritt</div>
+        <div class="setup-step"><span class="step-n">1</span><span>WhatsApp auf deinem Handy öffnen</span></div>
+        <div class="setup-step"><span class="step-n">2</span><span>Tippe auf die drei Punkte (oben rechts) → <strong>Verknüpfte Geräte</strong></span></div>
+        <div class="setup-step"><span class="step-n">3</span><span>Tippe auf <strong>Gerät hinzufügen</strong></span></div>
+        <div class="setup-step"><span class="step-n">4</span><span>Halte die Kamera auf den QR-Code oben</span></div>
+      </div>
+    </div>
+
+    <!-- Verbunden -->
+    <div id="connected-section">
+      <div class="info-row">
+        <span class="info-label">Verbunden seit</span>
+        <span class="info-val" id="info-since">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Nachrichten verarbeitet</span>
+        <span class="info-val" id="info-msgs">—</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="location.reload()">↻ Aktualisieren</button>
+      </div>
+    </div>
+
+    <!-- Getrennt -->
+    <div id="disconnected-section">
+      <div class="disc-hint">
+        Die Verbindung zu WhatsApp ist unterbrochen.<br>
+        Ilija versucht automatisch neu zu verbinden.<br><br>
+        Erscheint innerhalb von 30 Sekunden kein QR-Code,<br>
+        bitte einen Administrator informieren.
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="location.reload()">↻ Aktualisieren</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let _qrInstance = null
+let _lastQr = ''
+let _pollTimer = null
+
+function setStatus(state, data) {
+  const badge   = document.getElementById('status-badge')
+  const txt     = document.getElementById('status-text')
+  const qrSec   = document.getElementById('qr-section')
+  const conSec  = document.getElementById('connected-section')
+  const disSec  = document.getElementById('disconnected-section')
+
+  badge.className = 'status-badge ' + state
+  qrSec.style.display = conSec.style.display = disSec.style.display = 'none'
+
+  if (state === 'connected') {
+    txt.textContent = 'WhatsApp verbunden'
+    conSec.style.display = 'block'
+    if (data.connected_since) {
+      const d = new Date(data.connected_since * 1000)
+      document.getElementById('info-since').textContent =
+        d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'})
+    }
+    document.getElementById('info-msgs').textContent = (data.msg_count || 0) + ' seit Start'
+
+  } else if (state === 'qr') {
+    txt.textContent = 'QR-Code scannen'
+    qrSec.style.display = 'block'
+    const qr = data.qr || ''
+    if (qr && qr !== _lastQr) {
+      _lastQr = qr
+      const box = document.getElementById('qr-box')
+      box.innerHTML = ''
+      _qrInstance = new QRCode(box, {text: qr, width: 220, height: 220, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.M})
+    }
+
+  } else {
+    txt.textContent = 'Nicht verbunden'
+    disSec.style.display = 'block'
+  }
+}
+
+async function poll() {
+  try {
+    const r = await fetch('/api/whatsapp/status')
+    if (r.ok) {
+      const d = await r.json()
+      setStatus(d.status || 'disconnected', d)
+    }
+  } catch(_) {}
+  _pollTimer = setTimeout(poll, 2000)
+}
+
+poll()
+</script>
+</body>
+</html>

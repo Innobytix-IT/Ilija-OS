@@ -15,10 +15,16 @@ const axios  = require('axios')
 const pino   = require('pino')
 const path   = require('path')
 
-const ILIJA_API  = process.env.ILIJA_API  || 'http://localhost:5001/api/whatsapp'
-const AUTH_DIR   = process.env.AUTH_DIR   || path.join(__dirname, 'auth_info')
-const LOG_LEVEL  = process.env.LOG_LEVEL  || 'silent'   // 'debug' für verbose
-const GRUPPEN    = process.env.GRUPPEN === 'true'        // Gruppennachrichten verarbeiten?
+const ILIJA_BASE   = process.env.ILIJA_BASE || 'http://localhost:5001'
+const ILIJA_API    = process.env.ILIJA_API  || ILIJA_BASE + '/api/whatsapp'
+const ILIJA_STATUS = ILIJA_BASE + '/api/whatsapp/connection-status'
+const AUTH_DIR     = process.env.AUTH_DIR   || path.join(__dirname, 'auth_info')
+const LOG_LEVEL    = process.env.LOG_LEVEL  || 'silent'
+const GRUPPEN      = process.env.GRUPPEN === 'true'
+
+async function reportStatus(status, extra = {}) {
+    try { await axios.post(ILIJA_STATUS, { status, ...extra }, { timeout: 3000 }) } catch (_) {}
+}
 
 const logger = pino({ level: LOG_LEVEL })
 
@@ -53,25 +59,22 @@ async function startBridge() {
 
     sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
         if (qr) {
-            console.log('[Bridge] QR-Code erschienen – mit WhatsApp scannen')
-            // QR auch explizit drucken falls printQRInTerminal unterdrückt wird
-            try { require('qrcode-terminal').generate(qr, { small: true }) } catch (_) {}
+            console.log('[Bridge] QR-Code erschienen – bitte unter http://localhost:5001/whatsapp scannen')
+            reportStatus('qr', { qr })
         }
         if (connection === 'open') {
             console.log('[Bridge] ✅ WhatsApp verbunden')
+            reportStatus('connected')
         }
         if (connection === 'close') {
             const code   = lastDisconnect?.error?.output?.statusCode
             const logout = code === DisconnectReason.loggedOut
-            // Vollständigen Fehler ausgeben für Diagnose
-            if (lastDisconnect?.error) {
-                console.error('[Bridge] Disconnect-Fehler:', JSON.stringify(lastDisconnect.error, null, 2))
-            }
             console.log(`[Bridge] Verbindung getrennt (Code ${code}). Wiederverbinden: ${!logout}`)
+            reportStatus('disconnected')
             if (!logout) {
                 setTimeout(startBridge, 3000)
             } else {
-                console.log('[Bridge] ❌ Ausgeloggt – bitte erneut QR-Code scannen und bridge neu starten')
+                console.log('[Bridge] ❌ Ausgeloggt – QR unter http://localhost:5001/whatsapp scannen')
             }
         }
     })
