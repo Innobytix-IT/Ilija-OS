@@ -9,23 +9,24 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0B1520;
-  --s1:#10202D;--s2:#16293A;--s3:#1E3547;--s4:#274257;
-  --bdr:rgba(255,255,255,.055);--bdr2:rgba(255,255,255,.1);
-  --g:#E0A82E;--g2:#C8871B;--gd:rgba(224,168,46,.07);--gg:rgba(224,168,46,.12);
-  --tx:#E6EEF5;--tx2:#8FA6B8;--tx3:#4A6072;
-  --green:#22c97c;--green-dim:rgba(34,201,124,.12);
-  --red:#ef4444;--red-dim:rgba(239,68,68,.1);
-  --blue:#60a5fa;--blue-dim:rgba(96,165,250,.1);
-  --f:'Inter',sans-serif;--m:'JetBrains Mono',monospace;
-  --r:9px;
+  --bg:#0B1520; --s1:#10202D; --s2:#16293A; --s3:#1E3547; --s4:#274257;
+  --bdr:rgba(255,255,255,.055); --bdr2:rgba(255,255,255,.1); --bdr3:rgba(255,255,255,.18);
+  --g:#E0A82E; --g2:#C8871B; --gd:rgba(224,168,46,.08); --gg:rgba(224,168,46,.18);
+  --tx:#E6EEF5; --tx2:#8FA6B8; --tx3:#4A6072;
+  --green:#22c97c; --gdim:rgba(34,201,124,.12);
+  --red:#ef4444; --rdim:rgba(239,68,68,.1);
+  --blue:#60a5fa; --bdim:rgba(96,165,250,.1);
+  --yellow:#f59e0b; --ydim:rgba(245,158,11,.1);
+  --purple:#a78bfa; --pdim:rgba(167,139,250,.1);
+  --teal:#2dd4bf; --tdim:rgba(45,212,191,.1);
+  --f:'Inter',sans-serif; --m:'JetBrains Mono',monospace; --r:9px;
 }
 html{font-size:16px;color-scheme:dark}
 body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--s4);border-radius:2px}
 
 /* ── Topbar ─────────────────────────────────────────────── */
-.topbar{display:flex;align-items:center;gap:0;height:52px;padding:0 20px;background:var(--s1);border-bottom:1px solid var(--bdr);flex-shrink:0;position:relative;z-index:100;overflow-x:auto}
+.topbar{display:flex;align-items:center;height:52px;padding:0 20px;background:var(--s1);border-bottom:1px solid var(--bdr);flex-shrink:0;overflow-x:auto}
 .topbar::-webkit-scrollbar{height:0}
 .logo{display:flex;align-items:center;gap:9px;text-decoration:none;flex-shrink:0}
 .logo-gem{width:30px;height:30px;background:var(--g);border-radius:7px;display:grid;place-items:center;font-family:var(--m);font-weight:500;font-size:14px;color:var(--bg)}
@@ -38,76 +39,141 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
 .tab.active{background:var(--gd);color:var(--g);border:1px solid var(--gg)}
 
 /* ── Layout ─────────────────────────────────────────────── */
-.page{flex:1;overflow-y:auto;padding:32px 20px 60px}
-.page-inner{max-width:640px;margin:0 auto}
-.page-title{font-size:1.25rem;font-weight:600;color:var(--tx);margin-bottom:4px}
-.page-sub{font-size:.82rem;color:var(--tx3);margin-bottom:32px}
+.body{flex:1;display:flex;overflow:hidden}
+.sidebar{width:220px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--bdr);padding:16px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.main{flex:1;overflow-y:auto;padding:32px 32px 80px}
 
-/* ── Section ────────────────────────────────────────────── */
-.section{margin-bottom:28px}
-.section-title{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.section-title::after{content:'';flex:1;height:1px;background:var(--bdr)}
+/* ── Sidebar ─────────────────────────────────────────────── */
+.sb-label{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);padding:10px 8px 4px;margin-top:6px}
+.sb-label:first-child{margin-top:0}
+.sb-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;font-size:.8rem;font-weight:500;color:var(--tx2);cursor:pointer;transition:all .13s;text-decoration:none;border:none;background:none;font-family:var(--f);width:100%;text-align:left}
+.sb-item:hover{background:var(--s2);color:var(--tx)}
+.sb-item.active{background:var(--gd);color:var(--g)}
+.sb-icon{width:18px;text-align:center;font-size:.85rem;flex-shrink:0}
+.sb-chip{margin-left:auto;font-size:.6rem;font-weight:600;padding:2px 6px;border-radius:4px}
+.chip-ok{background:var(--gdim);color:var(--green)}
+.chip-warn{background:var(--ydim);color:var(--yellow)}
 
-/* ── Card ───────────────────────────────────────────────── */
+/* ── Wizard ─────────────────────────────────────────────── */
+#wizard{display:none}
+.wiz-header{text-align:center;padding-bottom:28px}
+.wiz-title{font-size:1.5rem;font-weight:700;color:var(--tx);margin-bottom:6px}
+.wiz-sub{font-size:.85rem;color:var(--tx3)}
+.progress-bar{display:flex;gap:0;margin:24px 0 32px;position:relative}
+.progress-bar::before{content:'';position:absolute;top:11px;left:0;right:0;height:2px;background:var(--s3);z-index:0}
+.pb-step{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;z-index:1}
+.pb-dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--s4);background:var(--s2);display:grid;place-items:center;font-size:.65rem;font-weight:700;color:var(--tx3);transition:all .2s}
+.pb-dot.done{border-color:var(--green);background:var(--green);color:#000}
+.pb-dot.active{border-color:var(--g);background:var(--gd);color:var(--g)}
+.pb-label{font-size:.62rem;color:var(--tx3);text-align:center;white-space:nowrap}
+.pb-step.active .pb-label{color:var(--g)}
+.pb-step.done .pb-label{color:var(--green)}
+
+.wiz-step{display:none}
+.wiz-step.active{display:block}
+.wiz-nav{display:flex;gap:10px;margin-top:28px;justify-content:space-between}
+.btn{padding:9px 20px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;font-family:var(--f);transition:all .13s}
+.btn-prim{background:var(--g);color:var(--bg)}
+.btn-prim:hover{background:var(--g2)}
+.btn-ghost{background:var(--s3);color:var(--tx2);border:1px solid var(--bdr2)}
+.btn-ghost:hover{color:var(--tx)}
+.btn-skip{background:none;color:var(--tx3);border:none;font-size:.78rem;cursor:pointer;font-family:var(--f)}
+.btn-skip:hover{color:var(--tx2)}
+.btn-sm{padding:6px 14px;font-size:.76rem}
+.btn-danger{background:var(--rdim);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.btn-danger:hover{background:rgba(239,68,68,.2)}
+.btn-teal{background:var(--tdim);color:var(--teal);border:1px solid rgba(45,212,191,.2)}
+.btn-teal:hover{background:rgba(45,212,191,.2)}
+
+/* ── Settings ────────────────────────────────────────────── */
+#settings{display:none}
+.settings-mode-btn{display:inline-flex;align-items:center;gap:6px;font-size:.75rem;color:var(--tx3);border:1px solid var(--bdr2);background:var(--s2);border-radius:6px;padding:5px 10px;cursor:pointer;font-family:var(--f);transition:all .13s;margin-bottom:28px}
+.settings-mode-btn:hover{color:var(--tx);border-color:var(--bdr3)}
+
+/* ── Section ─────────────────────────────────────────────── */
+.section{margin-bottom:36px;scroll-margin-top:20px}
+.sec-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.sec-icon{font-size:1.1rem}
+.sec-title{font-size:1rem;font-weight:600;color:var(--tx)}
+.sec-sub{font-size:.75rem;color:var(--tx3);margin-top:1px}
 .card{background:var(--s2);border:1px solid var(--bdr2);border-radius:12px;overflow:hidden}
-
-/* ── Row ────────────────────────────────────────────────── */
-.row{display:flex;align-items:center;padding:14px 20px;border-bottom:1px solid var(--bdr);gap:16px}
+.row{display:flex;align-items:center;padding:13px 18px;border-bottom:1px solid var(--bdr);gap:14px}
 .row:last-child{border:none}
 .row-left{flex:1;min-width:0}
-.row-label{font-size:.85rem;font-weight:500;color:var(--tx);margin-bottom:2px}
-.row-hint{font-size:.75rem;color:var(--tx3);line-height:1.4}
-.row-control{flex-shrink:0}
+.row-label{font-size:.84rem;font-weight:500;color:var(--tx);margin-bottom:2px}
+.row-hint{font-size:.73rem;color:var(--tx3);line-height:1.45}
+.row-control{flex-shrink:0;min-width:170px;text-align:right}
+.row-wide{flex-direction:column;align-items:stretch;gap:8px}
+.row-wide .row-label{margin-bottom:0}
 
-/* ── Select ─────────────────────────────────────────────── */
-select{
-  appearance:none;
-  background:var(--s3) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234A6072'/%3E%3C/svg%3E") no-repeat right 10px center;
-  border:1px solid var(--bdr2);
-  border-radius:7px;
-  color:var(--tx);
-  font-family:var(--f);
-  font-size:.82rem;
-  padding:7px 30px 7px 11px;
-  cursor:pointer;
-  transition:border-color .13s;
-  min-width:160px;
+/* ── Form Controls ───────────────────────────────────────── */
+input[type=text],input[type=password],input[type=number],select,textarea{
+  width:100%;background:var(--s3);border:1px solid var(--bdr2);border-radius:7px;
+  color:var(--tx);font-family:var(--f);font-size:.82rem;padding:8px 11px;
+  transition:border-color .13s;outline:none;
 }
-select:focus{outline:none;border-color:var(--g)}
-select:hover{border-color:var(--s4)}
+input[type=text]:focus,input[type=password]:focus,input[type=number]:focus,select:focus,textarea:focus{border-color:var(--g)}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234A6072'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+input[type=number]{max-width:90px}
+.inline-pair{display:flex;gap:8px;align-items:center}
+.inline-pair label{font-size:.75rem;color:var(--tx3);white-space:nowrap}
 
 /* ── Toggle ─────────────────────────────────────────────── */
-.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle{position:relative;width:38px;height:21px;flex-shrink:0}
 .toggle input{opacity:0;width:0;height:0;position:absolute}
-.toggle-track{position:absolute;inset:0;border-radius:11px;background:var(--s4);cursor:pointer;transition:background .2s}
-.toggle input:checked + .toggle-track{background:var(--g)}
-.toggle-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;pointer-events:none}
-.toggle input:checked ~ .toggle-thumb{transform:translateX(18px)}
+.t-track{position:absolute;inset:0;border-radius:11px;background:var(--s4);cursor:pointer;transition:background .2s}
+.toggle input:checked + .t-track{background:var(--g)}
+.t-thumb{position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#fff;transition:transform .2s;pointer-events:none}
+.toggle input:checked ~ .t-thumb{transform:translateX(17px)}
 
-/* ── Toast ──────────────────────────────────────────────── */
-#toast{
-  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
-  background:var(--s2);border:1px solid var(--bdr2);border-radius:8px;
-  padding:10px 20px;font-size:.82rem;color:var(--tx);
-  opacity:0;transition:all .25s;pointer-events:none;z-index:9999;
-  white-space:nowrap;
-}
+/* ── Hint Box ────────────────────────────────────────────── */
+.hint{background:var(--s1);border:1px solid var(--bdr);border-radius:8px;padding:11px 14px;font-size:.76rem;color:var(--tx2);line-height:1.55;margin-bottom:12px}
+.hint a{color:var(--blue)}
+.hint strong{color:var(--tx)}
+.hint-blue{border-color:rgba(96,165,250,.2);background:var(--bdim);color:var(--blue)}
+.hint-yellow{border-color:rgba(245,158,11,.2);background:var(--ydim);color:var(--yellow)}
+.hint-green{border-color:rgba(34,201,124,.2);background:var(--gdim);color:var(--green)}
+
+/* ── Status Badge ────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;padding:3px 9px;border-radius:20px}
+.badge-ok{background:var(--gdim);color:var(--green);border:1px solid rgba(34,201,124,.2)}
+.badge-warn{background:var(--ydim);color:var(--yellow);border:1px solid rgba(245,158,11,.2)}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+/* ── Google Service Row ──────────────────────────────────── */
+.svc-row{display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid var(--bdr);font-size:.82rem}
+.svc-row:last-child{border:none}
+.svc-name{flex:1;color:var(--tx)}
+.svc-status{font-size:.72rem;font-weight:600}
+.svc-ok{color:var(--green)}
+.svc-miss{color:var(--tx3)}
+
+/* ── File Upload ─────────────────────────────────────────── */
+.upload-zone{border:2px dashed var(--bdr2);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all .15s}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--g);background:var(--gd)}
+.upload-zone input{display:none}
+.upload-icon{font-size:2rem;margin-bottom:8px}
+.upload-txt{font-size:.8rem;color:var(--tx2)}
+.upload-hint{font-size:.72rem;color:var(--tx3);margin-top:4px}
+
+/* ── Save Bar ────────────────────────────────────────────── */
+.save-bar{display:flex;align-items:center;gap:10px;padding-top:14px;border-top:1px solid var(--bdr);margin-top:14px}
+.save-msg{font-size:.78rem;font-weight:600;opacity:0;transition:opacity .2s}
+.save-msg.ok{color:var(--green);opacity:1}
+.save-msg.err{color:var(--red);opacity:1}
+
+/* ── Toast ───────────────────────────────────────────────── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--s2);border:1px solid var(--bdr2);border-radius:8px;padding:9px 20px;font-size:.82rem;color:var(--tx);opacity:0;transition:all .25s;pointer-events:none;z-index:9999;white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.ok{border-color:rgba(34,201,124,.3);color:var(--green)}
-#toast.err{border-color:rgba(239,68,68,.3);color:var(--red)}
-
-/* ── Info Box ───────────────────────────────────────────── */
-.info-box{background:var(--blue-dim);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:12px 16px;font-size:.78rem;color:var(--blue);line-height:1.55;margin-top:14px}
-.info-box strong{color:var(--tx)}
+#toast.err{border-color:rgba(239,68,44,.3);color:var(--red)}
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <a href="/" class="logo">
-    <div class="logo-gem">I</div>
-    <span class="logo-name">Ilija<em>PE</em></span>
-  </a>
+  <a href="/" class="logo"><div class="logo-gem">I</div><span class="logo-name">Ilija<em>PE</em></span></a>
   <div class="tb-sep"></div>
   <nav class="tab-group">
     <a href="/" class="tab">⚡ Workflow</a>
@@ -120,190 +186,906 @@ select:hover{border-color:var(--s4)}
   </nav>
 </div>
 
-<div class="page">
-  <div class="page-inner">
-    <div class="page-title">Einstellungen</div>
-    <div class="page-sub">Konfiguriere Ilija für deine Arbeitsweise</div>
+<div class="body">
 
-    <!-- Kalender-Sektion -->
-    <div class="section">
-      <div class="section-title">Kalender</div>
-      <div class="card">
+  <!-- ── Sidebar (Settings-Modus) ──────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-label">KI & Dienste</div>
+    <button class="sb-item active" onclick="scrollTo('sec-ki')" id="sb-ki">
+      <span class="sb-icon">🤖</span> KI-Anbieter
+      <span class="sb-chip chip-warn" id="chip-ki">Offen</span>
+    </button>
+    <button class="sb-item" onclick="scrollTo('sec-email')" id="sb-email">
+      <span class="sb-icon">📧</span> E-Mail
+      <span class="sb-chip chip-warn" id="chip-email">Offen</span>
+    </button>
+    <button class="sb-item" onclick="scrollTo('sec-telegram')" id="sb-telegram">
+      <span class="sb-icon">✈</span> Telegram
+      <span class="sb-chip chip-warn" id="chip-telegram">Offen</span>
+    </button>
+    <button class="sb-item" onclick="scrollTo('sec-google')" id="sb-google">
+      <span class="sb-icon">🔵</span> Google
+      <span class="sb-chip chip-warn" id="chip-google">Offen</span>
+    </button>
+    <div class="sb-label">Kalender</div>
+    <button class="sb-item" onclick="scrollTo('sec-kalender')">
+      <span class="sb-icon">📅</span> Kalender & Sync
+    </button>
+    <div class="sb-label">Eingangskanäle</div>
+    <button class="sb-item" onclick="scrollTo('sec-telefon')">
+      <span class="sb-icon">📞</span> Telefon
+      <span class="sb-chip chip-warn" id="chip-phone">Offen</span>
+    </button>
+    <button class="sb-item" onclick="scrollTo('sec-wa')">
+      <span class="sb-icon">💬</span> WhatsApp
+    </button>
+    <div class="sb-label">System</div>
+    <button class="sb-item" onclick="scrollTo('sec-fritzbox')">
+      <span class="sb-icon">☎</span> FritzBox SIP
+    </button>
+    <button class="sb-item" onclick="scrollTo('sec-dms')">
+      <span class="sb-icon">🗂</span> DMS
+    </button>
+    <button class="sb-item" onclick="scrollTo('sec-server')">
+      <span class="sb-icon">🖥</span> Server
+    </button>
+    <div style="margin-top:auto;padding-top:16px">
+      <button class="sb-item" onclick="startWizard()" style="color:var(--g)">
+        <span class="sb-icon">✨</span> Einrichtungsassistent
+      </button>
+    </div>
+  </aside>
 
-        <div class="row">
-          <div class="row-left">
-            <div class="row-label">Persönlicher Kalender</div>
-            <div class="row-hint">Für eigene Termine — wenn du Ilija sagst "trag einen Termin ein" oder "was hab ich morgen"</div>
-          </div>
-          <div class="row-control">
-            <select id="sel-persoenlich">
-              <option value="outlook">Microsoft Outlook</option>
-              <option value="google">Google Kalender</option>
-              <option value="lokal">Lokaler Kalender</option>
-            </select>
+  <!-- ── Main ─────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- ══════════════ WIZARD ══════════════ -->
+    <div id="wizard">
+      <div class="wiz-header">
+        <div class="wiz-title">Willkommen bei Ilija</div>
+        <div class="wiz-sub">Lass uns Ilija in ein paar Schritten einrichten</div>
+      </div>
+
+      <div class="progress-bar" id="progress-bar">
+        <div class="pb-step active" id="ps-0"><div class="pb-dot">1</div><div class="pb-label">KI-Anbieter</div></div>
+        <div class="pb-step" id="ps-1"><div class="pb-dot">2</div><div class="pb-label">E-Mail</div></div>
+        <div class="pb-step" id="ps-2"><div class="pb-dot">3</div><div class="pb-label">Kalender</div></div>
+        <div class="pb-step" id="ps-3"><div class="pb-dot">4</div><div class="pb-label">Eingangskanäle</div></div>
+        <div class="pb-step" id="ps-4"><div class="pb-dot">5</div><div class="pb-label">Fertig</div></div>
+      </div>
+
+      <!-- Step 0: KI-Anbieter -->
+      <div class="wiz-step active" id="ws-0">
+        <div id="wiz-ki-content"></div>
+        <div class="wiz-nav">
+          <button class="btn btn-ghost" onclick="showSettings()">Überspringen & direkt zu den Einstellungen</button>
+          <button class="btn btn-prim" onclick="saveKiAndNext()">Weiter →</button>
+        </div>
+      </div>
+
+      <!-- Step 1: E-Mail -->
+      <div class="wiz-step" id="ws-1">
+        <div id="wiz-email-content"></div>
+        <div class="wiz-nav">
+          <button class="btn btn-ghost" onclick="wizStep(0)">← Zurück</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn-skip" onclick="wizStep(2)">Überspringen</button>
+            <button class="btn btn-prim" onclick="saveEmailAndNext()">Weiter →</button>
           </div>
         </div>
+      </div>
 
-        <div class="row">
-          <div class="row-left">
-            <div class="row-label">Buchungskalender</div>
-            <div class="row-hint">Für Kundentermine — wenn jemand per WhatsApp einen Termin bei dir bucht</div>
-          </div>
-          <div class="row-control">
-            <select id="sel-buchung">
-              <option value="lokal">Lokaler Kalender</option>
-              <option value="outlook">Microsoft Outlook</option>
-              <option value="google">Google Kalender</option>
-            </select>
+      <!-- Step 2: Kalender -->
+      <div class="wiz-step" id="ws-2">
+        <div id="wiz-kal-content"></div>
+        <div class="wiz-nav">
+          <button class="btn btn-ghost" onclick="wizStep(1)">← Zurück</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn-skip" onclick="wizStep(3)">Überspringen</button>
+            <button class="btn btn-prim" onclick="saveKalAndNext()">Weiter →</button>
           </div>
         </div>
+      </div>
 
+      <!-- Step 3: Eingangskanäle -->
+      <div class="wiz-step" id="ws-3">
+        <div id="wiz-kanale-content"></div>
+        <div class="wiz-nav">
+          <button class="btn btn-ghost" onclick="wizStep(2)">← Zurück</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn-skip" onclick="wizDone()">Überspringen</button>
+            <button class="btn btn-prim" onclick="saveKanaleAndDone()">Speichern & Fertig →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Fertig -->
+      <div class="wiz-step" id="ws-4">
+        <div style="text-align:center;padding:40px 0">
+          <div style="font-size:3rem;margin-bottom:16px">🎉</div>
+          <div style="font-size:1.25rem;font-weight:700;color:var(--tx);margin-bottom:8px">Ilija ist einsatzbereit!</div>
+          <div style="font-size:.85rem;color:var(--tx3);margin-bottom:32px">Alle wichtigen Einstellungen wurden gespeichert. Du kannst sie jederzeit hier anpassen.</div>
+          <button class="btn btn-prim" style="font-size:.9rem;padding:11px 28px" onclick="showSettings()">Zu den Einstellungen →</button>
+        </div>
       </div>
     </div>
 
-    <!-- Sync-Sektion -->
-    <div class="section">
-      <div class="section-title">Kalender-Synchronisation</div>
-      <div class="card">
+    <!-- ══════════════ SETTINGS ══════════════ -->
+    <div id="settings">
+      <button class="settings-mode-btn" onclick="startWizard()">✨ Einrichtungsassistent starten</button>
 
-        <div class="row">
-          <div class="row-left">
-            <div class="row-label">Synchronisieren mit</div>
-            <div class="row-hint">Hält den lokalen Kalender mit einem Cloud-Dienst in Sync</div>
-          </div>
-          <div class="row-control">
-            <select id="sel-sync-provider">
-              <option value="keiner">Kein Sync</option>
-              <option value="outlook">Microsoft Outlook</option>
-              <option value="google">Google Kalender</option>
-            </select>
-          </div>
+      <!-- ─── KI-Anbieter ─────────────────────────────────── -->
+      <div class="section" id="sec-ki">
+        <div class="sec-head">
+          <div class="sec-icon">🤖</div>
+          <div><div class="sec-title">KI-Anbieter</div><div class="sec-sub">API-Keys und Modelle für Ilija</div></div>
         </div>
-
-        <div class="row" id="row-intervall">
-          <div class="row-left">
-            <div class="row-label">Abruf-Intervall</div>
-            <div class="row-hint">Wie oft externe Termine in den lokalen Kalender importiert werden</div>
-          </div>
-          <div class="row-control">
-            <select id="sel-intervall">
-              <option value="manuell">Nur manuell</option>
-              <option value="3x_taeglich">3× täglich</option>
-              <option value="stuendlich">Stündlich</option>
-            </select>
-          </div>
+        <div class="hint hint-yellow"><strong>Mindestens einen Key eintragen.</strong> Empfohlen: Google Gemini (oft kostenlos). Keys werden sicher in der <code>.env</code>-Datei gespeichert und niemals übertragen.</div>
+        <div class="card" id="ki-card"></div>
+        <div class="save-bar">
+          <button class="btn btn-prim btn-sm" onclick="saveKi()">Speichern</button>
+          <span class="save-msg" id="ki-msg"></span>
         </div>
-
-        <div class="row" id="row-autopush">
-          <div class="row-left">
-            <div class="row-label">Automatisch hochladen</div>
-            <div class="row-hint">Neue Buchungen werden sofort in den Cloud-Kalender übertragen</div>
-          </div>
-          <div class="row-control">
-            <label class="toggle">
-              <input type="checkbox" id="tog-autopush" checked>
-              <div class="toggle-track"></div>
-              <div class="toggle-thumb"></div>
-            </label>
-          </div>
-        </div>
-
       </div>
 
-      <div class="info-box" id="sync-hint" style="display:none">
-        <strong>Hinweis:</strong> Für die Synchronisation mit Outlook oder Google muss der entsprechende Skill
-        im Skill-Store eingerichtet und autorisiert sein. Gehe dazu in den <a href="/cloud" style="color:var(--blue)">Cloud-Bereich</a>.
+      <!-- ─── E-Mail ────────────────────────────────────────── -->
+      <div class="section" id="sec-email">
+        <div class="sec-head">
+          <div class="sec-icon">📧</div>
+          <div><div class="sec-title">E-Mail (IMAP/SMTP)</div><div class="sec-sub">Ilija kann E-Mails lesen und senden</div></div>
+        </div>
+        <div class="hint"><strong>App-Passwort verwenden!</strong> Gmail, Outlook, GMX etc. erlauben kein normales Login-Passwort mehr. App-Passwort generieren: <a href="https://myaccount.google.com/apppasswords" target="_blank">Google</a> · <a href="https://account.microsoft.com/security" target="_blank">Microsoft</a></div>
+        <div class="card" id="email-card"></div>
+        <div class="save-bar">
+          <button class="btn btn-prim btn-sm" onclick="saveEmail()">Speichern</button>
+          <span class="save-msg" id="email-msg"></span>
+        </div>
+      </div>
+
+      <!-- ─── Telegram ──────────────────────────────────────── -->
+      <div class="section" id="sec-telegram">
+        <div class="sec-head">
+          <div class="sec-icon">✈</div>
+          <div><div class="sec-title">Telegram</div><div class="sec-sub">Fernsteuerung und Benachrichtigungen per Telegram-Bot</div></div>
+        </div>
+        <div class="hint">Bot erstellen: <strong>@BotFather</strong> in Telegram → /newbot. Deine User-ID: <strong>@userinfobot</strong> → /start.</div>
+        <div class="card" id="tg-card"></div>
+        <div class="save-bar">
+          <button class="btn btn-prim btn-sm" onclick="saveTelegram()">Speichern</button>
+          <span class="save-msg" id="tg-msg"></span>
+        </div>
+      </div>
+
+      <!-- ─── Google ────────────────────────────────────────── -->
+      <div class="section" id="sec-google">
+        <div class="sec-head">
+          <div class="sec-icon">🔵</div>
+          <div><div class="sec-title">Google Dienste</div><div class="sec-sub">Gmail, Drive, Docs, Kalender</div></div>
+        </div>
+        <div class="hint">1. <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> → Neues Projekt → APIs aktivieren<br>2. OAuth-Anmeldedaten → Desktop-App → JSON laden → hier hochladen</div>
+        <div class="card" id="google-card"></div>
+      </div>
+
+      <!-- ─── Kalender ──────────────────────────────────────── -->
+      <div class="section" id="sec-kalender">
+        <div class="sec-head">
+          <div class="sec-icon">📅</div>
+          <div><div class="sec-title">Kalender & Synchronisation</div><div class="sec-sub">Welchen Kalender Ilija für was nutzt</div></div>
+        </div>
+        <div class="card" id="kal-card"></div>
+        <div class="save-bar">
+          <button class="btn btn-prim btn-sm" onclick="saveKal()">Speichern</button>
+          <span class="save-msg" id="kal-msg"></span>
+        </div>
+      </div>
+
+      <!-- ─── Telefon ───────────────────────────────────────── -->
+      <div class="section" id="sec-telefon">
+        <div class="sec-head">
+          <div class="sec-icon">📞</div>
+          <div><div class="sec-title">Telefon</div><div class="sec-sub">Wie Ilija sich am Telefon verhält</div></div>
+        </div>
+        <div class="card" id="phone-card"></div>
+        <div class="save-bar">
+          <button class="btn btn-prim btn-sm" onclick="savePhone()">Speichern</button>
+          <span class="save-msg" id="phone-msg"></span>
+        </div>
+      </div>
+
+      <!-- ─── WhatsApp ──────────────────────────────────────── -->
+      <div class="section" id="sec-wa">
+        <div class="sec-head">
+          <div class="sec-icon">💬</div>
+          <div><div class="sec-title">WhatsApp</div><div class="sec-sub">Wie Ilija auf WhatsApp-Nachrichten antwortet</div></div>
+        </div>
+        <div class="card" id="wa-card"></div>
+        <div class="save-bar">
+          <button class="btn btn-prim btn-sm" onclick="saveWa()">Speichern</button>
+          <span class="save-msg" id="wa-msg"></span>
+        </div>
+      </div>
+
+      <!-- ─── FritzBox ──────────────────────────────────────── -->
+      <div class="section" id="sec-fritzbox">
+        <div class="sec-head">
+          <div class="sec-icon">☎</div>
+          <div><div class="sec-title">FritzBox SIP</div><div class="sec-sub">VoIP-Verbindung für eingehende Anrufe</div></div>
+        </div>
+        <div class="hint">FritzBox → Telefonie → Telefoniegeräte → Neues Gerät → IP-Telefon. Zugangsdaten hier eintragen.</div>
+        <div class="card" id="fritz-card"></div>
+        <div class="save-bar">
+          <button class="btn btn-prim btn-sm" onclick="saveFritz()">Speichern</button>
+          <button class="btn btn-teal btn-sm" onclick="testFritz()" style="margin-left:4px">Verbindung testen</button>
+          <span class="save-msg" id="fritz-msg"></span>
+        </div>
+      </div>
+
+      <!-- ─── DMS ───────────────────────────────────────────── -->
+      <div class="section" id="sec-dms">
+        <div class="sec-head">
+          <div class="sec-icon">🗂</div>
+          <div><div class="sec-title">DMS – Dokumentenverwaltung</div><div class="sec-sub">Archiv- und Import-Pfade</div></div>
+        </div>
+        <div class="card" id="dms-card"></div>
+        <div class="save-bar">
+          <button class="btn btn-prim btn-sm" onclick="saveDms()">Speichern</button>
+          <span class="save-msg" id="dms-msg"></span>
+        </div>
+      </div>
+
+      <!-- ─── Server ────────────────────────────────────────── -->
+      <div class="section" id="sec-server">
+        <div class="sec-head">
+          <div class="sec-icon">🖥</div>
+          <div><div class="sec-title">Server</div><div class="sec-sub">Port, Debug-Modus, Web-UI-Schutz</div></div>
+        </div>
+        <div class="card" id="server-card"></div>
+        <div class="save-bar">
+          <button class="btn btn-prim btn-sm" onclick="saveServer()">Speichern</button>
+          <span class="save-msg" id="server-msg"></span>
+        </div>
       </div>
     </div>
 
-    <!-- Speichern-Button -->
-    <button class="save-btn" onclick="speichern()">Einstellungen speichern</button>
-  </div>
+  </main>
 </div>
 
 <div id="toast"></div>
 
-<style>
-.save-btn{
-  background:var(--g);color:var(--bg);border:none;border-radius:8px;
-  font-family:var(--f);font-size:.85rem;font-weight:600;
-  padding:11px 28px;cursor:pointer;transition:background .13s;
-}
-.save-btn:hover{background:var(--g2)}
-</style>
-
 <script>
-let cfg = {};
+// ── State ─────────────────────────────────────────────────────
+let wizardStep = 0;
+let allData = {};   // cached API data
 
-async function laden() {
+const EMAIL_PROVIDERS = {
+  gmail:   {imap_host:'imap.gmail.com',   imap_port:993, smtp_host:'smtp.gmail.com',         smtp_port:587},
+  outlook: {imap_host:'outlook.office365.com', imap_port:993, smtp_host:'smtp.office365.com', smtp_port:587},
+  gmx:     {imap_host:'imap.gmx.net',     imap_port:993, smtp_host:'mail.gmx.net',           smtp_port:587},
+  webde:   {imap_host:'imap.web.de',      imap_port:993, smtp_host:'smtp.web.de',            smtp_port:587},
+  yahoo:   {imap_host:'imap.mail.yahoo.com',imap_port:993,smtp_host:'smtp.mail.yahoo.com',   smtp_port:587},
+  ionos:   {imap_host:'imap.ionos.de',    imap_port:993, smtp_host:'smtp.ionos.de',          smtp_port:587},
+  eigener: {imap_host:'',                 imap_port:993, smtp_host:'',                        smtp_port:587},
+};
+
+// ── Init ──────────────────────────────────────────────────────
+async function init() {
   try {
-    const res = await fetch('/api/kalender-settings');
-    cfg = await res.json();
-    anwenden(cfg);
+    const st = await api('/api/setup-status');
+    if (!st.setup_complete) {
+      await loadAllData();
+      startWizard();
+    } else {
+      await loadAllData();
+      showSettings();
+    }
   } catch(e) {
-    toast('Konnte Einstellungen nicht laden', 'err');
+    showSettings();
   }
 }
 
-function anwenden(c) {
-  setVal('sel-persoenlich', c.persoenlicher_kalender || 'outlook');
-  setVal('sel-buchung',     c.buchungskalender       || 'lokal');
-  setVal('sel-sync-provider', c.sync_provider        || 'keiner');
-  setVal('sel-intervall',   c.sync_intervall          || '3x_taeglich');
-  document.getElementById('tog-autopush').checked = c.sync_auto_push !== false;
-  syncHinweis();
+async function loadAllData() {
+  const [settings, email, tg, fritz, server, kanale, kal, google, dms] = await Promise.allSettled([
+    api('/api/settings'),
+    api('/api/email-settings'),
+    api('/api/telegram-settings'),
+    api('/api/fritzbox-settings'),
+    api('/api/server-settings'),
+    api('/api/eingangskanale-settings'),
+    api('/api/kalender-settings'),
+    api('/api/google-status'),
+    api('/api/dms-settings'),
+  ]);
+  allData.settings = settings.value || {};
+  allData.email    = (email.value || {}).config || {};
+  allData.tg       = tg.value || {};
+  allData.fritz    = fritz.value || {};
+  allData.server   = server.value || {};
+  allData.kanale   = kanale.value || {};
+  allData.kal      = kal.value || {};
+  allData.google   = google.value || {};
+  allData.dms      = dms.value || {};
+  updateChips();
 }
 
-function setVal(id, val) {
-  const el = document.getElementById(id);
+function updateChips() {
+  const s = allData.settings;
+  const hasKi = s.has_keys && (s.has_keys.anthropic || s.has_keys.openai || s.has_keys.gemini);
+  setChip('ki', hasKi);
+  setChip('email', !!allData.email.email_adresse);
+  setChip('telegram', !!allData.tg.token && !allData.tg.token.includes('****') || (allData.tg.chat_id));
+  setChip('google', allData.google.credentials_ok);
+  setChip('phone', !!(allData.kanale.phone && allData.kanale.phone.firmenname));
+}
+
+function setChip(id, ok) {
+  const el = document.getElementById('chip-'+id);
   if (!el) return;
-  for (const opt of el.options) {
-    if (opt.value === val) { opt.selected = true; return; }
-  }
+  el.textContent = ok ? '✓' : 'Offen';
+  el.className = 'sb-chip ' + (ok ? 'chip-ok' : 'chip-warn');
 }
 
-function syncHinweis() {
-  const p = document.getElementById('sel-sync-provider').value;
-  const noSync = p === 'keiner';
-  document.getElementById('row-intervall').style.opacity = noSync ? '.35' : '1';
-  document.getElementById('row-autopush').style.opacity  = noSync ? '.35' : '1';
-  document.getElementById('sync-hint').style.display    = noSync ? 'none' : 'block';
+// ── Wizard ────────────────────────────────────────────────────
+function startWizard() {
+  // Clear settings cards to avoid duplicate IDs in the DOM
+  ['ki-card','email-card','tg-card','kal-card','phone-card','wa-card','fritz-card','dms-card','server-card'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.innerHTML='';
+  });
+  document.getElementById('wizard').style.display = 'block';
+  document.getElementById('settings').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'none';
+  buildWizardContents();
+  wizStep(0);
 }
 
-document.getElementById('sel-sync-provider').addEventListener('change', syncHinweis);
+function showSettings() {
+  // Clear wizard content to avoid duplicate IDs in the DOM
+  ['wiz-ki-content','wiz-email-content','wiz-kal-content','wiz-kanale-content'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.innerHTML='';
+  });
+  document.getElementById('wizard').style.display = 'none';
+  document.getElementById('settings').style.display = 'block';
+  document.getElementById('sidebar').style.display = 'flex';
+  buildAllCards();
+}
 
-async function speichern() {
-  const payload = {
-    persoenlicher_kalender: document.getElementById('sel-persoenlich').value,
-    buchungskalender:       document.getElementById('sel-buchung').value,
-    sync_provider:          document.getElementById('sel-sync-provider').value,
-    sync_intervall:         document.getElementById('sel-intervall').value,
-    sync_auto_push:         document.getElementById('tog-autopush').checked,
+function wizStep(n) {
+  wizardStep = n;
+  document.querySelectorAll('.wiz-step').forEach((el,i)=> el.classList.toggle('active', i===n));
+  document.querySelectorAll('.pb-step').forEach((el,i)=> {
+    el.querySelector('.pb-dot').classList.toggle('done', i<n);
+    el.querySelector('.pb-dot').classList.toggle('active', i===n);
+    el.classList.toggle('active', i===n);
+    el.classList.toggle('done', i<n);
+  });
+}
+
+function buildWizardContents() {
+  document.getElementById('wiz-ki-content').innerHTML    = buildKiCard();
+  document.getElementById('wiz-email-content').innerHTML = buildEmailCard();
+  document.getElementById('wiz-kal-content').innerHTML   = buildKalCard();
+  document.getElementById('wiz-kanale-content').innerHTML = buildPhoneCard() + buildWaCard();
+}
+
+async function saveKiAndNext() { await saveKi(); wizStep(1); }
+async function saveEmailAndNext() { await saveEmail(); wizStep(2); }
+async function saveKalAndNext() { await saveKal(); wizStep(3); }
+async function saveKanaleAndDone() { await savePhone(); await saveWa(); wizDone(); }
+function wizDone() { wizStep(4); }
+
+// ── Build Cards ───────────────────────────────────────────────
+function buildKiCard() {
+  const s = allData.settings || {};
+  const k = s.keys || {};
+  const m = s.models || {};
+  const dp = s.default_provider || 'auto';
+  return `
+  <div class="card">
+    <div class="row">
+      <div class="row-left"><div class="row-label">Standard-Provider</div><div class="row-hint">Welchen KI-Dienst Ilija bevorzugt</div></div>
+      <div class="row-control">
+        <select id="ki-provider">
+          ${['auto','claude','openai','gemini','ollama'].map(v=>`<option value="${v}"${dp===v?' selected':''}>${{auto:'Automatisch',claude:'Claude (Anthropic)',openai:'ChatGPT (OpenAI)',gemini:'Gemini (Google)',ollama:'Ollama (lokal)'}[v]}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Claude API Key <span style="color:var(--tx3);font-weight:400">(console.anthropic.com)</span></div>
+      <input type="password" id="ki-anthropic" placeholder="sk-ant-api03-…" value="${k.anthropic||''}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Gemini API Key <span style="color:var(--tx3);font-weight:400">(aistudio.google.com – oft kostenlos)</span></div>
+      <input type="password" id="ki-gemini" placeholder="AIzaSy-…" value="${k.gemini||''}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">OpenAI API Key <span style="color:var(--tx3);font-weight:400">(platform.openai.com)</span></div>
+      <input type="password" id="ki-openai" placeholder="sk-proj-…" value="${k.openai||''}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label" style="color:var(--tx2)">Modell-Auswahl <span style="color:var(--tx3);font-weight:400">(optional)</span></div>
+      <div class="inline-pair">
+        <label>Claude:</label><input type="text" id="ki-m-claude" placeholder="claude-opus-4-6" value="${m.claude||''}">
+        <label>Gemini:</label><input type="text" id="ki-m-gemini" placeholder="gemini-2.5-flash" value="${m.gemini||''}">
+        <label>GPT:</label><input type="text" id="ki-m-openai" placeholder="gpt-4o" value="${m.openai||''}">
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildEmailCard() {
+  const e = allData.email || {};
+  const prov = e.provider || 'outlook';
+  const provOpts = Object.keys(EMAIL_PROVIDERS).map(p=>
+    `<option value="${p}"${prov===p?' selected':''}>${{gmail:'Gmail',outlook:'Microsoft Outlook',gmx:'GMX',webde:'Web.de',yahoo:'Yahoo',ionos:'IONOS',eigener:'Eigener Server'}[p]||p}</option>`
+  ).join('');
+  return `
+  <div class="card">
+    <div class="row">
+      <div class="row-left"><div class="row-label">Provider</div><div class="row-hint">Servereinstellungen werden automatisch gesetzt</div></div>
+      <div class="row-control"><select id="em-prov" onchange="onEmailProvChange()">${provOpts}</select></div>
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">E-Mail-Adresse</div>
+      <input type="text" id="em-addr" placeholder="deine@email.de" value="${e.email_adresse||''}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">App-Passwort <span style="color:var(--tx3);font-weight:400">(kein normales Login-Passwort!)</span></div>
+      <input type="password" id="em-pw" placeholder="xxxx xxxx xxxx xxxx" value="${e.passwort||''}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label" style="color:var(--tx2)">Erweiterte Server-Einstellungen</div>
+      <div class="inline-pair">
+        <label>IMAP:</label><input type="text" id="em-imap-host" placeholder="imap.gmail.com" value="${e.imap_host||''}">
+        <input type="number" id="em-imap-port" placeholder="993" value="${e.imap_port||993}" style="max-width:70px">
+        <label>SMTP:</label><input type="text" id="em-smtp-host" placeholder="smtp.gmail.com" value="${e.smtp_host||''}">
+        <input type="number" id="em-smtp-port" placeholder="587" value="${e.smtp_port||587}" style="max-width:70px">
+      </div>
+    </div>
+  </div>`;
+}
+
+function onEmailProvChange() {
+  const prov = document.getElementById('em-prov')?.value;
+  if (!prov || prov === 'eigener') return;
+  const p = EMAIL_PROVIDERS[prov];
+  if (!p) return;
+  const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = v; };
+  set('em-imap-host', p.imap_host); set('em-imap-port', p.imap_port);
+  set('em-smtp-host', p.smtp_host); set('em-smtp-port', p.smtp_port);
+}
+
+function buildTgCard() {
+  const t = allData.tg || {};
+  return `
+  <div class="card">
+    <div class="row row-wide">
+      <div class="row-label">Bot-Token <span style="color:var(--tx3);font-weight:400">(von @BotFather)</span></div>
+      <input type="password" id="tg-token" placeholder="1234567890:AAH-…" value="${t.token||''}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Erlaubte User-IDs <span style="color:var(--tx3);font-weight:400">(kommagetrennt)</span></div>
+      <input type="text" id="tg-users" placeholder="123456789,987654321" value="${t.allowed_users||''}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Standard-Chat-ID <span style="color:var(--tx3);font-weight:400">(für ausgehende Nachrichten)</span></div>
+      <input type="text" id="tg-chatid" placeholder="123456789" value="${t.chat_id||''}">
+    </div>
+  </div>`;
+}
+
+function buildGoogleCard() {
+  const g = allData.google || {};
+  const svcNames = {gmail:'Gmail',google_drive:'Google Drive',google_docs:'Google Docs',google_kalender:'Google Kalender'};
+  const svcRows = Object.entries(svcNames).map(([k,name])=>{
+    const ok = g.services && g.services[k];
+    return `<div class="svc-row">
+      <span class="svc-name">${name}</span>
+      <span class="svc-status ${ok?'svc-ok':'svc-miss'}">${ok?'✓ Verbunden':'Nicht autorisiert'}</span>
+    </div>`;
+  }).join('');
+  return `
+  <div class="card">
+    <div class="row row-wide">
+      <div class="row-label">OAuth credentials.json hochladen</div>
+      <label class="upload-zone" id="google-drop" ondragover="ev.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="onGoogleDrop(event)">
+        <input type="file" id="google-file" accept=".json" onchange="uploadGoogle(this.files[0])">
+        <div class="upload-icon">📂</div>
+        <div class="upload-txt">${g.credentials_ok ? '✅ credentials.json installiert' : 'credentials.json auswählen oder hier ablegen'}</div>
+        <div class="upload-hint">${g.credentials_ok ? 'Erneut hochladen um zu aktualisieren' : 'JSON-Datei von console.cloud.google.com'}</div>
+      </label>
+    </div>
+  </div>
+  <div class="card" style="margin-top:10px">
+    ${svcRows}
+  </div>`;
+}
+
+function buildKalCard() {
+  const k = allData.kal || {};
+  const kalOpts = (sel) => ['outlook','google','lokal'].map(v=>
+    `<option value="${v}"${sel===v?' selected':''}>${{outlook:'Microsoft Outlook',google:'Google Kalender',lokal:'Lokaler Kalender'}[v]}</option>`
+  ).join('');
+  const syncProvOpts = ['keiner','outlook','google'].map(v=>
+    `<option value="${v}"${k.sync_provider===v?' selected':''}>${{keiner:'Kein Sync',outlook:'Microsoft Outlook',google:'Google Kalender'}[v]}</option>`
+  ).join('');
+  const syncIntOpts = ['manuell','3x_taeglich','stuendlich'].map(v=>
+    `<option value="${v}"${k.sync_intervall===v?' selected':''}>${{manuell:'Nur manuell','3x_taeglich':'3× täglich',stuendlich:'Stündlich'}[v]}</option>`
+  ).join('');
+  return `
+  <div class="card">
+    <div class="row">
+      <div class="row-left"><div class="row-label">Persönlicher Kalender</div><div class="row-hint">Eigene Termine — wenn du Ilija selbst darum bittest</div></div>
+      <div class="row-control"><select id="kal-pers">${kalOpts(k.persoenlicher_kalender||'outlook')}</select></div>
+    </div>
+    <div class="row">
+      <div class="row-left"><div class="row-label">Buchungskalender</div><div class="row-hint">Kundentermine via WhatsApp oder Telefon</div></div>
+      <div class="row-control"><select id="kal-buch">${kalOpts(k.buchungskalender||'lokal')}</select></div>
+    </div>
+    <div class="row">
+      <div class="row-left"><div class="row-label">Synchronisieren mit</div><div class="row-hint">Lokalen Kalender mit Cloud synchronisieren</div></div>
+      <div class="row-control"><select id="kal-sync-prov" onchange="toggleSyncRows()">${syncProvOpts}</select></div>
+    </div>
+    <div class="row" id="kal-sync-int-row">
+      <div class="row-left"><div class="row-label">Abruf-Intervall</div><div class="row-hint">Wie oft externe Termine importiert werden</div></div>
+      <div class="row-control"><select id="kal-sync-int">${syncIntOpts}</select></div>
+    </div>
+    <div class="row" id="kal-sync-push-row">
+      <div class="row-left"><div class="row-label">Auto-Push</div><div class="row-hint">Neue Buchungen sofort in die Cloud übertragen</div></div>
+      <div class="row-control">
+        <label class="toggle"><input type="checkbox" id="kal-autopush"${k.sync_auto_push!==false?' checked':''}><div class="t-track"></div><div class="t-thumb"></div></label>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleSyncRows() {
+  const noSync = (document.getElementById('kal-sync-prov')?.value||'keiner') === 'keiner';
+  ['kal-sync-int-row','kal-sync-push-row'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.opacity = noSync ? '.3' : '1';
+  });
+}
+
+function buildPhoneCard() {
+  const p = (allData.kanale||{}).phone || {};
+  return `
+  <div class="card" style="margin-bottom:10px">
+    <div class="row row-wide">
+      <div class="row-label">Firmenname / Ihr Name</div>
+      <input type="text" id="ph-firma" placeholder="Mein Unternehmen" value="${esc(p.firmenname||'')}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Begrüßung am Telefon</div>
+      <textarea id="ph-begruessung" placeholder="Hallo! Ich bin Ilija…">${esc(p.begruessung||'')}</textarea>
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Ilija's Rolle am Telefon</div>
+      <input type="text" id="ph-rolle" placeholder="Ich bin Ilija, die KI-Assistentin." value="${esc(p.ki_rolle||'')}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Angebotene Dienste <span style="color:var(--tx3);font-weight:400">(ein Eintrag pro Zeile)</span></div>
+      <textarea id="ph-dienste" placeholder="Termin vereinbaren&#10;Öffnungszeiten mitteilen&#10;Allgemeine Fragen">${esc((p.dienste||[]).join('\n'))}</textarea>
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Verabschiedung</div>
+      <input type="text" id="ph-abschluss" placeholder="Auf Wiederhören!" value="${esc(p.abschluss||'')}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Antwort bei unbekannten Anfragen</div>
+      <input type="text" id="ph-unbekannt" placeholder="Das liegt leider nicht in meinem Bereich." value="${esc(p.nicht_zustaendig||'')}">
+    </div>
+  </div>`;
+}
+
+function buildWaCard() {
+  const w = (allData.kanale||{}).whatsapp || {};
+  return `
+  <div class="card">
+    <div class="row row-wide">
+      <div class="row-label">Begrüßung in WhatsApp <span style="color:var(--tx3);font-weight:400">(erste Nachricht an neue Kontakte)</span></div>
+      <textarea id="wa-begruessung" placeholder="Hallo! Wie kann ich dir helfen?">${esc(w.begruessung||'')}</textarea>
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Ilija's Rolle in WhatsApp</div>
+      <input type="text" id="wa-rolle" placeholder="Ich bin Ilija, die digitale Assistentin." value="${esc(w.ki_rolle||'')}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Angebotene Dienste <span style="color:var(--tx3);font-weight:400">(ein Eintrag pro Zeile)</span></div>
+      <textarea id="wa-dienste" placeholder="Termin buchen&#10;Fragen beantworten">${esc((w.dienste||[]).join('\n'))}</textarea>
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Antwort bei unbekannten Anfragen</div>
+      <input type="text" id="wa-unbekannt" placeholder="Das liegt leider nicht in meinem Bereich." value="${esc(w.nicht_zustaendig||'')}">
+    </div>
+  </div>`;
+}
+
+function buildFritzCard() {
+  const f = allData.fritz || {};
+  return `
+  <div class="card">
+    <div class="row row-wide">
+      <div class="row-label">FritzBox-Adresse</div>
+      <input type="text" id="fb-server" placeholder="fritz.box" value="${esc(f.SIP_SERVER||'')}">
+    </div>
+    <div class="row">
+      <div class="row-left"><div class="row-label">SIP-Port</div><div class="row-hint">Standard: 5060</div></div>
+      <div class="row-control"><input type="number" id="fb-port" placeholder="5060" value="${f.SIP_PORT||'5060'}"></div>
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">SIP-Benutzername</div>
+      <input type="text" id="fb-user" placeholder="ilija2026" value="${esc(f.SIP_USER||'')}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">SIP-Passwort</div>
+      <input type="password" id="fb-pw" placeholder="••••••••" value="${f.SIP_PASSWORD||''}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Lokale PC-IP <span style="color:var(--tx3);font-weight:400">(leer = automatisch)</span></div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="fb-ip" placeholder="192.168.x.x" value="${esc(f.SIP_MY_IP||'')}">
+        <button class="btn btn-ghost btn-sm" style="white-space:nowrap" onclick="detectIp()">🔍 Erkennen</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="row-left"><div class="row-label">Mikrofon-ID</div><div class="row-hint">0 = Standard-Mikrofon</div></div>
+      <div class="row-control"><input type="number" id="fb-mic" placeholder="0" value="${f.SIP_MIC_ID||'0'}"></div>
+    </div>
+    <div class="row row-wide" id="fritz-test-row" style="display:none">
+      <div id="fritz-test-result"></div>
+    </div>
+  </div>`;
+}
+
+function buildDmsCard() {
+  const d = allData.dms || {};
+  return `
+  <div class="card">
+    <div class="row row-wide">
+      <div class="row-label">Archiv-Pfad</div>
+      <input type="text" id="dms-archiv" placeholder="data/dms/archiv" value="${esc(d.archiv_pfad||'')}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Import-Pfad</div>
+      <input type="text" id="dms-import" placeholder="data/dms/import" value="${esc(d.import_pfad||'')}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">DMS-Passwort <span style="color:var(--tx3);font-weight:400">(leer = kein Schutz)</span></div>
+      <input type="password" id="dms-pw" placeholder="Leer lassen für keinen Schutz">
+    </div>
+  </div>`;
+}
+
+function buildServerCard() {
+  const s = allData.server || {};
+  return `
+  <div class="card">
+    <div class="row">
+      <div class="row-left"><div class="row-label">Port</div><div class="row-hint">Standard: 5001</div></div>
+      <div class="row-control"><input type="number" id="srv-port" placeholder="5001" value="${s.port||'5001'}"></div>
+    </div>
+    <div class="row">
+      <div class="row-left"><div class="row-label">Debug-Modus</div><div class="row-hint">Mehr Logs — nur für Entwicklung</div></div>
+      <div class="row-control">
+        <label class="toggle"><input type="checkbox" id="srv-debug"${s.debug?' checked':''}><div class="t-track"></div><div class="t-thumb"></div></label>
+      </div>
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Web-UI Benutzername <span style="color:var(--tx3);font-weight:400">(optional, für Passwortschutz)</span></div>
+      <input type="text" id="srv-user" placeholder="admin" value="${esc(s.web_user||'')}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Web-UI Passwort</div>
+      <input type="password" id="srv-pw" placeholder="${s.web_pw_set?'••••••••':'Leer = kein Schutz'}">
+    </div>
+  </div>`;
+}
+
+// ── Build all cards in settings mode ─────────────────────────
+function buildAllCards() {
+  document.getElementById('ki-card').innerHTML     = buildKiCard().replace('<div class="card">','').replace(/<\/div>$/,'');
+  document.getElementById('email-card').innerHTML  = buildEmailCard().replace('<div class="card">','').replace(/<\/div>$/,'');
+  document.getElementById('tg-card').innerHTML     = buildTgCard().replace('<div class="card">','').replace(/<\/div>$/,'');
+  document.getElementById('google-card').innerHTML = buildGoogleCard();
+  document.getElementById('kal-card').innerHTML    = buildKalCard().replace('<div class="card">','').replace(/<\/div>$/,'');
+  document.getElementById('phone-card').innerHTML  = buildPhoneCard().replace('<div class="card" style="margin-bottom:10px">','').replace(/<\/div>$/,'');
+  document.getElementById('wa-card').innerHTML     = buildWaCard().replace('<div class="card">','').replace(/<\/div>$/,'');
+  document.getElementById('fritz-card').innerHTML  = buildFritzCard().replace('<div class="card">','').replace(/<\/div>$/,'');
+  document.getElementById('dms-card').innerHTML    = buildDmsCard().replace('<div class="card">','').replace(/<\/div>$/,'');
+  document.getElementById('server-card').innerHTML = buildServerCard().replace('<div class="card">','').replace(/<\/div>$/,'');
+  toggleSyncRows();
+  updateChips();
+}
+
+// ── Save functions ────────────────────────────────────────────
+async function saveKi() {
+  const data = {
+    provider: gv('ki-provider') || 'auto',
+    keys:   {anthropic: gv('ki-anthropic'), openai: gv('ki-openai'), gemini: gv('ki-gemini')},
+    models: {claude: gv('ki-m-claude'), openai: gv('ki-m-openai'), gemini: gv('ki-m-gemini')},
   };
+  const r = await post('/api/settings', data);
+  msg('ki-msg', r.ok !== false);
+  if (r.ok !== false) { allData.settings = await api('/api/settings'); updateChips(); }
+  return r;
+}
+
+async function saveEmail() {
+  const data = {
+    provider:     gv('em-prov') || 'outlook',
+    email_adresse: gv('em-addr'),
+    passwort:     gv('em-pw'),
+    imap_host:    gv('em-imap-host'),
+    imap_port:    parseInt(gv('em-imap-port')||'993'),
+    smtp_host:    gv('em-smtp-host'),
+    smtp_port:    parseInt(gv('em-smtp-port')||'587'),
+  };
+  const r = await post('/api/email-settings', data);
+  msg('email-msg', r.ok);
+  if (r.ok) { allData.email = data; updateChips(); }
+  return r;
+}
+
+async function saveTelegram() {
+  const data = {token: gv('tg-token'), chat_id: gv('tg-chatid'), allowed_users: gv('tg-users')};
+  const r = await post('/api/telegram-settings', data);
+  msg('tg-msg', r.ok);
+  if (r.ok) { allData.tg = data; updateChips(); }
+  return r;
+}
+
+async function saveKal() {
+  const data = {
+    persoenlicher_kalender: gv('kal-pers'),
+    buchungskalender:       gv('kal-buch'),
+    sync_provider:          gv('kal-sync-prov'),
+    sync_intervall:         gv('kal-sync-int'),
+    sync_auto_push:         !!document.getElementById('kal-autopush')?.checked,
+  };
+  const r = await post('/api/kalender-settings', data);
+  msg('kal-msg', r.ok);
+  if (r.ok) allData.kal = data;
+  return r;
+}
+
+async function savePhone() {
+  const dienste = (gv('ph-dienste')||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const phone = {
+    firmenname: gv('ph-firma'), begruessung: gv('ph-begruessung'),
+    ki_rolle: gv('ph-rolle'), dienste,
+    abschluss: gv('ph-abschluss'), nicht_zustaendig: gv('ph-unbekannt'),
+    public_info_pfad: 'data/public_info',
+  };
+  const r = await post('/api/eingangskanale-settings', {phone});
+  msg('phone-msg', r.ok);
+  if (r.ok) { if (!allData.kanale) allData.kanale = {}; allData.kanale.phone = phone; updateChips(); }
+  return r;
+}
+
+async function saveWa() {
+  const dienste = (gv('wa-dienste')||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const wa = {
+    firmenname: gv('ph-firma') || (allData.kanale?.phone?.firmenname||''),
+    begruessung: gv('wa-begruessung'), ki_rolle: gv('wa-rolle'),
+    dienste, nicht_zustaendig: gv('wa-unbekannt'),
+    public_info_pfad: 'data/public_info',
+  };
+  const r = await post('/api/eingangskanale-settings', {whatsapp: wa});
+  msg('wa-msg', r.ok);
+  return r;
+}
+
+async function saveFritz() {
+  const data = {
+    SIP_SERVER: gv('fb-server'), SIP_PORT: gv('fb-port'),
+    SIP_USER:   gv('fb-user'),   SIP_PASSWORD: gv('fb-pw'),
+    SIP_MY_IP:  gv('fb-ip'),     SIP_MIC_ID: gv('fb-mic'),
+  };
+  const r = await post('/api/fritzbox-settings', data);
+  msg('fritz-msg', r.ok);
+  return r;
+}
+
+async function saveDms() {
+  const data = {archiv_pfad: gv('dms-archiv'), import_pfad: gv('dms-import'), passwort: gv('dms-pw')};
+  const r = await post('/api/dms-settings', data);
+  msg('dms-msg', r.ok);
+  return r;
+}
+
+async function saveServer() {
+  const data = {port: gv('srv-port'), debug: !!document.getElementById('srv-debug')?.checked, web_user: gv('srv-user'), web_pw: gv('srv-pw')};
+  const r = await post('/api/server-settings', data);
+  msg('server-msg', r.ok);
+  return r;
+}
+
+// ── FritzBox IP & Test ────────────────────────────────────────
+async function detectIp() {
   try {
-    const res = await fetch('/api/kalender-settings', {
-      method:  'POST',
-      headers: {'Content-Type':'application/json'},
-      body:    JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (data.ok) toast('✓ Gespeichert', 'ok');
-    else         toast(data.message || 'Fehler', 'err');
+    const r = await api('/api/fritzbox-settings');
+    if (r.SIP_MY_IP) { const el = document.getElementById('fb-ip'); if(el) el.value = r.SIP_MY_IP; }
+  } catch(e) {}
+  toast('IP wird über Server ermittelt — bitte SIP-Server-Adresse zuerst speichern.', 'ok');
+}
+
+async function testFritz() {
+  const server = gv('fb-server') || 'fritz.box';
+  const port   = gv('fb-port')   || '5060';
+  const row = document.getElementById('fritz-test-row');
+  const res = document.getElementById('fritz-test-result');
+  if (row) row.style.display = 'flex';
+  if (res) res.innerHTML = '<span style="color:var(--tx3)">⏳ Teste Verbindung…</span>';
+  try {
+    const r = await post('/api/fritzbox-test', {server, port});
+    if (res) res.innerHTML = r.ok
+      ? `<span style="color:var(--green)">✅ FritzBox erreichbar auf ${server}:${port}</span>`
+      : `<span style="color:var(--red)">❌ ${r.message}</span>`;
   } catch(e) {
-    toast('Verbindungsfehler', 'err');
+    if (res) res.innerHTML = `<span style="color:var(--red)">❌ Verbindungsfehler</span>`;
   }
+}
+
+// ── Google Upload ─────────────────────────────────────────────
+function onGoogleDrop(ev) {
+  ev.preventDefault();
+  document.getElementById('google-drop')?.classList.remove('drag');
+  const file = ev.dataTransfer?.files?.[0];
+  if (file) uploadGoogle(file);
+}
+
+async function uploadGoogle(file) {
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const r = await fetch('/api/google-credentials-upload', {method:'POST', body: fd});
+    const data = await r.json();
+    toast(data.message, data.ok ? 'ok' : 'err');
+    if (data.ok) { allData.google = await api('/api/google-status'); buildAllCards(); }
+  } catch(e) { toast('Upload fehlgeschlagen', 'err'); }
+}
+
+// ── Sidebar scroll highlight ──────────────────────────────────
+function scrollTo(id) {
+  document.getElementById(id)?.scrollIntoView({behavior:'smooth', block:'start'});
+  document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
+  const sec = id.replace('sec-','');
+  document.getElementById('sb-'+sec)?.classList.add('active');
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function gv(id) { return document.getElementById(id)?.value?.trim() || ''; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+async function api(url) {
+  const r = await fetch(url);
+  return r.json();
+}
+async function post(url, data) {
+  const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)});
+  const j = await r.json();
+  toast(j.message || (j.ok ? 'Gespeichert' : 'Fehler'), j.ok !== false ? 'ok' : 'err');
+  return j;
 }
 
 let _toastT = null;
-function toast(msg, type='ok') {
+function toast(txt, type='ok') {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'show ' + type;
+  el.textContent = txt; el.className = 'show '+type;
   clearTimeout(_toastT);
-  _toastT = setTimeout(() => el.className = '', 2800);
+  _toastT = setTimeout(()=> el.className='', 2800);
 }
 
-laden();
+function msg(id, ok) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = ok ? '✓ Gespeichert' : '✗ Fehler';
+  el.className = 'save-msg ' + (ok ? 'ok' : 'err');
+  setTimeout(()=> { el.className='save-msg'; }, 3000);
+}
+
+// ── Start ─────────────────────────────────────────────────────
+init();
 </script>
 </body>
 </html>

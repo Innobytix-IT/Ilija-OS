@@ -433,6 +433,354 @@ def save_kalender_settings():
     return jsonify({"ok": True, "message": "Kalender-Einstellungen gespeichert."})
 
 
+# ── Setup-Status (Wizard / Settings Erkennung) ───────────────
+@app.route("/api/setup-status")
+def setup_status():
+    """Gibt zurück ob Ilija bereits eingerichtet ist (für Wizard vs. Settings-Modus)."""
+    env = {}
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    env[k.strip()] = v.strip()
+    has_ki   = bool(env.get("ANTHROPIC_API_KEY") or env.get("GOOGLE_API_KEY") or env.get("GEMINI_API_KEY") or env.get("OPENAI_API_KEY"))
+    has_email  = os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "email", "email_config.json"))
+    has_phone  = os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "phone_config.json"))
+    return jsonify({"setup_complete": has_ki, "has_ki": has_ki, "has_email": has_email, "has_phone": has_phone})
+
+
+# ── E-Mail-Einstellungen ──────────────────────────────────────
+_EMAIL_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "email", "email_config.json")
+_EMAIL_PROVIDERS = {
+    "gmail":   {"imap_host": "imap.gmail.com",            "imap_port": 993, "smtp_host": "smtp.gmail.com",         "smtp_port": 587},
+    "outlook": {"imap_host": "outlook.office365.com",     "imap_port": 993, "smtp_host": "smtp.office365.com",     "smtp_port": 587},
+    "gmx":     {"imap_host": "imap.gmx.net",              "imap_port": 993, "smtp_host": "mail.gmx.net",           "smtp_port": 587},
+    "webde":   {"imap_host": "imap.web.de",               "imap_port": 993, "smtp_host": "smtp.web.de",            "smtp_port": 587},
+    "yahoo":   {"imap_host": "imap.mail.yahoo.com",       "imap_port": 993, "smtp_host": "smtp.mail.yahoo.com",    "smtp_port": 587},
+    "ionos":   {"imap_host": "imap.ionos.de",             "imap_port": 993, "smtp_host": "smtp.ionos.de",          "smtp_port": 587},
+    "eigener": {"imap_host": "",                           "imap_port": 993, "smtp_host": "",                       "smtp_port": 587},
+}
+
+@app.route("/api/email-settings", methods=["GET"])
+def get_email_settings():
+    cfg = {}
+    if os.path.exists(_EMAIL_CONFIG_PATH):
+        try:
+            with open(_EMAIL_CONFIG_PATH, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+        except Exception:
+            pass
+    if cfg.get("passwort"):
+        cfg["passwort"] = "****"
+    return jsonify({"config": cfg, "providers": list(_EMAIL_PROVIDERS.keys())})
+
+@app.route("/api/email-settings", methods=["POST"])
+def save_email_settings():
+    data = request.get_json() or {}
+    cfg = {}
+    if os.path.exists(_EMAIL_CONFIG_PATH):
+        try:
+            with open(_EMAIL_CONFIG_PATH, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+        except Exception:
+            pass
+    provider = data.get("provider", cfg.get("provider", "outlook"))
+    passwort  = data.get("passwort", "")
+    if "****" in passwort:
+        passwort = cfg.get("passwort", "")
+    provider_cfg = _EMAIL_PROVIDERS.get(provider, {})
+    new_cfg = {
+        "provider":      provider,
+        "email_adresse": data.get("email_adresse", cfg.get("email_adresse", "")),
+        "passwort":      passwort,
+        "imap_host":     data.get("imap_host") or provider_cfg.get("imap_host", ""),
+        "imap_port":     int(data.get("imap_port") or provider_cfg.get("imap_port", 993)),
+        "smtp_host":     data.get("smtp_host") or provider_cfg.get("smtp_host", ""),
+        "smtp_port":     int(data.get("smtp_port") or provider_cfg.get("smtp_port", 587)),
+        "konfiguriert_am": __import__("datetime").datetime.now().isoformat(),
+    }
+    os.makedirs(os.path.dirname(_EMAIL_CONFIG_PATH), exist_ok=True)
+    with open(_EMAIL_CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(new_cfg, f, ensure_ascii=False, indent=2)
+    return jsonify({"ok": True, "message": "E-Mail-Einstellungen gespeichert."})
+
+@app.route("/api/email-providers")
+def get_email_providers():
+    return jsonify(_EMAIL_PROVIDERS)
+
+
+# ── Telegram-Einstellungen ────────────────────────────────────
+_TG_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "telegram", "telegram_config.json")
+
+@app.route("/api/telegram-settings", methods=["GET"])
+def get_telegram_settings():
+    cfg = {}
+    if os.path.exists(_TG_CONFIG_PATH):
+        try:
+            with open(_TG_CONFIG_PATH, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+        except Exception:
+            pass
+    if cfg.get("token"):
+        t = cfg["token"]
+        cfg["token"] = t[:8] + "****" if len(t) > 8 else "****"
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    allowed_users = ""
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip().startswith("TELEGRAM_ALLOWED_USERS="):
+                    allowed_users = line.strip().split("=", 1)[1]
+    cfg["allowed_users"] = allowed_users
+    return jsonify(cfg)
+
+@app.route("/api/telegram-settings", methods=["POST"])
+def save_telegram_settings():
+    data = request.get_json() or {}
+    cfg = {}
+    if os.path.exists(_TG_CONFIG_PATH):
+        try:
+            with open(_TG_CONFIG_PATH, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+        except Exception:
+            pass
+    token = data.get("token", "")
+    if "****" in token:
+        token = cfg.get("token", "")
+    new_cfg = {
+        "token":           token,
+        "chat_id":         data.get("chat_id", cfg.get("chat_id", "")),
+        "konfiguriert_am": __import__("datetime").datetime.now().isoformat(),
+    }
+    os.makedirs(os.path.dirname(_TG_CONFIG_PATH), exist_ok=True)
+    with open(_TG_CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(new_cfg, f, ensure_ascii=False, indent=2)
+    # TELEGRAM_ALLOWED_USERS in .env schreiben
+    allowed = data.get("allowed_users", "")
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    env_lines = []
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            env_lines = f.readlines()
+    found = False
+    for i, line in enumerate(env_lines):
+        if line.strip().startswith("TELEGRAM_ALLOWED_USERS=") or line.strip().startswith("#TELEGRAM_ALLOWED_USERS="):
+            if allowed:
+                env_lines[i] = f"TELEGRAM_ALLOWED_USERS={allowed}\n"
+            else:
+                env_lines[i] = f"#TELEGRAM_ALLOWED_USERS=\n"
+            found = True
+            break
+    if not found and allowed:
+        env_lines.append(f"TELEGRAM_ALLOWED_USERS={allowed}\n")
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.writelines(env_lines)
+    return jsonify({"ok": True, "message": "Telegram-Einstellungen gespeichert."})
+
+
+# ── FritzBox-Einstellungen ────────────────────────────────────
+_SIP_KEYS = ["SIP_SERVER", "SIP_PORT", "SIP_USER", "SIP_PASSWORD", "SIP_MY_IP", "SIP_MIC_ID"]
+
+def _load_env_dict():
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    d = {}
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    d[k.strip()] = v.strip()
+    return d
+
+def _save_env_keys(new_vars: dict):
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    lines = []
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    for key, value in new_vars.items():
+        found = False
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith(f"{key}=") or stripped.startswith(f"#{key}="):
+                lines[i] = f"{key}={value}\n" if value else f"#{key}=\n"
+                found = True
+                break
+        if not found and value:
+            lines.append(f"{key}={value}\n")
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+
+@app.route("/api/fritzbox-settings", methods=["GET"])
+def get_fritzbox_settings():
+    env = _load_env_dict()
+    result = {k: env.get(k, "") for k in _SIP_KEYS}
+    if result.get("SIP_PASSWORD"):
+        result["SIP_PASSWORD"] = "****"
+    return jsonify(result)
+
+@app.route("/api/fritzbox-settings", methods=["POST"])
+def save_fritzbox_settings():
+    data  = request.get_json() or {}
+    env   = _load_env_dict()
+    patch = {}
+    for key in _SIP_KEYS:
+        val = data.get(key, "")
+        if key == "SIP_PASSWORD" and "****" in str(val):
+            val = env.get("SIP_PASSWORD", "")
+        patch[key] = val
+    _save_env_keys(patch)
+    return jsonify({"ok": True, "message": "FritzBox-Einstellungen gespeichert."})
+
+@app.route("/api/fritzbox-test", methods=["POST"])
+def test_fritzbox():
+    import socket
+    data   = request.get_json() or {}
+    server = data.get("server", "fritz.box")
+    port   = int(data.get("port", 5060))
+    try:
+        sock = socket.create_connection((server, port), timeout=4)
+        sock.close()
+        return jsonify({"ok": True, "message": f"FritzBox erreichbar auf {server}:{port}"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": f"Nicht erreichbar: {e}"})
+
+
+# ── Server-Einstellungen ──────────────────────────────────────
+@app.route("/api/server-settings", methods=["GET"])
+def get_server_settings():
+    env = _load_env_dict()
+    return jsonify({
+        "port":      env.get("PORT", "5001"),
+        "debug":     env.get("DEBUG", "false").lower() == "true",
+        "web_user":  env.get("WEB_USER", ""),
+        "web_pw_set": bool(env.get("WEB_PASSWORD")),
+    })
+
+@app.route("/api/server-settings", methods=["POST"])
+def save_server_settings():
+    data = request.get_json() or {}
+    patch = {}
+    if "port"  in data: patch["PORT"]  = str(data["port"])
+    if "debug" in data: patch["DEBUG"] = "true" if data["debug"] else "false"
+    if data.get("web_user"): patch["WEB_USER"] = data["web_user"]
+    if data.get("web_pw") and "****" not in data["web_pw"]: patch["WEB_PASSWORD"] = data["web_pw"]
+    _save_env_keys(patch)
+    return jsonify({"ok": True, "message": "Server-Einstellungen gespeichert."})
+
+
+# ── Eingangskanäle (Telefon + WhatsApp) ──────────────────────
+_PHONE_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "phone_config.json")
+_WA_CONFIG_PATH    = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "whatsapp", "whatsapp_config.json")
+
+@app.route("/api/eingangskanale-settings", methods=["GET"])
+def get_eingangskanale_settings():
+    phone = {}
+    if os.path.exists(_PHONE_CONFIG_PATH):
+        try:
+            with open(_PHONE_CONFIG_PATH, "r", encoding="utf-8") as f:
+                phone = json.load(f)
+        except Exception:
+            pass
+    wa = {}
+    if os.path.exists(_WA_CONFIG_PATH):
+        try:
+            with open(_WA_CONFIG_PATH, "r", encoding="utf-8") as f:
+                wa = json.load(f)
+        except Exception:
+            pass
+    return jsonify({"phone": phone, "whatsapp": wa})
+
+@app.route("/api/eingangskanale-settings", methods=["POST"])
+def save_eingangskanale_settings():
+    data  = request.get_json() or {}
+    phone = data.get("phone", {})
+    wa    = data.get("whatsapp", {})
+    if phone:
+        with open(_PHONE_CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(phone, f, ensure_ascii=False, indent=2)
+    if wa:
+        os.makedirs(os.path.dirname(_WA_CONFIG_PATH), exist_ok=True)
+        with open(_WA_CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(wa, f, ensure_ascii=False, indent=2)
+    return jsonify({"ok": True, "message": "Eingangskanal-Einstellungen gespeichert."})
+
+
+# ── DMS-Einstellungen ─────────────────────────────────────────
+@app.route("/api/dms-settings", methods=["GET"])
+def get_dms_settings():
+    try:
+        from skills.dms import _get_config as _dms_cfg
+        cfg = _dms_cfg()
+    except Exception:
+        cfg = {"archiv_pfad": "data/dms/archiv", "import_pfad": "data/dms/import"}
+    return jsonify(cfg)
+
+@app.route("/api/dms-settings", methods=["POST"])
+def save_dms_settings():
+    data = request.get_json() or {}
+    try:
+        from skills.dms import _get_config as _dms_cfg, _save_config as _dms_save
+        cfg = _dms_cfg()
+        if data.get("archiv_pfad"): cfg["archiv_pfad"] = data["archiv_pfad"]
+        if data.get("import_pfad"): cfg["import_pfad"] = data["import_pfad"]
+        # Passwort als SHA-256 speichern
+        pw = data.get("passwort", "")
+        if pw and "****" not in pw:
+            import hashlib
+            cfg["passwort_hash"] = hashlib.sha256(pw.encode()).hexdigest()
+        elif data.get("passwort_entfernen"):
+            cfg.pop("passwort_hash", None)
+        _dms_save(cfg)
+        return jsonify({"ok": True, "message": "DMS-Einstellungen gespeichert."})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)}), 500
+
+
+# ── Google-Status ─────────────────────────────────────────────
+@app.route("/api/google-status")
+def get_google_status():
+    base = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(base, "data")
+    cred_paths = [
+        os.path.join(data_dir, "google_kalender", "credentials.json"),
+        os.path.join(base, "credentials.json"),
+    ]
+    creds_ok = any(os.path.exists(p) for p in cred_paths)
+    services = {
+        "gmail":           os.path.exists(os.path.join(data_dir, "gmail",           "token.json")),
+        "google_drive":    os.path.exists(os.path.join(data_dir, "google_drive",    "token.json")),
+        "google_docs":     os.path.exists(os.path.join(data_dir, "google_docs",     "token.json")),
+        "google_kalender": os.path.exists(os.path.join(data_dir, "google_kalender", "token.json")),
+    }
+    return jsonify({"credentials_ok": creds_ok, "services": services})
+
+@app.route("/api/google-credentials-upload", methods=["POST"])
+def upload_google_credentials():
+    from flask import request as _req
+    if "file" not in _req.files:
+        return jsonify({"ok": False, "message": "Keine Datei"}), 400
+    f = _req.files["file"]
+    if not f.filename.endswith(".json"):
+        return jsonify({"ok": False, "message": "Nur JSON-Dateien erlaubt"}), 400
+    try:
+        content = json.loads(f.read().decode("utf-8"))
+    except Exception:
+        return jsonify({"ok": False, "message": "Ungültige JSON-Datei"}), 400
+    if "installed" not in content and "web" not in content:
+        return jsonify({"ok": False, "message": "Keine gültige Google credentials.json"}), 400
+    base = os.path.dirname(os.path.abspath(__file__))
+    dest = os.path.join(base, "data", "google_kalender", "credentials.json")
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    with open(dest, "w", encoding="utf-8") as out:
+        json.dump(content, out, ensure_ascii=False, indent=2)
+    return jsonify({"ok": True, "message": "credentials.json erfolgreich installiert."})
+
+
 @app.route("/api/whatsapp", methods=["POST"])
 def whatsapp_bridge():
     """Empfängt WhatsApp-Nachrichten vom Baileys-Bridge und gibt Ilijas Antwort zurück."""
