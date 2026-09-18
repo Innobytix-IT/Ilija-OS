@@ -48,8 +48,18 @@ def browser_oeffnen(url: str) -> str:
         options.add_argument("--disable-gpu")
         options.add_argument("--no-first-run")
         options.add_argument("--no-default-browser-check")
+        options.add_argument("--disable-session-crashed-bubble")
+        options.add_argument("--disable-infobars")
         options.add_argument(f"--user-data-dir={_PROFIL_DIR}")
         options.add_argument("--remote-debugging-port=9223")
+
+        # Singleton-Lock entfernen falls Chrome unsauber beendet wurde
+        import glob as _glob
+        for _lock in _glob.glob(os.path.join(_PROFIL_DIR, "Singleton*")):
+            try:
+                os.remove(_lock)
+            except OSError:
+                pass
 
         print(f"🚀 Starte Browser (Profil: {_PROFIL_DIR}) für {url}...")
 
