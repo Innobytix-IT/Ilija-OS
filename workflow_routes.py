@@ -346,15 +346,16 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
         # Adjazenzliste und In-Degree aufbauen
         adj      = {nid: [] for nid in nodes}  # nid → [successor_nid]
         in_deg   = {nid: 0  for nid in nodes}
-        conn_map = {}  # (to_nid) → [(from_nid, conn)]
+        conn_map = {}  # to_nid → [(from_nid, port)]  port = "true"|"false"|None
 
         for conn in connections:
-            frm = conn["from"]
-            to  = conn["to"]
+            frm  = conn["from"]
+            to   = conn["to"]
+            port = conn.get("port")  # "true", "false", oder None
             if frm in adj and to in in_deg:
                 adj[frm].append(to)
                 in_deg[to] += 1
-                conn_map.setdefault(to, []).append(frm)
+                conn_map.setdefault(to, []).append((frm, port))
 
         # Topologische Sortierung (Kahn)
         queue = [nid for nid, deg in in_deg.items() if deg == 0]
@@ -376,6 +377,7 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
         memory_write_queue = []   # memory nodes to write back after execution
         loop_processed     = set()  # nodes already executed inside a loop
         workflow_stopped   = None   # Wenn gesetzt: Workflow früh beendet (Grund als String)
+        skipped_nodes      = set()  # Nodes die wegen Bedingung-Verzweigung übersprungen werden
 
         with kernel_lock:
             k = get_kernel_func()
@@ -388,14 +390,23 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                 if nid in loop_processed:
                     continue   # wurde bereits innerhalb einer Schleife ausgeführt
 
+                if nid in skipped_nodes:
+                    statuses[nid] = "skipped"
+                    # Kaskade: Nachfolger überspringen wenn alle Vorgänger übersprungen wurden
+                    for succ in adj.get(nid, []):
+                        preds = conn_map.get(succ, [])
+                        if all(p in skipped_nodes for p, _ in preds):
+                            skipped_nodes.add(succ)
+                    continue
+
                 node    = nodes[nid]
                 ntype   = node.get("type", "note")
                 config  = node.get("config", {})
 
-                # Eingabe-Kontext aus Vorgängern zusammenbauen
+                # Eingabe-Kontext aus Vorgängern zusammenbauen (nur nicht-übersprungene)
                 prev_outputs = []
-                for prev_id in conn_map.get(nid, []):
-                    if prev_id in results:
+                for prev_id, _port in conn_map.get(nid, []):
+                    if prev_id in results and prev_id not in skipped_nodes:
                         prev_outputs.append(results[prev_id])
                 context = "\n".join(prev_outputs) if prev_outputs else ""
 
@@ -2089,6 +2100,19 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                             passed = bool(cond_raw) and cond_raw.lower() not in ("false","0","nein","no")
                         label = "✅ Bedingung erfüllt" if passed else "❌ Bedingung nicht erfüllt"
                         output = f"{label}\n{context}" if context else label
+                        # Port-basiertes Branching: falsche Zweige überspringen
+                        for succ in adj.get(nid, []):
+                            succ_port = next(
+                                (p for from_id, p in conn_map.get(succ, []) if from_id == nid),
+                                None
+                            )
+                            if succ_port == "true" and not passed:
+                                skipped_nodes.add(succ)
+                            elif succ_port == "false" and passed:
+                                skipped_nodes.add(succ)
+                            elif succ_port is None and not passed:
+                                # Kein Port = Gate-Verhalten: überspringen wenn Bedingung false
+                                skipped_nodes.add(succ)
 
                     # ── http ─────────────────────────────────────────────────
                     elif ntype == "http":
