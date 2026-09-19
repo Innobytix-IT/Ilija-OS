@@ -405,11 +405,15 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
 
                     elif ntype == "chat":
                         message = config.get("message", "").strip()
+                        # Langer Context (z.B. Web-Inhalt) kürzen damit der LLM nicht überläuft
+                        ctx = context
+                        if len(ctx) > 5000:
+                            ctx = ctx[:5000] + "\n\n[... Inhalt gekürzt ...]"
                         # Template: {{input}} durch Vorgänger-Output ersetzen
-                        if "{{input}}" in message and context:
-                            message = message.replace("{{input}}", context)
-                        elif not message and context:
-                            message = context
+                        if "{{input}}" in message and ctx:
+                            message = message.replace("{{input}}", ctx)
+                        elif not message and ctx:
+                            message = ctx
                         if not message:
                             message = "Hallo Ilija!"
                         output = k.chat(message)
