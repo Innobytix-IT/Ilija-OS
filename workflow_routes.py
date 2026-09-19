@@ -416,11 +416,11 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                             message = ctx
                         if not message:
                             message = "Hallo Ilija!"
-                        # Direkter Provider-Call ohne Chat-History — Workflow-Nodes sind zustandslos
+                        # Direkter Provider-Call ohne Chat-History und ohne vollständige Skill-Liste
                         try:
                             output = k.provider.chat(
                                 messages=[{"role": "user", "content": message}],
-                                system=k.get_system_prompt(),
+                                system="Du bist Ilija, ein hilfreicher KI-Assistent. Antworte auf Deutsch. Sei präzise und strukturiert.",
                             )
                         except Exception as _e:
                             output = f"❌ Fehler: {_e}"
