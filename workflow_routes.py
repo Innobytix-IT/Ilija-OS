@@ -416,7 +416,14 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                             message = ctx
                         if not message:
                             message = "Hallo Ilija!"
-                        output = k.chat(message)
+                        # Direkter Provider-Call ohne Chat-History — Workflow-Nodes sind zustandslos
+                        try:
+                            output = k.provider.chat(
+                                messages=[{"role": "user", "content": message}],
+                                system=k.get_system_prompt(),
+                            )
+                        except Exception as _e:
+                            output = f"❌ Fehler: {_e}"
 
                     elif ntype == "chatfilter":
                         # ── Chat-Filter: universeller Wächter zwischen Lese- und Chat-Nodes ──
