@@ -220,7 +220,30 @@ class Kernel:
             call_str     = f'SKILL:{skill_name}({params_str})'
             result       = result.replace(call_str, f'\n\n{skill_result}\n')
 
-        return result
+        # Zweiter LLM-Call: Skill-Ergebnisse zu einer fertigen Antwort synthetisieren.
+        # Der LLM hat beim ersten Call die Skill-Ergebnisse noch nicht gekannt —
+        # jetzt bekommt er sie und kann eine vollständige Antwort formulieren.
+        self.state.set_status(AgentStatus.THINKING, "Synthese")
+        synthesis_messages = list(self.state.chat_history) + [
+            {"role": "assistant", "content": result},
+            {"role": "user",      "content": (
+                "Ich habe dir jetzt alle Skill-Ergebnisse gegeben. "
+                "Bitte formuliere deine fertige, vollständige Antwort auf Basis dieser Informationen. "
+                "Keine weiteren Skill-Aufrufe mehr notwendig."
+            )},
+        ]
+        try:
+            synthesized = self.provider.chat(
+                messages=synthesis_messages,
+                system=self.get_system_prompt(),
+            )
+            # Schutzmechanismus: keine weiteren SKILL-Aufrufe in der Synthese erlaubt
+            if not re.search(pattern, synthesized):
+                return synthesized
+        except Exception:
+            pass
+
+        return result  # Fallback: Skill-Ergebnisse direkt eingebettet
 
     def switch_provider(self, mode: str):
         """Wechselt den KI-Provider."""
