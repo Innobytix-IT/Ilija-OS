@@ -221,15 +221,16 @@ class Kernel:
             result       = result.replace(call_str, f'\n\n{skill_result}\n')
 
         # Zweiter LLM-Call: Skill-Ergebnisse zu einer fertigen Antwort synthetisieren.
-        # Der LLM hat beim ersten Call die Skill-Ergebnisse noch nicht gekannt —
-        # jetzt bekommt er sie und kann eine vollständige Antwort formulieren.
+        # Fokussierter Einzelprompt ohne Chat-History — kein Prompt-Overflow.
         self.state.set_status(AgentStatus.THINKING, "Synthese")
-        synthesis_messages = list(self.state.chat_history) + [
-            {"role": "assistant", "content": result},
-            {"role": "user",      "content": (
-                "Ich habe dir jetzt alle Skill-Ergebnisse gegeben. "
-                "Bitte formuliere deine fertige, vollständige Antwort auf Basis dieser Informationen. "
-                "Keine weiteren Skill-Aufrufe mehr notwendig."
+        original_request = (self.state.chat_history[-1]["content"]
+                            if self.state.chat_history else "")
+        synthesis_messages = [
+            {"role": "user", "content": (
+                f"ANFRAGE: {original_request}\n\n"
+                f"GESAMMELTE DATEN (Skill-Ergebnisse):\n{result}\n\n"
+                "Schreibe jetzt deine fertige, strukturierte Antwort auf Basis "
+                "dieser Daten. Keine weiteren Skill-Aufrufe."
             )},
         ]
         try:
