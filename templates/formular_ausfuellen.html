@@ -285,8 +285,6 @@ function renderOverlay(pageNum) {
   overlay.style.height = currentVP.height + 'px';
 
   const sc = currentScale;
-  // PDF-Seitenhöhe in PDF-Einheiten (y=0 unten)
-  const ph = currentVP.height / sc;
 
   const seitenFelder = alleFelder.filter(f => f.page === pageNum - 1 && f.rect);
   overlay.innerHTML = '';
@@ -294,7 +292,7 @@ function renderOverlay(pageNum) {
   seitenFelder.forEach(f => {
     const [rx0, ry0, rx1, ry1] = f.rect;
     const cx = rx0 * sc;
-    const cy = (ph - ry1) * sc;       // PDF y von unten → Canvas y von oben
+    const cy = ry0 * sc;              // PyMuPDF: y=0 oben, direkte Multiplikation
     const cw = (rx1 - rx0) * sc;
     const ch = (ry1 - ry0) * sc;
     if (cw < 2 || ch < 2) return;
