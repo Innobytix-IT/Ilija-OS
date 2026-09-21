@@ -168,6 +168,17 @@ class IlijaApp(ctk.CTk):
         self.minsize(1020, 700)
         self.configure(fg_color=C_BG)
 
+        # Fenster-Icon (Titelleiste & Taskleiste)
+        try:
+            from PIL import Image, ImageTk
+            _icon_path = os.path.join(get_base_dir(), "branding", "ilija-icon.png")
+            if os.path.exists(_icon_path):
+                _icon_img = Image.open(_icon_path).resize((32, 32), Image.LANCZOS)
+                self._tk_icon = ImageTk.PhotoImage(_icon_img)
+                self.iconphoto(True, self._tk_icon)
+        except Exception:
+            pass
+
         self.server_thread   = None
         self.telegram_thread = None
         self._server_running   = False
