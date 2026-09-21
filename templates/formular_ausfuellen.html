@@ -86,9 +86,9 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
 .pdf-wrapper{position:relative;display:inline-block;line-height:0}
 #pdfOverlay{position:absolute;top:0;left:0;pointer-events:none}
 .ov-field{position:absolute;box-sizing:border-box}
-.ov-txt{border:none;background:rgba(255,255,100,.38);font-family:Arial,Helvetica,sans-serif;color:#111;outline:none;pointer-events:auto;padding:0 3px;border-radius:2px;overflow:hidden;white-space:nowrap;width:100%;height:100%;display:block;box-sizing:border-box}
-.ov-txt:focus{background:rgba(255,235,0,.7);box-shadow:0 0 0 2px #e09000;z-index:2;position:relative}
-.ov-txt:not(:placeholder-shown){font-weight:500}
+.ov-txt{border:none;background:rgba(255,255,100,.18);font-family:Arial,Helvetica,sans-serif;color:transparent;outline:none;pointer-events:auto;padding:0 3px;border-radius:2px;overflow:hidden;white-space:nowrap;width:100%;height:100%;display:block;box-sizing:border-box}
+.ov-txt:hover{background:rgba(255,255,100,.35);cursor:text}
+.ov-txt:focus{background:rgba(255,235,0,.9);color:#111;box-shadow:0 0 0 2px #e09000;z-index:2;position:relative}
 .ov-cb{pointer-events:auto;cursor:pointer;width:100%;height:100%;margin:0;accent-color:#1a7a1a}
 .ov-radio-dot{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:10px;color:#1a7a1a;font-weight:bold}
 .ov-sel{border:none;background:rgba(255,255,100,.38);font-family:Arial,sans-serif;color:#111;outline:none;pointer-events:auto;width:100%;height:100%;font-size:9px;padding:0 2px;box-sizing:border-box}
