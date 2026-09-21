@@ -1039,7 +1039,10 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
             "4. Gekoppelte Felder: Wenn ein 'numf'-Betrag eingetragen wird, "
             "MUSS die gleichnamige 'chbx'-Checkbox (selbes Suffix) auf 'true' gesetzt werden.\n"
             "   Beispiel: numfBedarfGrundmiete='620' → chbxBedarfGrundmiete='true'\n"
-            "5. Felder die du nicht kennst: '' (leerer String), aber CheckBox/Radio trotzdem befüllen.\n\n"
+            "5. Felder die du nicht kennst: '' (leerer String), aber CheckBox/Radio trotzdem befüllen.\n"
+            "6. Zeilen-Felder mit Z1/Z2/Z3 im Namen: Z1 = erste Person der BG (Antragsteller/in), "
+            "Z2 = zweite Person der BG, Z3 = dritte Person usw. Nutze die Nutzerdaten/Zusatzinfos, "
+            "um die richtigen Personen den richtigen Zeilen zuzuordnen.\n\n"
             "=== NUTZERDATEN ===\n"
             f"- Name: {absender.get('name', '')}\n"
             f"- Adresse: {adresse_einz}\n"
@@ -1100,7 +1103,8 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
                         continue
                     val = werte[name]
                     if widget.field_type_string == "CheckBox":
-                        widget.field_value = str(val).lower() in ("true", "1", "yes", "ja", "an")
+                        is_on = str(val).lower() in ("true", "1", "yes", "ja", "an")
+                        widget.field_value = widget.on_state() if is_on else "Off"
                     else:
                         widget.field_value = str(val)
                     widget.update()
