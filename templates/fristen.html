@@ -604,6 +604,17 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
       <span class="smtp-ok" id="smtpSaveOk">✓ Gespeichert</span>
     </div>
 
+    <hr class="section-sep">
+    <div class="section-label">📠 Fax-Versand</div>
+    <div style="background:var(--bdim);border:1px solid rgba(96,165,250,.15);border-radius:8px;padding:12px 14px;font-size:.75rem;color:var(--tx2);line-height:1.65">
+      Der Fax-Versand läuft über <strong style="color:var(--tx)">simple-fax.de</strong> — einen Online-Dienst für Faxversand ohne Faxgerät.<br><br>
+      <strong style="color:var(--tx)">Was du brauchst:</strong><br>
+      1. Kostenloses Konto auf <strong>simple-fax.de</strong> anlegen<br>
+      2. Guthaben aufladen (ab 7 Cent pro Seite, Deutschland)<br>
+      3. Die bei simple-fax.de hinterlegte E-Mail-Adresse als <strong>Benutzername</strong> oben im SMTP-Bereich eintragen<br><br>
+      Ilija sendet das PDF dann als E-Mail an <code style="background:var(--s3);padding:1px 5px;border-radius:3px">{Faxnummer}@simple-fax.de</code> — simple-fax.de liefert es als Fax aus.
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeAbsenderModal()">Abbrechen</button>
       <button class="btn btn-prim" onclick="saveAbsender()">Absender speichern</button>
