@@ -92,6 +92,16 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);min-height:100vh;
 .card-file{display:flex;align-items:center;gap:5px;font-size:.73rem;color:var(--teal);margin-bottom:6px}
 .card-file.no-file{color:var(--tx3)}
 
+/* ── E-Mail Modal ─────────────────────────────────────────── */
+.smtp-grid{display:grid;grid-template-columns:1fr 88px;gap:10px}
+.smtp-grid .field{margin-bottom:0}
+.smtp-check-row{display:flex;align-items:center;gap:9px;margin:8px 0 12px}
+.smtp-check-row input{width:15px;height:15px;accent-color:var(--g);flex-shrink:0}
+.smtp-check-row label{font-size:.8rem;color:var(--tx2);cursor:pointer}
+.smtp-save-row{display:flex;align-items:center;gap:10px;margin-top:4px}
+.smtp-ok{font-size:.72rem;color:var(--green);display:none}
+#eAnhangInfo{font-size:.77rem;color:var(--teal);padding:8px 12px;background:var(--s2);border-radius:6px;margin-bottom:4px;display:none}
+
 /* ── Empty state ─────────────────────────────────────────── */
 .empty{text-align:center;padding:64px 24px;color:var(--tx3)}
 .empty-icon{font-size:2.5rem;margin-bottom:14px;display:block}
@@ -401,6 +411,53 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
 </div>
 
 
+<!-- ════ E-Mail Modal ════ -->
+<div class="modal-bg" id="emailModal" onclick="if(event.target===this)closeEmailModal()">
+  <div class="modal" style="max-width:530px">
+    <div class="modal-title">
+      <span>📧 Per E-Mail senden</span>
+      <button class="modal-close" onclick="closeEmailModal()">✕</button>
+    </div>
+
+    <!-- SMTP nicht konfiguriert -->
+    <div id="eNoSMTP" style="display:none">
+      <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:14px;margin-bottom:16px;font-size:.8rem;color:var(--tx2);line-height:1.65">
+        ⚠️ <strong>SMTP ist noch nicht konfiguriert.</strong><br>
+        Bitte E-Mail-Server unter <strong>👤 Meine Daten → E-Mail-Versand</strong> hinterlegen.
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeEmailModal()">Schließen</button>
+        <button class="btn btn-prim" onclick="closeEmailModal();openAbsenderModal()">→ Meine Daten öffnen</button>
+      </div>
+    </div>
+
+    <!-- Compose Form -->
+    <div id="eForm" style="display:none">
+      <div class="field">
+        <label>An *</label>
+        <input class="inp" id="eTo" type="email" placeholder="empfaenger@beispiel.de">
+      </div>
+      <div class="field">
+        <label>CC <span class="opt">(optional)</span></label>
+        <input class="inp" id="eCc" placeholder="cc@beispiel.de">
+      </div>
+      <div class="field">
+        <label>Betreff *</label>
+        <input class="inp" id="eSubject" placeholder="Betreff">
+      </div>
+      <div class="field">
+        <label>Nachricht</label>
+        <textarea class="inp" id="eBody" rows="5" style="resize:vertical;min-height:100px" placeholder="Nachricht…"></textarea>
+      </div>
+      <div id="eAnhangInfo">📎 <span id="eAnhangName"></span></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeEmailModal()">Abbrechen</button>
+        <button class="btn btn-prim" id="eBtnSend" onclick="sendEmail()">📧 Senden</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ════ Absender-Modal ════ -->
 <div class="modal-bg" id="absenderModal" onclick="if(event.target===this)closeAbsenderModal()">
   <div class="modal">
@@ -458,9 +515,44 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
       </div>
     </div>
 
+    <hr class="section-sep">
+    <div class="section-label">📧 E-Mail-Versand (SMTP)</div>
+    <p style="font-size:.73rem;color:var(--tx3);margin-bottom:14px;line-height:1.5">
+      Für den direkten E-Mail-Versand aus dem Modul. Passwort wird lokal gespeichert.
+    </p>
+    <div class="smtp-grid">
+      <div class="field">
+        <label>SMTP-Server</label>
+        <input class="inp" id="smtpServer" placeholder="smtp.gmail.com">
+      </div>
+      <div class="field">
+        <label>Port</label>
+        <input class="inp" id="smtpPort" type="number" value="587" min="1" max="65535" style="width:100%">
+      </div>
+    </div>
+    <div class="field">
+      <label>Benutzername (E-Mail-Adresse)</label>
+      <input class="inp" id="smtpUser" type="email" placeholder="absender@gmail.com">
+    </div>
+    <div class="field">
+      <label>Passwort / App-Passwort <span id="smtpPassHint" style="color:var(--green);font-size:.68rem;display:none">✓ gesetzt</span></label>
+      <input class="inp" id="smtpPass" type="password" placeholder="Neu eingeben zum Ändern">
+      <div style="font-size:.68rem;color:var(--tx3);margin-top:4px">
+        Gmail: 2FA aktivieren und ein <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--g)">App-Passwort</a> erstellen.
+      </div>
+    </div>
+    <div class="smtp-check-row">
+      <input type="checkbox" id="smtpSsl">
+      <label for="smtpSsl">SSL (Port 465) statt STARTTLS (Port 587)</label>
+    </div>
+    <div class="smtp-save-row">
+      <button class="btn btn-ghost btn-sm" onclick="saveSmtp()">💾 SMTP-Daten speichern</button>
+      <span class="smtp-ok" id="smtpSaveOk">✓ Gespeichert</span>
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeAbsenderModal()">Abbrechen</button>
-      <button class="btn btn-prim" onclick="saveAbsender()">Speichern</button>
+      <button class="btn btn-prim" onclick="saveAbsender()">Absender speichern</button>
     </div>
   </div>
 </div>
@@ -591,6 +683,7 @@ function render(data) {
             <button class="btn btn-ghost btn-sm" onclick="openModal('${v.id}')">✏️ Bearbeiten</button>
             <button class="btn btn-teal btn-sm" onclick="openBrief('${v.id}')">✍️ Brief aufsetzen</button>
             <button class="btn btn-ghost btn-sm" onclick="uploadFile('${v.id}')">📎 Formular hochladen</button>
+            <button class="btn btn-ghost btn-sm" onclick="openEmailModal('${v.id}')">📧 Senden</button>
             <button class="btn btn-red btn-sm" onclick="confirmDelete('${v.id}','${esc(v.name)}')">🗑</button>
           </div>
         </div>
@@ -966,6 +1059,7 @@ function openAbsenderModal() {
   document.getElementById('aEmail').value   = absender.email   || '';
   setUTab('upload');
   ladeUnterschriftPreview();
+  loadSmtpConfig();
   document.getElementById('absenderModal').classList.add('open');
   setTimeout(() => document.getElementById('aName').focus(), 80);
 }
@@ -1011,10 +1105,132 @@ async function doDelete() {
   } catch { toast('Netzwerkfehler', false); }
 }
 
+// ── SMTP-Konfiguration ────────────────────────────────────────
+
+let _smtpKonfiguriert = false;
+
+async function loadSmtpConfig() {
+  try {
+    const r = await fetch('/api/fristen/email-config');
+    const d = await r.json();
+    document.getElementById('smtpServer').value = d.smtp_server || '';
+    document.getElementById('smtpPort').value   = d.smtp_port   || 587;
+    document.getElementById('smtpUser').value   = d.smtp_user   || '';
+    document.getElementById('smtpSsl').checked  = !!d.use_ssl;
+    const hint = document.getElementById('smtpPassHint');
+    if (hint) hint.style.display = d.hat_passwort ? 'inline' : 'none';
+    _smtpKonfiguriert = !!(d.smtp_server && d.smtp_user && d.hat_passwort);
+  } catch {}
+}
+
+async function saveSmtp() {
+  const body = {
+    smtp_server:   document.getElementById('smtpServer').value.trim(),
+    smtp_port:     parseInt(document.getElementById('smtpPort').value) || 587,
+    smtp_user:     document.getElementById('smtpUser').value.trim(),
+    smtp_password: document.getElementById('smtpPass').value,
+    use_ssl:       document.getElementById('smtpSsl').checked,
+  };
+  try {
+    const r = await fetch('/api/fristen/email-config', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (d.ok) {
+      _smtpKonfiguriert = !!(body.smtp_server && body.smtp_user);
+      document.getElementById('smtpPass').value = '';
+      const ok = document.getElementById('smtpSaveOk');
+      ok.style.display = 'inline';
+      setTimeout(() => { ok.style.display = 'none'; }, 2500);
+      const hint = document.getElementById('smtpPassHint');
+      if (body.smtp_password && hint) hint.style.display = 'inline';
+    } else toast(d.error || 'Fehler', false);
+  } catch { toast('Netzwerkfehler', false); }
+}
+
+// ── E-Mail senden ─────────────────────────────────────────────
+
+let _emailVid = null;
+
+async function openEmailModal(vid) {
+  _emailVid = vid;
+  await loadSmtpConfig();  // aktuellen Status laden
+  const v = vorlagen.find(x => x.id === vid);
+  if (!v) return;
+
+  if (!_smtpKonfiguriert) {
+    document.getElementById('eNoSMTP').style.display = 'block';
+    document.getElementById('eForm').style.display   = 'none';
+  } else {
+    document.getElementById('eNoSMTP').style.display = 'none';
+    document.getElementById('eForm').style.display   = 'block';
+
+    // Felder vorausfüllen
+    document.getElementById('eTo').value = v.empfaenger?.email || '';
+    document.getElementById('eCc').value = '';
+    document.getElementById('eSubject').value = v.name || '';
+
+    const absName = absender.name || '';
+    const gruss = absName ? `\nMit freundlichen Grüßen,\n${absName}` : '';
+    const anhangHinweis = v.datei ? ` Anbei erhalten Sie die zugehörigen Unterlagen.` : '';
+    document.getElementById('eBody').value =
+      `Sehr geehrte Damen und Herren,\n\nbeigefügt übersende ich Ihnen meine Unterlagen bezüglich: ${v.name}.${anhangHinweis}${gruss}`;
+
+    const anhangInfo = document.getElementById('eAnhangInfo');
+    if (v.datei) {
+      document.getElementById('eAnhangName').textContent = v.datei;
+      anhangInfo.style.display = 'block';
+    } else {
+      anhangInfo.style.display = 'none';
+    }
+    document.getElementById('eBtnSend').disabled = false;
+    document.getElementById('eBtnSend').textContent = '📧 Senden';
+  }
+  document.getElementById('emailModal').classList.add('open');
+}
+
+function closeEmailModal() {
+  document.getElementById('emailModal').classList.remove('open');
+  _emailVid = null;
+}
+
+async function sendEmail() {
+  if (!_emailVid) return;
+  const to = document.getElementById('eTo').value.trim();
+  if (!to) { toast('Empfänger fehlt', false); return; }
+
+  const btn = document.getElementById('eBtnSend');
+  btn.disabled = true; btn.textContent = '⏳ Wird gesendet…';
+
+  try {
+    const r = await fetch(`/api/fristen/${_emailVid}/email-senden`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        to,
+        cc:      document.getElementById('eCc').value.trim(),
+        subject: document.getElementById('eSubject').value.trim(),
+        body:    document.getElementById('eBody').value.trim(),
+      })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast('E-Mail gesendet ✓');
+      closeEmailModal();
+    } else {
+      toast('Fehler: ' + (d.error || 'Unbekannt'), false);
+      btn.disabled = false; btn.textContent = '📧 Senden';
+    }
+  } catch (e) {
+    toast('Netzwerkfehler: ' + e.message, false);
+    btn.disabled = false; btn.textContent = '📧 Senden';
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeModal(); closeBrief(); closeAbsenderModal(); closeConfirm(); }
+  if (e.key === 'Escape') { closeModal(); closeBrief(); closeAbsenderModal(); closeEmailModal(); closeConfirm(); }
 });
 
 load();

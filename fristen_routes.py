@@ -19,6 +19,7 @@ _DATA      = os.path.join(_BASE, "data", "fristen")
 _INDEX     = os.path.join(_DATA, "vorlagen.json")
 _FILES     = os.path.join(_DATA, "dateien")
 _ABSENDER          = os.path.join(_DATA, "absender.json")
+_EMAIL_CONFIG      = os.path.join(_DATA, "email_config.json")
 _UNTERSCHRIFT_BASE = os.path.join(_DATA, "unterschrift")
 _UNTERSCHRIFT_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".webp"]
 
@@ -86,6 +87,24 @@ def _delete_unterschrift():
         p = _UNTERSCHRIFT_BASE + ext
         if os.path.exists(p):
             os.remove(p)
+
+
+_EMAIL_DEFAULTS = {"smtp_server": "", "smtp_port": 587, "smtp_user": "",
+                   "smtp_password": "", "use_ssl": False}
+
+def _load_email_config() -> dict:
+    if not os.path.exists(_EMAIL_CONFIG):
+        return dict(_EMAIL_DEFAULTS)
+    try:
+        with open(_EMAIL_CONFIG, encoding="utf-8") as f:
+            return {**_EMAIL_DEFAULTS, **json.load(f)}
+    except Exception:
+        return dict(_EMAIL_DEFAULTS)
+
+def _save_email_config(data: dict):
+    os.makedirs(_DATA, exist_ok=True)
+    with open(_EMAIL_CONFIG, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 # ── Registrierung ─────────────────────────────────────────────────────────────
@@ -492,6 +511,99 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
         except Exception as e:
             if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    # ── E-Mail-Konfiguration ──────────────────────────────────────────────────
+
+    @app.route("/api/fristen/email-config", methods=["GET"])
+    def fristen_email_config_get():
+        cfg  = _load_email_config()
+        safe = {k: v for k, v in cfg.items() if k != "smtp_password"}
+        safe["hat_passwort"] = bool(cfg.get("smtp_password"))
+        return jsonify(safe)
+
+    @app.route("/api/fristen/email-config", methods=["POST"])
+    def fristen_email_config_post():
+        d   = request.get_json(force=True) or {}
+        cfg = _load_email_config()
+        if "smtp_server" in d: cfg["smtp_server"] = d["smtp_server"].strip()
+        if "smtp_port"   in d: cfg["smtp_port"]   = int(d["smtp_port"])
+        if "smtp_user"   in d: cfg["smtp_user"]   = d["smtp_user"].strip()
+        if "use_ssl"     in d: cfg["use_ssl"]     = bool(d["use_ssl"])
+        if d.get("smtp_password"):
+            cfg["smtp_password"] = d["smtp_password"]
+        _save_email_config(cfg)
+        return jsonify({"ok": True})
+
+    # ── E-Mail senden ─────────────────────────────────────────────────────────
+
+    @app.route("/api/fristen/<vid>/email-senden", methods=["POST"])
+    def fristen_email_senden(vid):
+        import smtplib, ssl as _ssl
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text      import MIMEText
+        from email.mime.base      import MIMEBase
+        from email                import encoders as _enc
+        import mimetypes
+
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v:
+            return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
+
+        cfg = _load_email_config()
+        if not cfg.get("smtp_server") or not cfg.get("smtp_user") or not cfg.get("smtp_password"):
+            return jsonify({"ok": False, "error": "SMTP nicht konfiguriert. Bitte unter 👤 Meine Daten einrichten."}), 400
+
+        d       = request.get_json(force=True) or {}
+        to      = d.get("to", "").strip()
+        cc      = d.get("cc", "").strip()
+        subject = d.get("subject", v.get("name", "")).strip()
+        body    = d.get("body", "").strip()
+
+        if not to:
+            return jsonify({"ok": False, "error": "Kein Empfänger angegeben"}), 400
+
+        msg           = MIMEMultipart("mixed")
+        msg["From"]   = cfg["smtp_user"]
+        msg["To"]     = to
+        if cc:
+            msg["Cc"] = cc
+        msg["Subject"] = subject
+
+        msg.attach(MIMEText(body or " ", "plain", "utf-8"))
+
+        # Datei anhängen (wenn vorhanden)
+        datei = v.get("datei", "")
+        if datei:
+            datei_pfad = os.path.join(_FILES, datei)
+            if os.path.exists(datei_pfad):
+                mime_type, _ = mimetypes.guess_type(datei_pfad)
+                maintype, subtype = (mime_type or "application/octet-stream").split("/", 1)
+                with open(datei_pfad, "rb") as af:
+                    part = MIMEBase(maintype, subtype)
+                    part.set_payload(af.read())
+                _enc.encode_base64(part)
+                part.add_header("Content-Disposition",
+                                f'attachment; filename="{datei}"')
+                msg.attach(part)
+
+        recipients = [to] + ([e.strip() for e in cc.split(",") if e.strip()] if cc else [])
+
+        try:
+            ctx = _ssl.create_default_context()
+            if cfg.get("use_ssl"):
+                with smtplib.SMTP_SSL(cfg["smtp_server"], int(cfg["smtp_port"]), context=ctx) as srv:
+                    srv.login(cfg["smtp_user"], cfg["smtp_password"])
+                    srv.sendmail(cfg["smtp_user"], recipients, msg.as_bytes())
+            else:
+                with smtplib.SMTP(cfg["smtp_server"], int(cfg["smtp_port"])) as srv:
+                    srv.ehlo()
+                    srv.starttls(context=ctx)
+                    srv.login(cfg["smtp_user"], cfg["smtp_password"])
+                    srv.sendmail(cfg["smtp_user"], recipients, msg.as_bytes())
+            return jsonify({"ok": True})
+        except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
     # ── Formular ausfüllen ────────────────────────────────────────────────────
