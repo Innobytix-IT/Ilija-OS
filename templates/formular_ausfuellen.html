@@ -273,7 +273,42 @@ async function ladeVorlageKontext() {
     if (d.referenz_name) {
       document.getElementById('referenzLabel').textContent = '✅ ' + d.referenz_name;
     }
+    _wendeModus(d.ki_modus || 'manuell');
   } catch(e) {}
+}
+
+function _wendeModus(modus) {
+  // Topbar-Buttons
+  const btnSeite   = document.getElementById('btnKI');
+  const btnAlle    = document.getElementById('btnKIAlle');
+  // Sidebar-Buttons
+  const btnSeite2  = document.getElementById('btnKI2');
+  const btnAlle2   = document.getElementById('btnKIAlle2');
+  const btnZP      = document.getElementById('btnZeitplan');
+  const infoBar    = document.querySelector('.infobar span');
+
+  if (modus === 'manuell') {
+    if (btnSeite)  btnSeite.style.display  = '';
+    if (btnAlle)   btnAlle.style.display   = 'none';
+    if (btnSeite2) btnSeite2.style.display = '';
+    if (btnAlle2)  btnAlle2.style.display  = 'none';
+    if (infoBar)   infoBar.innerHTML = 'Felder im rechten Panel ausfüllen. <strong>Klick auf einen Feldnamen</strong> springt im Dokument zur richtigen Seite.';
+  } else if (modus === 'ki_pruefen') {
+    if (btnSeite)  btnSeite.style.display  = 'none';
+    if (btnAlle)   { btnAlle.style.display = ''; btnAlle.textContent = '✨ KI befüllen & prüfen'; }
+    if (btnSeite2) btnSeite2.style.display = 'none';
+    if (btnAlle2)  { btnAlle2.style.display = ''; btnAlle2.textContent = '✨ Alle'; }
+    if (infoBar)   infoBar.innerHTML = '✨ <strong>KI + Prüfen</strong> — Klick auf „KI befüllen & prüfen" füllt alle Felder auf einmal aus. Danach prüfen und senden.';
+  } else if (modus === 'autonom') {
+    if (btnSeite)  btnSeite.style.display  = 'none';
+    if (btnAlle)   btnAlle.style.display   = 'none';
+    if (btnSeite2) btnSeite2.style.display = 'none';
+    if (btnAlle2)  btnAlle2.style.display  = 'none';
+    if (infoBar)   infoBar.innerHTML = '⏰ <strong>Autonom</strong> — dieser Antrag wird zum eingetragenen Stichtag automatisch befüllt und versendet. Zeitplan unten prüfen/anpassen.';
+    // Zeitplan-Panel automatisch öffnen
+    const panel = document.getElementById('zeitplanPanel');
+    if (panel) panel.classList.add('open');
+  }
 }
 
 // Auto-Save Kontext bei Verlassen des Textfeldes

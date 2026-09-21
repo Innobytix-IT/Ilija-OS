@@ -91,6 +91,14 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);min-height:100vh;
 .card-actions{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}
 .card-file{display:flex;align-items:center;gap:5px;font-size:.73rem;color:var(--teal);margin-bottom:6px}
 .card-file.no-file{color:var(--tx3)}
+/* ── Modus-Selector ── */
+.modus-row{display:flex;align-items:center;gap:6px;margin:8px 0 4px;flex-wrap:wrap}
+.modus-lbl{font-size:.67rem;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-right:2px}
+.modus-btn{padding:3px 10px;border-radius:20px;border:1px solid var(--bdr2);background:var(--s2);color:var(--tx2);font-size:.7rem;font-weight:500;cursor:pointer;font-family:var(--f);transition:all .12s;white-space:nowrap}
+.modus-btn:hover{background:var(--s3);color:var(--tx)}
+.modus-btn.active.m-manuell{background:var(--s3);color:var(--tx);border-color:var(--bdr2)}
+.modus-btn.active.m-ki_pruefen{background:rgba(26,100,220,.12);color:var(--a);border-color:rgba(26,100,220,.3)}
+.modus-btn.active.m-autonom{background:var(--gdim);color:var(--g);border-color:rgba(34,197,94,.3)}
 
 /* ── E-Mail Modal ─────────────────────────────────────────── */
 .smtp-grid{display:grid;grid-template-columns:1fr 88px;gap:10px}
@@ -744,6 +752,7 @@ function render(data) {
           ${empfParts.length ? `<div class="card-row"><strong>Empfänger:</strong>&nbsp;${esc(empfParts.join(' · '))}</div>` : ''}
           <div class="card-row">${notifChips(v.benachrichtigung)}</div>
           ${fileHtml}
+          ${v.datei && v.datei.toLowerCase().endsWith('.pdf') ? modusRow(v) : ''}
           <div class="card-actions">
             <button class="btn btn-ghost btn-sm" onclick="openModal('${v.id}')">✏️ Bearbeiten</button>
             <button class="btn btn-teal btn-sm" onclick="openBrief('${v.id}')">✍️ Brief aufsetzen</button>
@@ -756,6 +765,38 @@ function render(data) {
       </div>
     </div>`;
   }).join('');
+}
+
+// ── KI-Modus Selector ────────────────────────────────────────
+
+function modusRow(v) {
+  const modus = v.ki_modus || 'manuell';
+  const opts = [
+    { key: 'manuell',    label: '🖊 Manuell' },
+    { key: 'ki_pruefen', label: '✨ KI + Prüfen' },
+    { key: 'autonom',    label: '⏰ Autonom' }
+  ];
+  const btns = opts.map(o => {
+    const active = o.key === modus ? `active m-${o.key}` : '';
+    let extra = '';
+    if (o.key === 'autonom' && v.zeitplan?.aktiv && v.zeitplan?.naechste_ausfuehrung) {
+      extra = ` <span style="font-size:.63rem;opacity:.75">· ${v.zeitplan.naechste_ausfuehrung}</span>`;
+    }
+    if (o.key === 'autonom' && v.zeitplan?.letzter_status === 'fehler') {
+      extra += ' <span style="color:var(--red);font-size:.63rem">⚠</span>';
+    }
+    return `<button class="modus-btn ${active}" onclick="setModus('${v.id}','${o.key}',event)">${o.label}${extra}</button>`;
+  }).join('');
+  return `<div class="modus-row"><span class="modus-lbl">Modus</span>${btns}</div>`;
+}
+
+async function setModus(vid, modus, evt) {
+  if (evt) evt.stopPropagation();
+  await fetch(`/api/fristen/${vid}/modus`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ modus })
+  });
+  await load();
 }
 
 // ── Laden ────────────────────────────────────────────────────

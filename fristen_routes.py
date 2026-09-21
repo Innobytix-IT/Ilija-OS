@@ -1281,7 +1281,21 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
         if not v:
             return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
         return jsonify({"ok": True, "ki_kontext": v.get("ki_kontext", ""),
-                        "referenz_name": v.get("referenz_name", "")})
+                        "referenz_name": v.get("referenz_name", ""),
+                        "ki_modus": v.get("ki_modus", "manuell")})
+
+    @app.route("/api/fristen/<vid>/modus", methods=["POST"])
+    def fristen_modus_post(vid):
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v:
+            return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
+        modus = (request.get_json(force=True) or {}).get("modus", "manuell")
+        if modus not in ("manuell", "ki_pruefen", "autonom"):
+            return jsonify({"ok": False, "error": "Ungültiger Modus"}), 400
+        v["ki_modus"] = modus
+        _save(vorlagen)
+        return jsonify({"ok": True})
 
     @app.route("/api/fristen/<vid>/ki-kontext", methods=["POST"])
     def fristen_ki_kontext_save(vid):
