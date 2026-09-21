@@ -1054,9 +1054,18 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
             f"{feld_liste}\n\n"
             'Antworte nur mit: {"Feldname": "Wert", ...}'
         )
-        with kernel_lock:
-            k = get_kernel_func()
-        raw = k.chat(prompt)
+        # Fristen-KI braucht eine saubere, zustandslose Provider-Verbindung ohne
+        # die globale Ilija-Chat-History und System-Prompt, da sonst die JSON-Antwort
+        # durch die Ilija-Persoenlichkeit ueberschrieben wird.
+        try:
+            from providers import select_provider
+            _, _prov = select_provider()
+            raw = _prov.chat(
+                messages=[{"role": "user", "content": prompt}],
+                system="Du bist ein Formular-Ausfüllassistent. Antworte IMMER und NUR mit reinem JSON — kein Text davor oder danach."
+            )
+        except Exception as _e:
+            return jsonify({"ok": False, "error": f"KI-Provider Fehler: {_e}"}), 503
         match = re.search(r'\{[\s\S]*\}', raw)
         if not match:
             return jsonify({"ok": False, "error": "KI-Antwort nicht parsbar", "raw": raw[:300]}), 500
