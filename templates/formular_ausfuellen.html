@@ -122,6 +122,15 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
       <h2>📋 Formularfelder</h2>
       <button class="btn btn-ghost btn-sm" id="btnKI2" onclick="kiBefuellen()" disabled>🤖 KI</button>
     </div>
+    <div class="ki-kontext-wrap" id="kiKontextWrap" style="display:none;padding:8px 12px;border-bottom:1px solid var(--bdr2)">
+      <label style="font-size:.7rem;font-weight:600;color:var(--tx2);display:block;margin-bottom:4px">
+        💡 Zusatzinfos für KI (optional)
+      </label>
+      <textarea id="kiKontext" rows="3"
+        placeholder="z.B.: BG-Nummer: 123456, Jobcenter: Stuttgart Mitte, Bewilligungszeitraum: 01.01.–30.06.2027"
+        style="width:100%;font-size:.75rem;padding:6px 8px;border-radius:6px;background:var(--s2);border:1px solid var(--bdr2);color:var(--tx);font-family:var(--f);resize:vertical;box-sizing:border-box"></textarea>
+      <p style="font-size:.67rem;color:var(--tx3);margin:3px 0 0">KI befüllt nur die aktuelle Seite.</p>
+    </div>
     <div class="fp-body" id="fieldsBody">
       <div class="state-msg" style="padding:32px 16px">
         <span class="icon">⏳</span>
@@ -216,6 +225,7 @@ async function ladeFelder() {
     document.getElementById('btnKI').disabled  = false;
     document.getElementById('btnKI2').disabled = false;
     document.getElementById('btnSave').disabled = false;
+    document.getElementById('kiKontextWrap').style.display = 'block';
   } catch(e) {
     body.innerHTML = `<div class="no-fields">❌ ${esc(e.message)}</div>`;
   }
@@ -294,14 +304,20 @@ async function springeZuSeite(page) {
 
 // ── KI auto-befüllen ───────────────────────────────────────────
 async function kiBefuellen() {
-  const btn = document.getElementById('btnKI');
-  btn.disabled = true;
-  btn.textContent = '⏳ KI denkt…';
+  const btn  = document.getElementById('btnKI');
+  const btn2 = document.getElementById('btnKI2');
+  [btn, btn2].forEach(b => { if(b) { b.disabled = true; b.textContent = '⏳ KI denkt…'; } });
   try {
+    // Nur Felder der aktuellen Seite (0-basiert in alleFelder, 1-basiert in currentPage)
+    const seitenFelder = alleFelder.filter(f => f.page === currentPage - 1);
+    const kontext = (document.getElementById('kiKontext') || {}).value || '';
     const r = await fetch(`/api/fristen/${VID}/formular-ki-vorschlag`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ felder: alleFelder.map(f => ({ name: f.name, type: f.type, choices: f.choices })) })
+      body: JSON.stringify({
+        felder: seitenFelder.map(f => ({ name: f.name, label: f.label || f.name, type: f.type, choices: f.choices })),
+        kontext: kontext.trim()
+      })
     });
     const d = await r.json();
     if (!d.ok) { toast('KI-Fehler: ' + (d.error||'Unbekannt')); return; }
@@ -333,12 +349,14 @@ async function kiBefuellen() {
         if (rb.value === String(val)) { rb.checked = true; count++; }
       });
     });
-    toast(`🤖 ${count} Feld${count!==1?'er':''} befüllt`);
+    toast(`🤖 ${count} Feld${count!==1?'er':''} auf Seite ${currentPage} befüllt`);
   } catch(e) {
     toast('Fehler: ' + e.message);
   } finally {
-    btn.disabled = false;
-    btn.textContent = '🤖 KI auto-befüllen';
+    const b  = document.getElementById('btnKI');
+    const b2 = document.getElementById('btnKI2');
+    if(b)  { b.disabled  = false; b.textContent  = '🤖 KI auto-befüllen'; }
+    if(b2) { b2.disabled = false; b2.textContent = '🤖 KI'; }
   }
 }
 

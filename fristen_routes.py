@@ -965,15 +965,17 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
         v = _find(vorlagen, vid)
         if not v:
             return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
-        data    = request.get_json(force=True) or {}
-        felder  = data.get("felder", [])
+        data     = request.get_json(force=True) or {}
+        felder   = data.get("felder", [])
+        kontext  = data.get("kontext", "").strip()
         absender = _load_absender()
         feld_liste = "\n".join(
-            "- " + f["name"] + " (" + f.get("type", "Text") + ")"
+            "- " + f["name"] + ' ("' + f.get("label", f["name"]) + '", ' + f.get("type", "Text") + ")"
             + (" [Optionen: " + ", ".join(f["choices"][:6]) + "]" if f.get("choices") else "")
             for f in felder
         )
         adresse_einz = absender.get("adresse", "").replace("\n", ", ").strip()
+        kontext_block = f"\nZusatzinfos vom Nutzer:\n{kontext}\n" if kontext else ""
         prompt = (
             "Du befüllst ein PDF-Formular. Antworte NUR mit einem JSON-Objekt "
             "(kein Markdown, keine Erklärungen, nur roher JSON-Text).\n\n"
@@ -981,9 +983,10 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
             f"- Name: {absender.get('name', '')}\n"
             f"- Adresse: {adresse_einz}\n"
             f"- E-Mail: {absender.get('email', '')}\n"
-            f"- Formulartitel: {v.get('name', '')}\n\n"
-            "Formularfelder (befülle sinnvoll basierend auf Nutzerdaten, "
-            "leerer String falls unbekannt):\n"
+            f"- Formulartitel: {v.get('name', '')}\n"
+            f"{kontext_block}\n"
+            "Formularfelder — Format: Feldname (Bezeichnung, Typ) [Optionen].\n"
+            "Befülle sinnvoll basierend auf Nutzerdaten; leerer String falls unbekannt:\n"
             f"{feld_liste}\n\n"
             'Format: {"Feldname": "Wert", ...}'
         )
