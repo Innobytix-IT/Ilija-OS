@@ -899,6 +899,12 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
             abort(404)
         return render_template("formular_ausfuellen.html", vid=vid, name=v.get("name", "Dokument"))
 
+    def _camel_to_label(name):
+        import re
+        clean = re.sub(r'^(txtf?|date|chk|cmb|rb|lbl|btn)', '', name, flags=re.IGNORECASE)
+        spaced = re.sub(r'([A-Z])', r' \1', clean).strip()
+        return spaced if spaced else name
+
     @app.route("/api/fristen/<vid>/formular-felder", methods=["GET"])
     def fristen_formular_felder(vid):
         try:
@@ -924,6 +930,8 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
                 val  = widget.field_value
                 val_str = str(val) if val else ""
                 choices = list(widget.choice_values or [])
+                raw_label = getattr(widget, "field_label", None)
+                display_label = (raw_label.strip() if raw_label and raw_label.strip() else None) or _camel_to_label(name)
                 if ft == "RadioButton":
                     if name in seen_radio:
                         # add choice to existing entry
@@ -937,6 +945,7 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
                         seen_radio[name] = len(felder)
                 felder.append({
                     "name":    name,
+                    "label":   display_label,
                     "type":    ft,
                     "value":   val_str if val_str != "Off" else "",
                     "choices": choices,

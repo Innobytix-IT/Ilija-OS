@@ -245,18 +245,19 @@ function renderFelder(felder) {
 }
 
 function renderFeld(f) {
-  const id   = 'f_' + CSS.escape(f.name);
-  const pg   = f.page + 1;
+  const id       = 'f_' + CSS.escape(f.name);
+  const pg       = f.page + 1;
+  const dispName = f.label || f.name;
   const onclickLabel = `onclick="springeZuSeite(${pg})"`;
-  const label = `<div class="fi-label" ${onclickLabel} title="Zu Seite ${pg} springen">
-    ${esc(f.name)} <span class="fi-page">S.${pg}</span></div>`;
+  const label = `<div class="fi-label" ${onclickLabel} title="${esc(f.name)} — Zu Seite ${pg} springen">
+    ${esc(dispName)} <span class="fi-page">S.${pg}</span></div>`;
 
   let input = '';
   if (f.type === 'CheckBox') {
     const checked = ['true','1','yes','ja','an'].includes((f.value||'').toLowerCase()) ? 'checked' : '';
     input = `<div class="check-wrap">
       <input type="checkbox" class="fi-check" id="${id}" data-fname="${esc(f.name)}" ${checked}>
-      <label class="check-label" for="${id}">${esc(f.name)}</label>
+      <label class="check-label" for="${id}">${esc(dispName)}</label>
     </div>`;
   } else if (f.type === 'RadioButton') {
     input = `<div class="radio-group">` +
