@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="de" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ilija · Formular ausfüllen</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B1520;--s1:#10202D;--s2:#16293A;--s3:#1E3547;--s4:#274257;
+  --bdr:rgba(255,255,255,.055);--bdr2:rgba(255,255,255,.1);
+  --g:#E0A82E;--g2:#C8871B;--gd:rgba(224,168,46,.08);--gg:rgba(224,168,46,.2);
+  --tx:#E6EEF5;--tx2:#8FA6B8;--tx3:#4A6072;
+  --green:#22c97c;--red:#ef4444;
+  --f:'Inter',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{color-scheme:dark;font-size:16px}
+body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* Topbar */
+.topbar{display:flex;align-items:center;height:52px;padding:0 18px;background:var(--s1);border-bottom:1px solid var(--bdr);flex-shrink:0;gap:10px}
+.back-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:.78rem;font-weight:500;color:var(--tx2);background:var(--s3);border:1px solid var(--bdr2);cursor:pointer;font-family:var(--f);text-decoration:none;transition:all .13s;white-space:nowrap}
+.back-btn:hover{color:var(--tx);background:var(--s4)}
+.tb-title{font-size:.83rem;font-weight:600;color:var(--tx);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn{padding:8px 16px;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;border:none;font-family:var(--f);transition:all .13s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.btn-prim{background:var(--g);color:#0B1520}.btn-prim:hover{background:var(--g2)}
+.btn-ghost{background:var(--s3);color:var(--tx2);border:1px solid var(--bdr2)}.btn-ghost:hover{background:var(--s4);color:var(--tx)}
+.btn-sm{padding:5px 11px;font-size:.73rem}
+.btn:disabled{opacity:.35;cursor:default;pointer-events:none}
+
+/* Info-Leiste */
+.infobar{padding:7px 18px;background:var(--gd);border-bottom:1px solid var(--gg);font-size:.74rem;color:var(--g);flex-shrink:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+
+/* Seiten-Navigation */
+.page-nav{display:flex;align-items:center;gap:8px;padding:6px 18px;background:var(--s1);border-bottom:1px solid var(--bdr);flex-shrink:0}
+.page-info{font-size:.75rem;color:var(--tx2);min-width:80px;text-align:center}
+
+/* Split layout */
+.split{display:flex;flex:1;overflow:hidden;min-height:0}
+.viewer-pane{flex:3;min-width:0;overflow:auto;display:flex;justify-content:center;padding:24px 20px;background:var(--bg)}
+canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
+.fields-pane{width:380px;flex-shrink:0;overflow-y:auto;background:var(--s1);border-left:1px solid var(--bdr);display:flex;flex-direction:column}
+.fp-head{padding:14px 16px 10px;border-bottom:1px solid var(--bdr);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fp-head h2{font-size:.8rem;font-weight:700;color:var(--tx)}
+.fp-body{padding:14px 14px 24px;flex:1;overflow-y:auto}
+
+/* Page group */
+.pg-group{margin-bottom:20px}
+.pg-label{font-size:.65rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.09em;padding:0 2px;margin-bottom:8px}
+.pg-label span{background:var(--s3);padding:2px 7px;border-radius:3px}
+.pg-label.active span{background:var(--gg);color:var(--g)}
+
+/* Field item */
+.fi{margin-bottom:12px}
+.fi-label{font-size:.73rem;font-weight:500;color:var(--tx2);margin-bottom:4px;display:flex;align-items:center;gap:6px;cursor:pointer}
+.fi-label:hover{color:var(--g)}
+.fi-label .fi-page{font-size:.62rem;color:var(--tx3);background:var(--s3);padding:1px 5px;border-radius:3px;flex-shrink:0}
+.fi-input{width:100%;padding:7px 10px;border-radius:6px;font-size:.8rem;background:var(--s2);border:1px solid var(--bdr2);color:var(--tx);font-family:var(--f);transition:border-color .13s}
+.fi-input:focus{outline:none;border-color:var(--g)}
+.fi-select{width:100%;padding:7px 10px;border-radius:6px;font-size:.8rem;background:var(--s2);border:1px solid var(--bdr2);color:var(--tx);font-family:var(--f)}
+.fi-select:focus{outline:none;border-color:var(--g)}
+.radio-group{display:flex;flex-direction:column;gap:6px;padding:6px 0}
+.radio-opt{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.8rem;color:var(--tx2)}
+.radio-opt input{accent-color:var(--g);width:14px;height:14px;cursor:pointer}
+.radio-opt:hover{color:var(--tx)}
+.check-wrap{display:flex;align-items:center;gap:9px}
+.fi-check{width:16px;height:16px;accent-color:var(--g);cursor:pointer;flex-shrink:0}
+.check-label{font-size:.8rem;color:var(--tx2);cursor:pointer}
+
+/* KI-Badge */
+.ki-badge{display:inline-block;background:var(--gg);color:var(--g);border-radius:3px;padding:1px 5px;font-size:.62rem;font-weight:700;margin-left:6px;vertical-align:middle}
+
+/* Statusmeldungen */
+.state-msg{text-align:center;padding:48px 20px;color:var(--tx3);font-size:.82rem}
+.state-msg .icon{font-size:2rem;display:block;margin-bottom:12px}
+.no-fields{padding:20px 16px;font-size:.8rem;color:var(--tx3);line-height:1.65;text-align:center}
+
+/* Toast */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--s3);border:1px solid var(--bdr2);border-radius:8px;padding:10px 22px;font-size:.8rem;color:var(--tx);z-index:300;transition:transform .25s ease;pointer-events:none;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="/fristen" class="back-btn">← Zurück</a>
+  <span class="tb-title">📝 Formular ausfüllen — {{ name | e }}</span>
+  <button class="btn btn-ghost btn-sm" id="btnKI" onclick="kiBefuellen()" disabled>🤖 KI auto-befüllen</button>
+  <button class="btn btn-prim" id="btnSave" onclick="speichern()" disabled>✓ Speichern</button>
+</header>
+
+<div class="infobar">
+  <span>Felder im rechten Panel ausfüllen. <strong>Klick auf einen Feldnamen</strong> springt im Dokument zur richtigen Seite.</span>
+</div>
+
+<div class="page-nav">
+  <button class="btn btn-ghost btn-sm" id="btnPrev" onclick="wechselSeite(-1)" disabled>← Vorherige</button>
+  <span class="page-info" id="pageInfo">Seite 1 / 1</span>
+  <button class="btn btn-ghost btn-sm" id="btnNext" onclick="wechselSeite(1)"  disabled>Nächste →</button>
+  <span style="flex:1"></span>
+  <span style="font-size:.71rem;color:var(--tx3)">Zoom:</span>
+  <button class="btn btn-ghost btn-sm" onclick="setScale(currentScale-0.25)">−</button>
+  <button class="btn btn-ghost btn-sm" onclick="setScale(currentScale+0.25)">+</button>
+</div>
+
+<div class="split">
+  <!-- PDF Viewer -->
+  <div class="viewer-pane" id="viewerPane">
+    <div id="stateMsg" class="state-msg">
+      <span class="icon">⏳</span>
+      <p>Dokument wird geladen…</p>
+    </div>
+    <canvas id="pdfCanvas" style="display:none"></canvas>
+  </div>
+
+  <!-- Fields Panel -->
+  <aside class="fields-pane">
+    <div class="fp-head">
+      <h2>📋 Formularfelder</h2>
+      <button class="btn btn-ghost btn-sm" id="btnKI2" onclick="kiBefuellen()" disabled>🤖 KI</button>
+    </div>
+    <div class="fp-body" id="fieldsBody">
+      <div class="state-msg" style="padding:32px 16px">
+        <span class="icon">⏳</span>
+        <p>Felder werden geladen…</p>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const VID = "{{ vid | e }}";
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let pdfDoc      = null;
+let currentPage = 1;
+let totalPages  = 1;
+let currentScale= 1.4;
+let currentVP   = null;
+let alleFelder  = [];  // [{name, type, value, choices, page, rect}, ...]
+
+// ── PDF laden ──────────────────────────────────────────────────
+async function ladePDF() {
+  try {
+    pdfDoc     = await pdfjsLib.getDocument(`/fristen/datei/${VID}`).promise;
+    totalPages = pdfDoc.numPages;
+    await renderSeite(1);
+    updateNav();
+    document.getElementById('pdfCanvas').style.display = 'block';
+    document.getElementById('stateMsg').style.display  = 'none';
+  } catch(err) {
+    document.getElementById('stateMsg').innerHTML =
+      `<span class="icon">❌</span><p>PDF-Ladefehler: ${esc(err.message||'')}</p>`;
+  }
+}
+
+async function renderSeite(num) {
+  const page = await pdfDoc.getPage(num);
+  currentVP  = page.getViewport({ scale: currentScale });
+  const canvas = document.getElementById('pdfCanvas');
+  canvas.width  = currentVP.width;
+  canvas.height = currentVP.height;
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport: currentVP }).promise;
+  currentPage = num;
+  document.getElementById('pageInfo').textContent = `Seite ${currentPage} / ${totalPages}`;
+  // Seiten-Gruppen-Header aktiv markieren
+  document.querySelectorAll('.pg-label').forEach(el => {
+    const p = parseInt(el.dataset.page);
+    el.classList.toggle('active', p === num - 1);
+  });
+}
+
+function updateNav() {
+  document.getElementById('btnPrev').disabled = currentPage <= 1;
+  document.getElementById('btnNext').disabled = currentPage >= totalPages;
+}
+
+async function wechselSeite(delta) {
+  const z = currentPage + delta;
+  if (z < 1 || z > totalPages) return;
+  await renderSeite(z);
+  updateNav();
+}
+
+async function setScale(s) {
+  currentScale = Math.max(0.5, Math.min(3.0, Math.round(s * 4) / 4));
+  if (pdfDoc) { await renderSeite(currentPage); }
+}
+
+// ── Felder laden & rendern ─────────────────────────────────────
+async function ladeFelder() {
+  const body = document.getElementById('fieldsBody');
+  try {
+    const r = await fetch(`/api/fristen/${VID}/formular-felder`);
+    const d = await r.json();
+    if (!d.ok) {
+      body.innerHTML = `<div class="no-fields">⚠️ ${esc(d.error||'Fehler')}</div>`;
+      return;
+    }
+    alleFelder = d.felder || [];
+    if (alleFelder.length === 0) {
+      body.innerHTML = `<div class="no-fields">
+        <span style="font-size:1.6rem;display:block;margin-bottom:10px">📄</span>
+        Dieses PDF enthält keine ausfüllbaren Formularfelder (AcroForm).<br><br>
+        <span style="color:var(--tx3)">Um Text hinzuzufügen, nutze die Unterschrift-Platzierung als Workaround.</span>
+      </div>`;
+      return;
+    }
+    renderFelder(alleFelder);
+    document.getElementById('btnKI').disabled  = false;
+    document.getElementById('btnKI2').disabled = false;
+    document.getElementById('btnSave').disabled = false;
+  } catch(e) {
+    body.innerHTML = `<div class="no-fields">❌ ${esc(e.message)}</div>`;
+  }
+}
+
+function renderFelder(felder) {
+  // Felder nach Seite gruppieren
+  const gruppen = {};
+  felder.forEach(f => {
+    const p = f.page;
+    if (!gruppen[p]) gruppen[p] = [];
+    gruppen[p].push(f);
+  });
+
+  const body = document.getElementById('fieldsBody');
+  let html = '';
+  Object.keys(gruppen).sort((a,b)=>a-b).forEach(p => {
+    const pg = parseInt(p);
+    html += `<div class="pg-group">
+      <div class="pg-label" data-page="${pg}"><span>Seite ${pg+1}</span></div>`;
+    gruppen[p].forEach(f => {
+      html += renderFeld(f);
+    });
+    html += '</div>';
+  });
+  body.innerHTML = html;
+}
+
+function renderFeld(f) {
+  const id   = 'f_' + CSS.escape(f.name);
+  const pg   = f.page + 1;
+  const onclickLabel = `onclick="springeZuSeite(${pg})"`;
+  const label = `<div class="fi-label" ${onclickLabel} title="Zu Seite ${pg} springen">
+    ${esc(f.name)} <span class="fi-page">S.${pg}</span></div>`;
+
+  let input = '';
+  if (f.type === 'CheckBox') {
+    const checked = ['true','1','yes','ja','an'].includes((f.value||'').toLowerCase()) ? 'checked' : '';
+    input = `<div class="check-wrap">
+      <input type="checkbox" class="fi-check" id="${id}" data-fname="${esc(f.name)}" ${checked}>
+      <label class="check-label" for="${id}">${esc(f.name)}</label>
+    </div>`;
+  } else if (f.type === 'RadioButton') {
+    input = `<div class="radio-group">` +
+      f.choices.map(c => {
+        const sel = f.value === c ? 'checked' : '';
+        return `<label class="radio-opt">
+          <input type="radio" name="r_${CSS.escape(f.name)}" value="${esc(c)}"
+                 data-fname="${esc(f.name)}" ${sel}> ${esc(c)}
+        </label>`;
+      }).join('') + `</div>`;
+  } else if (f.type === 'ComboBox') {
+    input = `<select class="fi-select" id="${id}" data-fname="${esc(f.name)}">
+      <option value="">— auswählen —</option>
+      ${f.choices.map(c => `<option value="${esc(c)}" ${f.value===c?'selected':''}>${esc(c)}</option>`).join('')}
+    </select>`;
+  } else if (f.type === 'ListBox') {
+    input = `<select class="fi-select" id="${id}" data-fname="${esc(f.name)}" multiple size="4">
+      ${f.choices.map(c => `<option value="${esc(c)}" ${f.value===c?'selected':''}>${esc(c)}</option>`).join('')}
+    </select>`;
+  } else {
+    // Text, Numeric, etc.
+    input = `<input type="text" class="fi-input" id="${id}" data-fname="${esc(f.name)}"
+                    value="${esc(f.value||'')}" placeholder="${esc(f.name)}">`;
+  }
+  return `<div class="fi">${label}${input}</div>`;
+}
+
+async function springeZuSeite(page) {
+  if (pdfDoc && page >= 1 && page <= totalPages) {
+    await renderSeite(page);
+    updateNav();
+  }
+}
+
+// ── KI auto-befüllen ───────────────────────────────────────────
+async function kiBefuellen() {
+  const btn = document.getElementById('btnKI');
+  btn.disabled = true;
+  btn.textContent = '⏳ KI denkt…';
+  try {
+    const r = await fetch(`/api/fristen/${VID}/formular-ki-vorschlag`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ felder: alleFelder.map(f => ({ name: f.name, type: f.type, choices: f.choices })) })
+    });
+    const d = await r.json();
+    if (!d.ok) { toast('KI-Fehler: ' + (d.error||'Unbekannt')); return; }
+    const vs = d.vorschlaege || {};
+    let count = 0;
+    Object.entries(vs).forEach(([name, val]) => {
+      if (!val) return;
+      // Text/Combo inputs
+      const el = document.querySelector(`[data-fname="${CSS.escape(name)}"]`);
+      if (el) {
+        if (el.type === 'checkbox') {
+          el.checked = ['true','1','yes','ja','an'].includes(String(val).toLowerCase());
+        } else {
+          el.value = String(val);
+        }
+        // KI-Badge zum Label hinzufügen
+        const fi = el.closest('.fi');
+        if (fi) {
+          const lbl = fi.querySelector('.fi-label');
+          if (lbl && !lbl.querySelector('.ki-badge')) {
+            lbl.insertAdjacentHTML('beforeend', '<span class="ki-badge">KI</span>');
+          }
+        }
+        count++;
+      }
+      // Radio buttons
+      const radios = document.querySelectorAll(`input[type="radio"][data-fname="${CSS.escape(name)}"]`);
+      radios.forEach(rb => {
+        if (rb.value === String(val)) { rb.checked = true; count++; }
+      });
+    });
+    toast(`🤖 ${count} Feld${count!==1?'er':''} befüllt`);
+  } catch(e) {
+    toast('Fehler: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🤖 KI auto-befüllen';
+  }
+}
+
+// ── Speichern ─────────────────────────────────────────────────
+async function speichern() {
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true;
+  btn.textContent = '⏳ Wird gespeichert…';
+
+  const werte = {};
+  // Text/Combo/List inputs
+  document.querySelectorAll('[data-fname]').forEach(el => {
+    const name = el.getAttribute('data-fname');
+    if (el.type === 'checkbox') {
+      werte[name] = el.checked ? 'true' : 'false';
+    } else if (el.type === 'radio') {
+      if (el.checked) werte[name] = el.value;
+    } else {
+      werte[name] = el.value || '';
+    }
+  });
+
+  try {
+    const r = await fetch(`/api/fristen/${VID}/formular-ausfuellen`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ werte })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast('Gespeichert ✓');
+      setTimeout(() => { window.location.href = '/fristen'; }, 1100);
+    } else {
+      alert('Fehler: ' + (d.error||'Unbekannt'));
+      btn.disabled = false;
+      btn.textContent = '✓ Speichern';
+    }
+  } catch(e) {
+    alert('Netzwerkfehler: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '✓ Speichern';
+  }
+}
+
+// ── Hilfs-Funktionen ──────────────────────────────────────────
+function esc(s) {
+  return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Init ─────────────────────────────────────────────────────
+(async () => {
+  await Promise.all([ladePDF(), ladeFelder()]);
+})();
+</script>
+</body>
+</html>

@@ -562,9 +562,12 @@ function render(data) {
     } else if (v.datei) {
       const isPdf = v.datei.toLowerCase().endsWith('.pdf');
       const platziereLink = isPdf
-        ? ` &nbsp;<a href="/fristen/unterschrift-setzen/${v.id}" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:none;font-weight:600;font-size:.71rem">✍️ Unterschrift platzieren →</a>`
+        ? ` &nbsp;<a href="/fristen/unterschrift-setzen/${v.id}" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:none;font-weight:600;font-size:.71rem">✍️ Unterschrift →</a>`
         : '';
-      fileHtml = `<div class="card-file">📎 ${esc(v.datei)}${platziereLink}</div>`;
+      const formularLink = isPdf
+        ? ` &nbsp;<a href="/fristen/formular-ausfuellen/${v.id}" target="_blank" rel="noopener" style="color:var(--g);text-decoration:none;font-weight:600;font-size:.71rem">📝 Formular →</a>`
+        : '';
+      fileHtml = `<div class="card-file">📎 ${esc(v.datei)}${platziereLink}${formularLink}</div>`;
     } else {
       fileHtml = `<div class="card-file no-file">Noch kein Formular hinterlegt — Ilija kann einen Brief aufsetzen</div>`;
     }

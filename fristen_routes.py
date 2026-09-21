@@ -494,6 +494,153 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
                 os.remove(tmp_path)
             return jsonify({"ok": False, "error": str(e)}), 500
 
+    # ── Formular ausfüllen ────────────────────────────────────────────────────
+
+    @app.route("/fristen/formular-ausfuellen/<vid>")
+    def fristen_formular_page(vid):
+        from flask import abort
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v or not v.get("datei", "").lower().endswith(".pdf"):
+            abort(404)
+        return render_template("formular_ausfuellen.html", vid=vid, name=v.get("name", "Dokument"))
+
+    @app.route("/api/fristen/<vid>/formular-felder", methods=["GET"])
+    def fristen_formular_felder(vid):
+        try:
+            import fitz
+        except ImportError:
+            return jsonify({"ok": False, "error": "PyMuPDF nicht installiert"}), 503
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v or not v.get("datei"):
+            return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
+        src = os.path.join(_FILES, v["datei"])
+        if not os.path.exists(src) or not v["datei"].lower().endswith(".pdf"):
+            return jsonify({"ok": False, "error": "Keine PDF-Datei"}), 404
+        felder = []
+        doc = fitz.open(src)
+        seen_radio = {}  # field_name → index in felder (for grouping radio choices)
+        for page_num, page in enumerate(doc):
+            for widget in page.widgets():
+                ft = widget.field_type_string
+                if ft in ("Button", "Signature", "Unknown"):
+                    continue
+                name = widget.field_name or f"Feld_{len(felder)+1}"
+                val  = widget.field_value
+                val_str = str(val) if val else ""
+                choices = list(widget.choice_values or [])
+                if ft == "RadioButton":
+                    if name in seen_radio:
+                        # add choice to existing entry
+                        felder[seen_radio[name]]["choices"].extend(
+                            c for c in choices if c not in felder[seen_radio[name]]["choices"]
+                        )
+                        if val_str and val_str != "Off":
+                            felder[seen_radio[name]]["value"] = val_str
+                        continue
+                    else:
+                        seen_radio[name] = len(felder)
+                felder.append({
+                    "name":    name,
+                    "type":    ft,
+                    "value":   val_str if val_str != "Off" else "",
+                    "choices": choices,
+                    "page":    page_num,
+                    "rect":    [widget.rect.x0, widget.rect.y0,
+                                widget.rect.x1, widget.rect.y1],
+                })
+        total_pages = doc.page_count
+        doc.close()
+        return jsonify({"ok": True, "felder": felder, "total_pages": total_pages})
+
+    @app.route("/api/fristen/<vid>/formular-ki-vorschlag", methods=["POST"])
+    def fristen_formular_ki(vid):
+        if not get_kernel_func or not kernel_lock:
+            return jsonify({"ok": False, "error": "Kernel nicht verfügbar"}), 503
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v:
+            return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
+        data    = request.get_json(force=True) or {}
+        felder  = data.get("felder", [])
+        absender = _load_absender()
+        feld_liste = "\n".join(
+            "- " + f["name"] + " (" + f["type"] + ")"
+            + (" [Optionen: " + ", ".join(f["choices"][:6]) + "]" if f.get("choices") else "")
+            for f in felder
+        )
+        adresse_einz = absender.get("adresse", "").replace("\n", ", ").strip()
+        prompt = (
+            "Du befüllst ein PDF-Formular. Antworte NUR mit einem JSON-Objekt "
+            "(kein Markdown, keine Erklärungen, nur roher JSON-Text).\n\n"
+            "Nutzerdaten:\n"
+            f"- Name: {absender.get('name', '')}\n"
+            f"- Adresse: {adresse_einz}\n"
+            f"- E-Mail: {absender.get('email', '')}\n"
+            f"- Formulartitel: {v.get('name', '')}\n\n"
+            "Formularfelder (befülle sinnvoll basierend auf Nutzerdaten, "
+            "leerer String falls unbekannt):\n"
+            f"{feld_liste}\n\n"
+            'Format: {"Feldname": "Wert", ...}'
+        )
+        with kernel_lock:
+            k = get_kernel_func()
+        raw = k.chat(prompt)
+        match = re.search(r'\{[\s\S]*\}', raw)
+        if not match:
+            return jsonify({"ok": False, "error": "KI-Antwort nicht parsbar", "raw": raw[:300]}), 500
+        try:
+            vorschlaege = json.loads(match.group())
+        except Exception:
+            return jsonify({"ok": False, "error": "JSON-Fehler", "raw": raw[:300]}), 500
+        return jsonify({"ok": True, "vorschlaege": vorschlaege})
+
+    @app.route("/api/fristen/<vid>/formular-ausfuellen", methods=["POST"])
+    def fristen_formular_ausfuellen_post(vid):
+        try:
+            import fitz
+        except ImportError:
+            return jsonify({"ok": False, "error": "PyMuPDF nicht installiert"}), 503
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v or not v.get("datei"):
+            return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
+        src_path = os.path.join(_FILES, v["datei"])
+        if not os.path.exists(src_path) or not v["datei"].lower().endswith(".pdf"):
+            return jsonify({"ok": False, "error": "Keine PDF-Datei"}), 404
+        data  = request.get_json(force=True) or {}
+        werte = data.get("werte", {})
+        out_name = f"{vid}_ausgefuellt.pdf"
+        out_path = os.path.join(_FILES, out_name)
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False, dir=_FILES) as tmp:
+                tmp_path = tmp.name
+            doc = fitz.open(src_path)
+            for page in doc:
+                for widget in page.widgets():
+                    name = widget.field_name
+                    if name not in werte:
+                        continue
+                    val = werte[name]
+                    if widget.field_type_string == "CheckBox":
+                        widget.field_value = str(val).lower() in ("true", "1", "yes", "ja", "an")
+                    else:
+                        widget.field_value = str(val)
+                    widget.update()
+            doc.save(tmp_path, incremental=False)
+            doc.close()
+            shutil.move(tmp_path, out_path)
+            tmp_path = None
+            v["datei"] = out_name
+            _save(vorlagen)
+            return jsonify({"ok": True, "datei": out_name})
+        except Exception as e:
+            if tmp_path and os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            return jsonify({"ok": False, "error": str(e)}), 500
+
 
 def _fmt_datum(datum_str: str) -> str:
     try:
