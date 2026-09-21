@@ -73,8 +73,8 @@ except Exception as _e:
     print(f'AHPT-Routen nicht geladen: {_e}')
 
 # ── Fristen & Vorlagen einbinden ──────────────────────────────
-from fristen_routes import fristen_bp
-app.register_blueprint(fristen_bp)
+from fristen_routes import register_fristen_routes
+register_fristen_routes(app, get_kernel, kernel_lock)
 
 # ── Chat-Sessions einbinden ───────────────────────────────────
 from session_routes import register_session_routes
