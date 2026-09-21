@@ -97,6 +97,21 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
 .ov-radio:checked{background:rgba(26,122,26,.2);border-color:#1a7a1a}
 .ov-radio:checked::after{content:'●';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#1a7a1a;font-weight:700;font-size:10px;line-height:1}
 .ov-sel{border:none;background:rgba(255,255,100,.38);font-family:Arial,sans-serif;color:#111;outline:none;pointer-events:auto;width:100%;height:100%;font-size:9px;padding:0 2px;box-sizing:border-box}
+/* ── Variante 2 / 3 ── */
+.btn-ki-alle{background:rgba(26,100,220,.1);color:var(--a);border:1px solid rgba(26,100,220,.25)}
+.btn-ki-alle:hover:not(:disabled){background:rgba(26,100,220,.2)}
+.review-banner{display:none;align-items:center;gap:10px;padding:7px 14px;background:rgba(0,160,60,.1);border-bottom:1px solid rgba(0,160,60,.28);font-size:.74rem;color:var(--tx)}
+.review-banner.show{display:flex}
+.review-banner button{flex-shrink:0}
+.zeitplan-panel{display:none;padding:10px 12px 12px;border-bottom:1px solid var(--bdr2);background:var(--s2)}
+.zeitplan-panel.open{display:block}
+.zp-row{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
+.zp-row label{font-size:.67rem;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.03em}
+.zp-row input,.zp-row select,.zp-row textarea{font-size:.72rem;padding:4px 7px;border-radius:5px;border:1px solid var(--bdr2);background:var(--bg);color:var(--tx);width:100%;box-sizing:border-box;font-family:var(--f)}
+.zp-row textarea{resize:vertical;min-height:48px}
+.zp-status{font-size:.67rem;color:var(--tx3);padding:2px 0 6px;line-height:1.5}
+.zp-aktiv-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.zp-aktiv-row label{font-size:.74rem;font-weight:600;color:var(--tx);cursor:pointer}
 </style>
 </head>
 <body>
@@ -104,7 +119,8 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
 <header class="topbar">
   <a href="/fristen" class="back-btn">← Zurück</a>
   <span class="tb-title">📝 Formular ausfüllen — {{ name | e }}</span>
-  <button class="btn btn-ghost btn-sm" id="btnKI" onclick="kiBefuellen()" disabled>🤖 KI auto-befüllen</button>
+  <button class="btn btn-ghost btn-sm" id="btnKI" onclick="kiBefuellen()" disabled>🤖 Seite (KI)</button>
+  <button class="btn btn-ghost btn-sm btn-ki-alle" id="btnKIAlle" onclick="kiAlleSeitenBefuellen()" disabled>✨ Alle Seiten (KI)</button>
   <button class="btn btn-prim" id="btnSave" onclick="speichern()" disabled>✓ Speichern</button>
 </header>
 
@@ -139,7 +155,11 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
   <aside class="fields-pane">
     <div class="fp-head">
       <h2>📋 Formularfelder</h2>
-      <button class="btn btn-ghost btn-sm" id="btnKI2" onclick="kiBefuellen()" disabled>🤖 KI</button>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button class="btn btn-ghost btn-sm" id="btnKI2" onclick="kiBefuellen()" disabled title="Aktuelle Seite befüllen">🤖</button>
+        <button class="btn btn-ghost btn-sm btn-ki-alle" id="btnKIAlle2" onclick="kiAlleSeitenBefuellen()" disabled title="Alle Seiten auf einmal befüllen">✨ Alle</button>
+        <button class="btn btn-ghost btn-sm" id="btnZeitplan" onclick="toggleZeitplan()" title="Zeitplan einrichten">⏰</button>
+      </div>
     </div>
     <div class="ki-kontext-wrap" id="kiKontextWrap" style="display:none;padding:8px 12px;border-bottom:1px solid var(--bdr2)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -157,6 +177,68 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
         </label>
       </div>
     </div>
+    <!-- Variante 2: Review-Banner nach "Alle Seiten (KI)" -->
+    <div class="review-banner" id="reviewBanner">
+      <span id="reviewMsg" style="flex:1">✨ KI hat alle Felder vorbereitet — bitte prüfen.</span>
+      <button class="btn btn-prim btn-sm" onclick="speichernUndSenden()">✓ Speichern & Senden</button>
+      <button class="btn btn-ghost btn-sm" onclick="nurSpeichern()">Nur speichern</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('reviewBanner').classList.remove('show')" style="font-size:.8rem">✕</button>
+    </div>
+
+    <!-- Variante 3: Zeitplan-Panel -->
+    <div class="zeitplan-panel" id="zeitplanPanel">
+      <div style="font-size:.74rem;font-weight:700;color:var(--tx);margin-bottom:10px;display:flex;align-items:center;gap:6px">⏰ Zeitplan <span style="font-size:.65rem;font-weight:400;color:var(--tx3)">(vollautonomer Ablauf)</span></div>
+      <div class="zp-aktiv-row">
+        <input type="checkbox" id="zpAktiv" onchange="zeitplanAktivChanged()">
+        <label for="zpAktiv">Zeitplan aktiv</label>
+      </div>
+      <div id="zpConfig" style="display:none">
+        <div class="zp-row">
+          <label>Intervall</label>
+          <select id="zpIntervall" onchange="zeitplanIntervallChanged()">
+            <option value="einmalig">Einmalig</option>
+            <option value="taeglich">Täglich</option>
+            <option value="woechentlich">Wöchentlich</option>
+            <option value="monatlich" selected>Monatlich</option>
+            <option value="jaehrlich">Jährlich</option>
+          </select>
+        </div>
+        <div class="zp-row" id="zpTagRow">
+          <label>Am <span id="zpTagLabel">Tag des Monats</span></label>
+          <input type="number" id="zpTag" min="1" max="28" value="1" placeholder="z.B. 15">
+        </div>
+        <div class="zp-row" id="zpMonatRow" style="display:none">
+          <label>Im Monat</label>
+          <select id="zpMonat">
+            <option value="1">Januar</option><option value="2">Februar</option>
+            <option value="3">März</option><option value="4">April</option>
+            <option value="5">Mai</option><option value="6">Juni</option>
+            <option value="7">Juli</option><option value="8">August</option>
+            <option value="9">September</option><option value="10">Oktober</option>
+            <option value="11">November</option><option value="12">Dezember</option>
+          </select>
+        </div>
+        <div class="zp-row">
+          <label>Empfänger (E-Mail)</label>
+          <input type="email" id="zpEmpfaenger" placeholder="z.B. jobcenter@example.de">
+        </div>
+        <div class="zp-row">
+          <label>CC (optional)</label>
+          <input type="email" id="zpCC" placeholder="">
+        </div>
+        <div class="zp-row">
+          <label>Betreff</label>
+          <input type="text" id="zpBetreff" placeholder="Leer = Vorlagenname">
+        </div>
+        <div class="zp-row">
+          <label>E-Mail-Text</label>
+          <textarea id="zpText" placeholder="Leer = Standardtext"></textarea>
+        </div>
+        <div class="zp-status" id="zpStatus"></div>
+        <button class="btn btn-prim btn-sm" onclick="zeitplanSpeichern()" style="width:100%">Zeitplan speichern</button>
+      </div>
+    </div>
+
     <div class="fp-body" id="fieldsBody">
       <div class="state-msg" style="padding:32px 16px">
         <span class="icon">⏳</span>
@@ -406,9 +488,11 @@ async function ladeFelder() {
       return;
     }
     renderFelder(alleFelder);
-    document.getElementById('btnKI').disabled  = false;
-    document.getElementById('btnKI2').disabled = false;
-    document.getElementById('btnSave').disabled = false;
+    document.getElementById('btnKI').disabled     = false;
+    document.getElementById('btnKI2').disabled    = false;
+    document.getElementById('btnKIAlle').disabled  = false;
+    document.getElementById('btnKIAlle2').disabled = false;
+    document.getElementById('btnSave').disabled    = false;
     document.getElementById('kiKontextWrap').style.display = 'block';
     // Overlay-Refresh bei Änderungen im rechten Panel
     const body2 = document.getElementById('fieldsBody');
@@ -544,8 +628,8 @@ async function kiBefuellen() {
   } finally {
     const b  = document.getElementById('btnKI');
     const b2 = document.getElementById('btnKI2');
-    if(b)  { b.disabled  = false; b.textContent  = '🤖 KI auto-befüllen'; }
-    if(b2) { b2.disabled = false; b2.textContent = '🤖 KI'; }
+    if(b)  { b.disabled  = false; b.textContent  = '🤖 Seite (KI)'; }
+    if(b2) { b2.disabled = false; b2.textContent = '🤖'; }
   }
 }
 
@@ -601,9 +685,181 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+// ── Variante 2: Alle Seiten auf einmal befüllen ───────────────
+async function kiAlleSeitenBefuellen() {
+  const btns = ['btnKIAlle','btnKIAlle2'];
+  btns.forEach(id => { const b=document.getElementById(id); if(b){b.disabled=true;b.textContent='⏳ KI denkt…';} });
+  try {
+    const alleKI = alleFelder.map(f => ({
+      name: f.name, label: f.label || f.name,
+      type: f.type, choices: f.choices || []
+    }));
+    const r = await fetch(`/api/fristen/${VID}/ki-alle-seiten`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ felder: alleKI })
+    });
+    const d = await r.json();
+    if (!d.ok) { toast('KI-Fehler: ' + (d.error||'Unbekannt')); return; }
+    let count = _wendeVorschlaegean(d.vorschlaege || {});
+    renderOverlay(currentPage);
+    // Review-Banner anzeigen
+    const banner = document.getElementById('reviewBanner');
+    document.getElementById('reviewMsg').textContent =
+      `✨ KI hat ${count} Felder befüllt — bitte prüfen.`;
+    banner.classList.add('show');
+    toast(`✨ ${count} Felder auf allen Seiten befüllt`);
+  } catch(e) {
+    toast('Fehler: ' + e.message);
+  } finally {
+    btns.forEach(id => { const b=document.getElementById(id); if(b){b.disabled=false;} });
+    document.getElementById('btnKIAlle').textContent  = '✨ Alle Seiten (KI)';
+    const b2 = document.getElementById('btnKIAlle2'); if(b2) b2.textContent='✨ Alle';
+  }
+}
+
+function _wendeVorschlaegean(vs) {
+  let count = 0;
+  Object.entries(vs).forEach(([name, val]) => {
+    if (val === '' || val === null || val === undefined) return;
+    const el = document.querySelector(`[data-fname="${CSS.escape(name)}"]`);
+    if (el && el.type !== 'radio') {
+      if (el.type === 'checkbox') {
+        el.checked = ['true','1','yes','ja','an'].includes(String(val).toLowerCase());
+      } else {
+        el.value = String(val);
+        el.dispatchEvent(new Event('input', {bubbles:true}));
+      }
+      const fi = el.closest('.fi');
+      if (fi) {
+        const lbl = fi.querySelector('.fi-label');
+        if (lbl && !lbl.querySelector('.ki-badge'))
+          lbl.insertAdjacentHTML('beforeend', '<span class="ki-badge">KI</span>');
+      }
+      count++;
+    }
+    const radios = document.querySelectorAll(`input[type="radio"][data-fname="${CSS.escape(name)}"]`);
+    radios.forEach(rb => { if (rb.value === String(val)) { rb.checked = true; count++; } });
+  });
+  return count;
+}
+
+async function nurSpeichern() {
+  document.getElementById('reviewBanner').classList.remove('show');
+  await speichern();
+}
+
+async function speichernUndSenden() {
+  document.getElementById('reviewBanner').classList.remove('show');
+  // Erst speichern, dann zurück zu /fristen wo Versand verfügbar ist
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true; btn.textContent = '⏳ Wird gespeichert…';
+  const werte = {};
+  document.querySelectorAll('[data-fname]').forEach(el => {
+    const name = el.getAttribute('data-fname');
+    if (el.type === 'checkbox')     werte[name] = el.checked ? 'true' : 'false';
+    else if (el.type === 'radio')   { if (el.checked) werte[name] = el.value; }
+    else                            werte[name] = el.value || '';
+  });
+  try {
+    const r = await fetch(`/api/fristen/${VID}/formular-ausfuellen`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({werte})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast('Gespeichert ✓ — weiter zum Versand…');
+      setTimeout(() => { window.location.href = `/fristen#vid-${VID}`; }, 900);
+    } else {
+      alert('Fehler: ' + (d.error||'Unbekannt'));
+      btn.disabled = false; btn.textContent = '✓ Speichern';
+    }
+  } catch(e) {
+    alert('Netzwerkfehler: ' + e.message);
+    btn.disabled = false; btn.textContent = '✓ Speichern';
+  }
+}
+
+// ── Variante 3: Zeitplan ──────────────────────────────────────
+function toggleZeitplan() {
+  const panel = document.getElementById('zeitplanPanel');
+  panel.classList.toggle('open');
+}
+
+function zeitplanAktivChanged() {
+  const aktiv = document.getElementById('zpAktiv').checked;
+  document.getElementById('zpConfig').style.display = aktiv ? 'block' : 'none';
+}
+
+function zeitplanIntervallChanged() {
+  const iv = document.getElementById('zpIntervall').value;
+  document.getElementById('zpMonatRow').style.display = iv === 'jaehrlich' ? 'block' : 'none';
+  document.getElementById('zpTagRow').style.display   = ['einmalig','taeglich'].includes(iv) ? 'none' : 'block';
+  document.getElementById('zpTagLabel').textContent   = iv === 'woechentlich' ? 'Wochentag (1=Mo)' : 'Tag des Monats';
+}
+
+async function zeitplanLaden() {
+  try {
+    const r = await fetch(`/api/fristen/${VID}/zeitplan`);
+    const d = await r.json();
+    if (!d.ok || !d.zeitplan) return;
+    const zp = d.zeitplan;
+    document.getElementById('zpAktiv').checked = !!zp.aktiv;
+    if (zp.intervall)     document.getElementById('zpIntervall').value  = zp.intervall;
+    if (zp.stichtag_tag)  document.getElementById('zpTag').value        = zp.stichtag_tag;
+    if (zp.stichtag_monat)document.getElementById('zpMonat').value      = zp.stichtag_monat;
+    if (zp.empfaenger)    document.getElementById('zpEmpfaenger').value = zp.empfaenger;
+    if (zp.empfaenger_cc) document.getElementById('zpCC').value         = zp.empfaenger_cc;
+    if (zp.betreff)       document.getElementById('zpBetreff').value    = zp.betreff;
+    if (zp.text)          document.getElementById('zpText').value       = zp.text;
+    zeitplanAktivChanged();
+    zeitplanIntervallChanged();
+    // Status anzeigen
+    const st = document.getElementById('zpStatus');
+    const parts = [];
+    if (zp.naechste_ausfuehrung) parts.push(`Nächste Ausführung: ${zp.naechste_ausfuehrung}`);
+    if (zp.letzter_lauf) {
+      const ico = zp.letzter_status === 'ok' ? '✓' : '✗';
+      parts.push(`Letzter Lauf: ${zp.letzter_lauf} ${ico}`);
+      if (zp.letzter_fehler) parts.push(`Fehler: ${zp.letzter_fehler}`);
+    }
+    st.textContent = parts.join(' · ');
+  } catch(e) {}
+}
+
+async function zeitplanSpeichern() {
+  const aktiv = document.getElementById('zpAktiv').checked;
+  const data = {
+    aktiv,
+    intervall:      document.getElementById('zpIntervall').value,
+    stichtag_tag:   parseInt(document.getElementById('zpTag').value) || 1,
+    stichtag_monat: parseInt(document.getElementById('zpMonat').value) || 1,
+    empfaenger:     document.getElementById('zpEmpfaenger').value.trim(),
+    empfaenger_cc:  document.getElementById('zpCC').value.trim(),
+    betreff:        document.getElementById('zpBetreff').value.trim(),
+    text:           document.getElementById('zpText').value.trim()
+  };
+  try {
+    const r = await fetch(`/api/fristen/${VID}/zeitplan`, {
+      method: 'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast('Zeitplan gespeichert ✓');
+      if (d.zeitplan?.naechste_ausfuehrung) {
+        document.getElementById('zpStatus').textContent =
+          `Nächste Ausführung: ${d.zeitplan.naechste_ausfuehrung}`;
+      }
+    } else {
+      toast('Fehler: ' + (d.error||'Unbekannt'));
+    }
+  } catch(e) { toast('Fehler: ' + e.message); }
+}
+
 // ── Init ─────────────────────────────────────────────────────
 (async () => {
-  await Promise.all([ladePDF(), ladeFelder(), ladeVorlageKontext()]);
+  await Promise.all([ladePDF(), ladeFelder(), ladeVorlageKontext(), zeitplanLaden()]);
   const ta = document.getElementById('kiKontext');
   if (ta) ta.addEventListener('input', kiKontextChanged);
 })();

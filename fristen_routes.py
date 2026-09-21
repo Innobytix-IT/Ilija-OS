@@ -280,6 +280,313 @@ def _sende_fristen_benachrichtigungen() -> dict:
     return {"gesendet": gesendet, "fehler": fehler}
 
 
+# ── Autonome KI-Ausführung (Variante 2 + 3) ──────────────────────────────────
+
+def _ki_alle_felder_befuellen(v: dict, felder_alle: list) -> tuple:
+    """KI befüllt alle Felder in einem einzigen Call.
+    Gibt (True, vorschlaege_dict) oder (False, fehlermeldung) zurück."""
+    from providers import select_provider
+    absender   = _load_absender()
+    feld_namen = {f["name"] for f in felder_alle}
+    feld_liste = "\n".join(
+        "- " + f["name"] + ' ("' + f.get("label", f["name"]) + '", ' + f.get("type", "Text") + ")"
+        + (" [Optionen: " + ", ".join(f["choices"][:6]) + "]" if f.get("choices") else "")
+        for f in felder_alle
+    )
+    kontext      = v.get("ki_kontext", "").strip()
+    adresse_einz = absender.get("adresse", "").replace("\n", ", ").strip()
+    kontext_block  = f"\nZusatzinfos:\n{kontext}\n" if kontext else ""
+    referenz_block = (
+        f"\nReferenzdokument \"{v.get('referenz_name', '')}\" (Auszug):\n"
+        + v["referenz_text"][:3000] + "\n"
+    ) if v.get("referenz_text") else ""
+    prompt = (
+        "Du befüllst ein deutsches PDF-Formular. Antworte NUR mit einem JSON-Objekt "
+        "(kein Markdown, keine Erklärungen, nur roher JSON-Text).\n\n"
+        "=== PFLICHTREGELN ===\n"
+        "1. JEDES Feld im JSON zurückgeben — auch wenn der Wert leer ist.\n"
+        "2. CheckBox: IMMER 'true' oder 'false' — nie leer lassen.\n"
+        "3. RadioButton: IMMER genau einen der [Optionen]-Werte wählen — nie leer lassen.\n"
+        "4. Gekoppelte Felder: Wenn ein 'numf'-Betrag eingetragen wird, "
+        "MUSS die gleichnamige 'chbx'-Checkbox (selbes Suffix) auf 'true' gesetzt werden.\n"
+        "   Beispiel: numfBedarfGrundmiete='620' → chbxBedarfGrundmiete='true'\n"
+        "5. Felder die du nicht kennst: '' (leerer String), aber CheckBox/Radio trotzdem befüllen.\n"
+        "6. Zeilen-Felder mit Z1/Z2/Z3 im Namen: Z1 = erste Person der BG, "
+        "Z2 = zweite Person der BG, Z3 = dritte Person usw.\n\n"
+        "=== NUTZERDATEN ===\n"
+        f"- Name: {absender.get('name', '')}\n"
+        f"- Adresse: {adresse_einz}\n"
+        f"- E-Mail: {absender.get('email', '')}\n"
+        f"- Formulartitel: {v.get('name', '')}\n"
+        f"{kontext_block}"
+        f"{referenz_block}\n"
+        "=== FELDER (Feldname, Bezeichnung, Typ, [Optionen]) ===\n"
+        f"{feld_liste}\n\n"
+        'Antworte nur mit: {"Feldname": "Wert", ...}'
+    )
+    try:
+        _, _prov = select_provider()
+        raw = _prov.chat(
+            messages=[{"role": "user", "content": prompt}],
+            system="Du bist ein Formular-Ausfüllassistent. Antworte IMMER und NUR mit reinem JSON — kein Text davor oder danach."
+        )
+    except Exception as e:
+        return False, f"KI-Provider Fehler: {e}"
+    match = re.search(r'\{[\s\S]*\}', raw)
+    if not match:
+        return False, "KI-Antwort nicht parsbar"
+    try:
+        vorschlaege = json.loads(match.group())
+    except Exception:
+        return False, "JSON-Fehler in KI-Antwort"
+    for name, val in list(vorschlaege.items()):
+        if name.lower().startswith("numf") and val:
+            chbx = "chbx" + name[4:]
+            if chbx in feld_namen and vorschlaege.get(chbx, "false") != "true":
+                vorschlaege[chbx] = "true"
+    return True, vorschlaege
+
+
+def _felder_aus_pdf(datei_pfad: str) -> list:
+    """Liest alle AcroForm-Felder aus einem PDF (für den autonomen Lauf)."""
+    try:
+        import fitz
+        doc = fitz.open(datei_pfad)
+        felder, seen_radio = [], {}
+        for page_num, page in enumerate(doc):
+            for widget in page.widgets():
+                ft   = widget.field_type_string
+                name = widget.field_name
+                if not name:
+                    continue
+                choices = list(widget.choice_values or [])
+                val_str = str(widget.field_value or "")
+                if val_str == "Off":
+                    val_str = ""
+                w_rect = [widget.rect.x0, widget.rect.y0,
+                          widget.rect.x1, widget.rect.y1]
+                if ft == "RadioButton":
+                    if name in seen_radio:
+                        ex = felder[seen_radio[name]]
+                        for c in choices:
+                            if c not in ex["choices"]:
+                                ex["choices"].append(c)
+                        ex["choice_rects"].append(w_rect)
+                        if val_str and val_str != "Off":
+                            ex["value"] = val_str
+                        continue
+                    seen_radio[name] = len(felder)
+                entry = {
+                    "name": name, "label": widget.field_label or name,
+                    "type": ft, "value": val_str, "choices": choices,
+                    "page": page_num, "rect": w_rect
+                }
+                if ft == "RadioButton":
+                    entry["choice_rects"] = [w_rect]
+                felder.append(entry)
+        doc.close()
+        return felder
+    except Exception:
+        return []
+
+
+def _pdf_ausfuellen(src_path: str, out_path: str, werte: dict) -> bool:
+    """Füllt ein PDF-Formular mit den gegebenen Werten und speichert es."""
+    tmp_path = None
+    try:
+        import fitz
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False,
+                                         dir=os.path.dirname(out_path)) as tmp:
+            tmp_path = tmp.name
+        doc = fitz.open(src_path)
+        for page in doc:
+            for widget in page.widgets():
+                name = widget.field_name
+                if name not in werte:
+                    continue
+                val = werte[name]
+                if widget.field_type_string == "CheckBox":
+                    is_on = str(val).lower() in ("true", "1", "yes", "ja", "an")
+                    widget.field_value = widget.on_state() if is_on else "Off"
+                else:
+                    widget.field_value = str(val)
+                widget.update()
+        doc.save(tmp_path, incremental=False)
+        doc.close()
+        shutil.move(tmp_path, out_path)
+        return True
+    except Exception:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        return False
+
+
+def _berechne_naechste_ausfuehrung(zeitplan: dict) -> str:
+    """Berechnet das nächste Ausführungsdatum aus dem Zeitplan-Objekt."""
+    from datetime import date, timedelta
+    import calendar
+    today     = date.today()
+    intervall = zeitplan.get("intervall", "monatlich")
+    tag       = max(1, min(28, int(zeitplan.get("stichtag_tag", today.day))))
+    monat     = max(1, min(12, int(zeitplan.get("stichtag_monat", today.month))))
+    if intervall == "taeglich":
+        return (today + timedelta(days=1)).isoformat()
+    if intervall == "woechentlich":
+        return (today + timedelta(weeks=1)).isoformat()
+    if intervall == "monatlich":
+        nm = today.month % 12 + 1
+        ny = today.year + (1 if today.month == 12 else 0)
+        return date(ny, nm, min(tag, calendar.monthrange(ny, nm)[1])).isoformat()
+    if intervall == "jaehrlich":
+        ny = today.year + 1
+        return date(ny, monat, min(tag, calendar.monthrange(ny, monat)[1])).isoformat()
+    return (today + timedelta(days=30)).isoformat()
+
+
+def _update_zeitplan_status(vorlagen: list, v: dict, status: str, fehler):
+    from datetime import date
+    zp = v.setdefault("zeitplan", {})
+    zp["letzter_lauf"]   = date.today().isoformat()
+    zp["letzter_status"] = status
+    zp["letzter_fehler"] = fehler
+    _save(vorlagen)
+
+
+def _autonomer_lauf(vid: str):
+    """Vollautonomer Ablauf für eine Vorlage: KI → PDF speichern → Unterschrift → E-Mail."""
+    import smtplib, ssl as _ssl, mimetypes
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text      import MIMEText
+    from email.mime.base      import MIMEBase
+    from email                import encoders as _enc
+    print(f"[AutoLauf] Starte für Vorlage {vid}")
+    vorlagen = _load()
+    v = _find(vorlagen, vid)
+    if not v:
+        return
+    zeitplan = v.get("zeitplan", {})
+    basis    = v.get("basis_datei") or v.get("datei", "")
+    src_path = os.path.join(_FILES, basis)
+    if not basis or not os.path.exists(src_path):
+        _update_zeitplan_status(vorlagen, v, "fehler", "Basis-PDF nicht gefunden")
+        return
+    felder_alle = _felder_aus_pdf(src_path)
+    if not felder_alle:
+        _update_zeitplan_status(vorlagen, v, "fehler", "Keine PDF-Felder gefunden")
+        return
+    ok, result = _ki_alle_felder_befuellen(v, felder_alle)
+    if not ok:
+        _update_zeitplan_status(vorlagen, v, "fehler", result)
+        return
+    out_name = f"{vid}_ausgefuellt.pdf"
+    out_path = os.path.join(_FILES, out_name)
+    if not _pdf_ausfuellen(src_path, out_path, result):
+        _update_zeitplan_status(vorlagen, v, "fehler", "PDF-Speichern fehlgeschlagen")
+        return
+    v["datei"] = out_name
+    # Auto-Unterschrift
+    upos = v.get("unterschrift_position")
+    if upos:
+        u_pfad = _find_unterschrift()
+        if u_pfad:
+            s_name = f"{vid}_signed.pdf"
+            s_path = os.path.join(_FILES, s_name)
+            s_tmp  = None
+            try:
+                import fitz
+                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False,
+                                                  dir=_FILES) as sf:
+                    s_tmp = sf.name
+                sdoc = fitz.open(out_path)
+                pn   = min(int(upos.get("page", 0)), len(sdoc) - 1)
+                sr   = fitz.Rect(upos["x"], upos["y"],
+                                 upos["x"] + upos["width"], upos["y"] + upos["height"])
+                sdoc[pn].insert_image(sr, filename=u_pfad, keep_proportion=True)
+                sdoc.save(s_tmp); sdoc.close()
+                shutil.move(s_tmp, s_path)
+                s_tmp = None
+                v["datei"] = s_name
+                out_path   = s_path
+            except Exception as e:
+                print(f"[AutoLauf] Unterschrift-Fehler (nicht fatal): {e}")
+                if s_tmp and os.path.exists(s_tmp):
+                    os.remove(s_tmp)
+    # E-Mail senden
+    empfaenger = zeitplan.get("empfaenger", "").strip()
+    if empfaenger:
+        cfg = _load_email_config()
+        if cfg.get("smtp_server") and cfg.get("smtp_user") and cfg.get("smtp_password"):
+            try:
+                msg = MIMEMultipart("mixed")
+                msg["From"]    = cfg["smtp_user"]
+                msg["To"]      = empfaenger
+                cc = zeitplan.get("empfaenger_cc", "").strip()
+                if cc:
+                    msg["Cc"] = cc
+                msg["Subject"] = zeitplan.get("betreff") or v.get("name", "Formular")
+                body_text = (zeitplan.get("text") or "").strip() \
+                    or "Anbei das automatisch ausgefüllte Formular."
+                msg.attach(MIMEText(body_text, "plain", "utf-8"))
+                if os.path.exists(out_path):
+                    mt, _ = mimetypes.guess_type(out_path)
+                    main, sub = (mt or "application/pdf").split("/", 1)
+                    with open(out_path, "rb") as af:
+                        part = MIMEBase(main, sub)
+                        part.set_payload(af.read())
+                    _enc.encode_base64(part)
+                    part.add_header("Content-Disposition",
+                                    f'attachment; filename="{os.path.basename(out_path)}"')
+                    msg.attach(part)
+                rcpts = [empfaenger] + \
+                    ([e.strip() for e in cc.split(",") if e.strip()] if cc else [])
+                ctx = _ssl.create_default_context()
+                if cfg.get("use_ssl"):
+                    with smtplib.SMTP_SSL(cfg["smtp_server"],
+                                          int(cfg["smtp_port"]), context=ctx) as srv:
+                        srv.login(cfg["smtp_user"], cfg["smtp_password"])
+                        srv.sendmail(cfg["smtp_user"], rcpts, msg.as_bytes())
+                else:
+                    with smtplib.SMTP(cfg["smtp_server"],
+                                      int(cfg["smtp_port"])) as srv:
+                        srv.ehlo(); srv.starttls(context=ctx)
+                        srv.login(cfg["smtp_user"], cfg["smtp_password"])
+                        srv.sendmail(cfg["smtp_user"], rcpts, msg.as_bytes())
+                print(f"[AutoLauf] E-Mail an {empfaenger} gesendet")
+            except Exception as e:
+                print(f"[AutoLauf] E-Mail-Fehler: {e}")
+                _update_zeitplan_status(vorlagen, v, "fehler", f"E-Mail-Fehler: {e}")
+                return
+    if zeitplan.get("intervall") == "einmalig":
+        zeitplan["aktiv"] = False
+    else:
+        zeitplan["naechste_ausfuehrung"] = _berechne_naechste_ausfuehrung(zeitplan)
+    _update_zeitplan_status(vorlagen, v, "ok", None)
+    print(f"[AutoLauf] Vorlage {vid} erfolgreich abgeschlossen")
+
+
+def _start_autonom_scheduler():
+    """Hintergrund-Thread: prüft alle 15 Minuten auf fällige autonome Abläufe."""
+    import time as _time
+    from datetime import date
+    while True:
+        _time.sleep(900)
+        try:
+            today    = date.today().isoformat()
+            vorlagen = _load()
+            for v in vorlagen:
+                zp = v.get("zeitplan", {})
+                if not zp.get("aktiv"):
+                    continue
+                naechste = zp.get("naechste_ausfuehrung", "")
+                if naechste and naechste <= today:
+                    try:
+                        _autonomer_lauf(v["id"])
+                    except Exception as e:
+                        print(f"[AutoLauf] Fehler für {v.get('id')}: {e}")
+        except Exception as e:
+            print(f"[AutoSched] Fehler: {e}")
+
+
 def _start_fristen_notif_scheduler():
     """Hintergrund-Thread: prüft täglich zwischen 7–9 Uhr auf fällige Benachrichtigungen."""
     import time as _time
@@ -297,9 +604,11 @@ def _start_fristen_notif_scheduler():
 
 def register_fristen_routes(app, get_kernel_func=None, kernel_lock=None):
 
-    # Benachrichtigungs-Scheduler einmalig starten
+    # Scheduler einmalig starten
     threading.Thread(target=_start_fristen_notif_scheduler,
                      daemon=True, name="fristen-notif").start()
+    threading.Thread(target=_start_autonom_scheduler,
+                     daemon=True, name="fristen-autonom").start()
 
     # ── Seite ─────────────────────────────────────────────────────────────────
 
@@ -1128,6 +1437,50 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
                     vorschlaege[chbx] = "true"
 
         return jsonify({"ok": True, "vorschlaege": vorschlaege})
+
+    @app.route("/api/fristen/<vid>/ki-alle-seiten", methods=["POST"])
+    def fristen_ki_alle_seiten(vid):
+        """Variante 2/3: KI befüllt alle Felder aller Seiten in einem Call."""
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v:
+            return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
+        data = request.get_json(force=True) or {}
+        felder_alle = data.get("felder", [])
+        if not felder_alle:
+            return jsonify({"ok": False, "error": "Keine Felder übergeben"}), 400
+        ok, result = _ki_alle_felder_befuellen(v, felder_alle)
+        if not ok:
+            return jsonify({"ok": False, "error": result}), 503
+        return jsonify({"ok": True, "vorschlaege": result})
+
+    @app.route("/api/fristen/<vid>/zeitplan", methods=["GET"])
+    def fristen_zeitplan_get(vid):
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v:
+            return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
+        return jsonify({"ok": True, "zeitplan": v.get("zeitplan", {})})
+
+    @app.route("/api/fristen/<vid>/zeitplan", methods=["POST"])
+    def fristen_zeitplan_post(vid):
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v:
+            return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
+        d = request.get_json(force=True) or {}
+        # Basis-Datei beim ersten Aktivieren festhalten
+        if d.get("aktiv") and not v.get("basis_datei") and v.get("datei"):
+            v["basis_datei"] = v["datei"]
+        zp = v.setdefault("zeitplan", {})
+        for key in ("aktiv", "intervall", "stichtag_tag", "stichtag_monat",
+                    "empfaenger", "empfaenger_cc", "betreff", "text"):
+            if key in d:
+                zp[key] = d[key]
+        if zp.get("aktiv") and not zp.get("naechste_ausfuehrung"):
+            zp["naechste_ausfuehrung"] = _berechne_naechste_ausfuehrung(zp)
+        _save(vorlagen)
+        return jsonify({"ok": True, "zeitplan": zp})
 
     @app.route("/api/fristen/<vid>/formular-ausfuellen", methods=["POST"])
     def fristen_formular_ausfuellen_post(vid):
