@@ -466,6 +466,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   loadSessions();
   loadWorkspace();
   loadShell();
+  checkFristenNotification();
   document.getElementById('ta').focus();
   document.addEventListener('click',e=>{
     if(!document.getElementById('mwrap').contains(e.target))
@@ -744,6 +745,56 @@ function fmt(s){
 }
 
 function scrollDown(){const a=document.getElementById('msgs');a.scrollTop=a.scrollHeight}
+
+// ── Fristen-Benachrichtigung ───────────────────────────────────
+async function checkFristenNotification(){
+  try{
+    const heute=new Date().toISOString().slice(0,10);
+    const key='ilija_frist_notif_'+heute;
+    const seenIds=JSON.parse(localStorage.getItem(key)||'[]');
+
+    const r=await fetch('/api/fristen/chat-notification');
+    if(!r.ok)return;
+    const fristen=await r.json();
+    const neu=fristen.filter(f=>!seenIds.includes(f.id));
+    if(neu.length===0)return;
+
+    localStorage.setItem(key,JSON.stringify([...seenIds,...neu.map(f=>f.id)]));
+
+    const header=neu.length===1
+      ?'📋 Eine Frist benötigt deine Aufmerksamkeit:'
+      :`📋 ${neu.length} Fristen benötigen deine Aufmerksamkeit:`;
+
+    const listHtml=neu.map(f=>{
+      const t=f.tage;
+      const icon=t<0?'⚠️':t===0?'🔴':t<=3?'⚡':'⏰';
+      const nameH=esc(f.name);
+      const wann=t<0
+        ?`<strong>überfällig seit ${-t} Tag${-t===1?'':'en'}</strong>`
+        :t===0?'<strong>heute fällig!</strong>'
+        :t===1?'<strong>morgen fällig</strong>'
+        :`in ${t} Tagen fällig (${esc(f.frist_datum)})`;
+      return `${icon} <strong>${nameH}</strong> — ${wann}`;
+    }).join('<br>');
+
+    const msgHtml=`${header}<br><br>${listHtml}<br><br>`+
+      `<a href="/fristen" style="color:var(--g);font-weight:600;text-decoration:none">→ Fristen &amp; Vorlagen öffnen</a>`;
+
+    hideWelcome();
+    const area=document.getElementById('msgs');
+    const div=document.createElement('div');
+    div.className='msg assistant';
+    const now=new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    div.innerHTML=`
+      <div class="msg-av">I</div>
+      <div class="msg-body">
+        <div class="msg-bubble" style="border-left:3px solid var(--g);padding-left:14px">${msgHtml}</div>
+        <div class="msg-time">${now} · Frist-Erinnerung</div>
+      </div>`;
+    area.appendChild(div);
+    scrollDown();
+  }catch(e){}
+}
 function setLoading(v){loading=v;document.getElementById('sendBtn').disabled=v}
 
 // ── Session-Persistenz ────────────────────────────────────────

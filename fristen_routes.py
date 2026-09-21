@@ -113,6 +113,29 @@ def register_fristen_routes(app, get_kernel_func=None, kernel_lock=None):
         vorlagen.sort(key=lambda v: v["_tage_bis_frist"])
         return jsonify(vorlagen)
 
+    @app.route("/api/fristen/chat-notification", methods=["GET"])
+    def fristen_chat_notification():
+        """Gibt Fristen zurück, die ≤7 Tage entfernt oder überfällig sind."""
+        vorlagen = _load()
+        heute = datetime.today().date()
+        urgent = []
+        for v in vorlagen:
+            try:
+                fd = datetime.strptime(v["frist_datum"], "%Y-%m-%d").date()
+                tage = (fd - heute).days
+                if tage <= 7:
+                    urgent.append({
+                        "id":          v["id"],
+                        "name":        v["name"],
+                        "typ":         v.get("typ", ""),
+                        "frist_datum": v["frist_datum"],
+                        "tage":        tage,
+                    })
+            except Exception:
+                pass
+        urgent.sort(key=lambda x: x["tage"])
+        return jsonify(urgent)
+
     @app.route("/api/fristen", methods=["POST"])
     def fristen_create():
         d = request.get_json(force=True) or {}
