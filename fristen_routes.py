@@ -1011,31 +1011,45 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
         felder   = data.get("felder", [])
         kontext  = data.get("kontext", "").strip() or v.get("ki_kontext", "").strip()
         absender = _load_absender()
+
+        # Feldnamen-Set für spätere Pairing-Prüfung
+        feld_namen = {f["name"] for f in felder}
+
+        # Feldliste mit Typ-Hinweisen aufbauen
         feld_liste = "\n".join(
             "- " + f["name"] + ' ("' + f.get("label", f["name"]) + '", ' + f.get("type", "Text") + ")"
             + (" [Optionen: " + ", ".join(f["choices"][:6]) + "]" if f.get("choices") else "")
             for f in felder
         )
+
         adresse_einz = absender.get("adresse", "").replace("\n", ", ").strip()
         kontext_block = f"\nZusatzinfos:\n{kontext}\n" if kontext else ""
         referenz_block = (
             f"\nReferenzdokument \"{v.get('referenz_name','')}\" (Auszug):\n"
             + v["referenz_text"][:3000] + "\n"
         ) if v.get("referenz_text") else ""
+
         prompt = (
-            "Du befüllst ein PDF-Formular. Antworte NUR mit einem JSON-Objekt "
+            "Du befüllst ein deutsches PDF-Formular. Antworte NUR mit einem JSON-Objekt "
             "(kein Markdown, keine Erklärungen, nur roher JSON-Text).\n\n"
-            "Nutzerdaten:\n"
+            "=== PFLICHTREGELN ===\n"
+            "1. JEDES Feld im JSON zurückgeben — auch wenn der Wert leer ist.\n"
+            "2. CheckBox: IMMER 'true' oder 'false' — nie leer lassen.\n"
+            "3. RadioButton: IMMER genau einen der [Optionen]-Werte wählen — nie leer lassen.\n"
+            "4. Gekoppelte Felder: Wenn ein 'numf'-Betrag eingetragen wird, "
+            "MUSS die gleichnamige 'chbx'-Checkbox (selbes Suffix) auf 'true' gesetzt werden.\n"
+            "   Beispiel: numfBedarfGrundmiete='620' → chbxBedarfGrundmiete='true'\n"
+            "5. Felder die du nicht kennst: '' (leerer String), aber CheckBox/Radio trotzdem befüllen.\n\n"
+            "=== NUTZERDATEN ===\n"
             f"- Name: {absender.get('name', '')}\n"
             f"- Adresse: {adresse_einz}\n"
             f"- E-Mail: {absender.get('email', '')}\n"
             f"- Formulartitel: {v.get('name', '')}\n"
             f"{kontext_block}"
             f"{referenz_block}\n"
-            "Formularfelder — Format: Feldname (Bezeichnung, Typ) [Optionen].\n"
-            "Befülle sinnvoll basierend auf allen Quellen oben; leerer String falls unbekannt:\n"
+            "=== FELDER (Feldname, Bezeichnung, Typ, [Optionen]) ===\n"
             f"{feld_liste}\n\n"
-            'Format: {"Feldname": "Wert", ...}'
+            'Antworte nur mit: {"Feldname": "Wert", ...}'
         )
         with kernel_lock:
             k = get_kernel_func()
@@ -1047,6 +1061,14 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
             vorschlaege = json.loads(match.group())
         except Exception:
             return jsonify({"ok": False, "error": "JSON-Fehler", "raw": raw[:300]}), 500
+
+        # ── Post-Processing: numf+chbx automatisch koppeln ──────────
+        for name, val in list(vorschlaege.items()):
+            if name.lower().startswith("numf") and val:
+                chbx = "chbx" + name[4:]
+                if chbx in feld_namen and vorschlaege.get(chbx, "false") != "true":
+                    vorschlaege[chbx] = "true"
+
         return jsonify({"ok": True, "vorschlaege": vorschlaege})
 
     @app.route("/api/fristen/<vid>/formular-ausfuellen", methods=["POST"])
