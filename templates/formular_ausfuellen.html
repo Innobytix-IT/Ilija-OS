@@ -513,9 +513,9 @@ async function kiBefuellen() {
     let count = 0;
     Object.entries(vs).forEach(([name, val]) => {
       if (!val) return;
-      // Text/Combo inputs
+      // Text/Combo inputs (Radio-Buttons werden unten separat behandelt)
       const el = document.querySelector(`[data-fname="${CSS.escape(name)}"]`);
-      if (el) {
+      if (el && el.type !== 'radio') {
         if (el.type === 'checkbox') {
           el.checked = ['true','1','yes','ja','an'].includes(String(val).toLowerCase());
         } else {
