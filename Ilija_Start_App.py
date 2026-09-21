@@ -173,7 +173,14 @@ class IlijaApp(ctk.CTk):
         self._server_running   = False
         self._telegram_running = False
 
+        # Modus: "einrichtung" (Setup-Wizard) oder "einstellungen" (freier Zugriff)
+        _env = load_env_dict()
+        _has_any_key = any(_env.get(k, "").strip() for k in (
+            "ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "OPENAI_API_KEY"))
+        self._mode = "einrichtung" if not _has_any_key else "einstellungen"
+
         self._build_header()
+        self._build_wizard_nav()
         self._build_tabs()
         self._build_status_bar()
         self._build_footer_buttons()
@@ -185,11 +192,49 @@ class IlijaApp(ctk.CTk):
         hdr = ctk.CTkFrame(self, fg_color=C_BG3, corner_radius=12)
         hdr.pack(fill="x", padx=20, pady=(15, 5))
 
-        ctk.CTkLabel(hdr, text="⚡  Ilija Public Edition",
+        hdr_inner = ctk.CTkFrame(hdr, fg_color="transparent")
+        hdr_inner.pack(fill="x", padx=16, pady=(12, 12))
+
+        left = ctk.CTkFrame(hdr_inner, fg_color="transparent")
+        left.pack(side="left")
+        ctk.CTkLabel(left, text="⚡  Ilija Public Edition",
                      font=ctk.CTkFont(size=22, weight="bold"),
-                     text_color=C_GREEN).pack(pady=(12, 2))
-        ctk.CTkLabel(hdr, text="Dein privater KI-Agent für Automatisierung",
-                     font=ctk.CTkFont(size=12), text_color=C_MUTED).pack(pady=(0, 12))
+                     text_color=C_GREEN).pack(anchor="w")
+        ctk.CTkLabel(left, text="Dein privater KI-Agent für Automatisierung",
+                     font=ctk.CTkFont(size=12), text_color=C_MUTED).pack(anchor="w", pady=(1, 0))
+
+        right = ctk.CTkFrame(hdr_inner, fg_color="transparent")
+        right.pack(side="right")
+        self.btn_mode_toggle = ctk.CTkButton(
+            right, text="", width=195, height=32, corner_radius=8,
+            font=ctk.CTkFont(size=11), command=self._toggle_mode)
+        self.btn_mode_toggle.pack()
+        self._refresh_mode_toggle()
+
+    # ── Wizard-Navigationsleiste ──────────────────────────────────────────────
+    def _build_wizard_nav(self):
+        self._wizard_nav = ctk.CTkFrame(self, fg_color=C_BG3, corner_radius=8)
+        # Sichtbarkeit wird durch _apply_mode gesteuert
+
+        left = ctk.CTkFrame(self._wizard_nav, fg_color="transparent")
+        left.pack(side="left", padx=14, pady=8, fill="y")
+        ctk.CTkLabel(left, text="✨  Einrichtungsassistent – Tab für Tab ausfüllen:",
+                     font=ctk.CTkFont(size=11), text_color=C_YELLOW).pack(anchor="w")
+        ctk.CTkLabel(left, text="Fertig? Oben rechts auf 'Einstellungs-Modus' wechseln.",
+                     font=ctk.CTkFont(size=10), text_color=C_MUTED).pack(anchor="w")
+
+        right = ctk.CTkFrame(self._wizard_nav, fg_color="transparent")
+        right.pack(side="right", padx=14, pady=8)
+        ctk.CTkButton(right, text="← Zurück", width=90, height=28, corner_radius=6,
+                      fg_color=C_BG2, hover_color="#3a3a5e",
+                      font=ctk.CTkFont(size=11), text_color=C_TEXT,
+                      command=self._wizard_prev_tab).pack(side="left", padx=(0, 6))
+        ctk.CTkButton(right, text="Weiter →", width=90, height=28, corner_radius=6,
+                      fg_color=C_GREEN, hover_color="#00b86e",
+                      font=ctk.CTkFont(size=11), text_color="black",
+                      command=self._wizard_next_tab).pack(side="left")
+
+        self._apply_mode()
 
     # ── Tabs ──────────────────────────────────────────────────────────────────
     def _build_tabs(self):
@@ -199,7 +244,12 @@ class IlijaApp(ctk.CTk):
                               segmented_button_selected_hover_color="#00b86e")
         self.tabview.pack(fill="both", expand=True, padx=20, pady=5)
 
-        for name in ["1. KI Modelle", "2. Telegram", "3. Google", "4. E-Mail", "5. DMS", "6. Server", "7. FritzBox", "8. Eingangskanäle", "9. Start"]:
+        self._tab_names = [
+            "1. KI Modelle", "2. Telegram", "3. Google", "4. E-Mail",
+            "5. DMS", "6. Server", "7. FritzBox", "8. Eingangskanäle",
+            "9. Start", "10. AHPT",
+        ]
+        for name in self._tab_names:
             self.tabview.add(name)
 
         self._tab_ki()
@@ -211,6 +261,7 @@ class IlijaApp(ctk.CTk):
         self._tab_fritzbox()
         self._tab_eingangskanale()
         self._tab_start()
+        self._tab_ahpt()
 
     # ── Status-Bar ────────────────────────────────────────────────────────────
     def _build_status_bar(self):
@@ -246,6 +297,40 @@ class IlijaApp(ctk.CTk):
             height=42, corner_radius=8, width=180,
             command=self._quit_all)
         self.btn_quit.pack(side="right")
+
+    # ── Modus-Umschaltung ─────────────────────────────────────────────────────
+    def _toggle_mode(self):
+        self._mode = "einstellungen" if self._mode == "einrichtung" else "einrichtung"
+        self._refresh_mode_toggle()
+        self._apply_mode()
+
+    def _refresh_mode_toggle(self):
+        if self._mode == "einrichtung":
+            self.btn_mode_toggle.configure(
+                text="⚙ Einstellungs-Modus",
+                fg_color=C_BG2, hover_color="#3a3a5e", text_color=C_MUTED)
+        else:
+            self.btn_mode_toggle.configure(
+                text="✨ Einrichtungsassistent",
+                fg_color=C_BG2, hover_color="#3a3a5e", text_color=C_YELLOW)
+
+    def _apply_mode(self):
+        if self._mode == "einrichtung":
+            self._wizard_nav.pack(fill="x", padx=20, pady=(0, 4))
+        else:
+            self._wizard_nav.pack_forget()
+
+    def _wizard_next_tab(self):
+        current = self.tabview.get()
+        idx = self._tab_names.index(current) if current in self._tab_names else 0
+        if idx < len(self._tab_names) - 1:
+            self.tabview.set(self._tab_names[idx + 1])
+
+    def _wizard_prev_tab(self):
+        current = self.tabview.get()
+        idx = self._tab_names.index(current) if current in self._tab_names else 0
+        if idx > 0:
+            self.tabview.set(self._tab_names[idx - 1])
 
     # ─────────────────────────────────────────────────────────────────────────
     # Hilfsmethoden für Widgets
@@ -1019,6 +1104,319 @@ class IlijaApp(ctk.CTk):
         self._log("Bereit. Bitte Einstellungen speichern und Module starten.")
 
     # ─────────────────────────────────────────────────────────────────────────
+    # TAB 10: AHPT – Asymmetric HTTP Polling Tunnel
+    # ─────────────────────────────────────────────────────────────────────────
+    def _tab_ahpt(self):
+        f = self._scrollable("10. AHPT")
+
+        self._section(f, "🔗  AHPT – Asymmetric HTTP Polling Tunnel", C_TEAL)
+        self._hint_box(f,
+            "AHPT erlaubt sicheren Fernzugriff über einen Web-Relay ohne offene Ports.\n"
+            "Der Agent auf diesem PC meldet sich beim Relay; die Android-App kommuniziert\n"
+            "dann über diesen verschlüsselten Kanal (Noise IK).\n\n"
+            "DMS-Import-Ordner via AHPT: Endanwender können Fotos/Dokumente direkt in\n"
+            "den DMS-Import-Ordner hochladen – von überall, ohne VPN."
+        )
+
+        # ── Relay-Server ──────────────────────────────────────
+        self._section(f, "🌐  Relay-Server", C_BLUE)
+        self._label(f, "Relay-Basis-URL (bplaced oder eigener Server):")
+        self.ent_ahpt_relay = self._entry(f, placeholder="http://example.bplaced.net/privat")
+
+        self._label(f, "Geheimnis-Datei-Pfad:")
+        self.ent_ahpt_geheimnis = self._entry(f, placeholder=r"C:\Users\manue\.ahpt\geheimnis")
+
+        self._divider(f)
+
+        # ── Schlüssel ─────────────────────────────────────────
+        self._section(f, "🔑  Agent-Schlüssel", C_GREEN)
+        self._label(f, "Schlüssel-Datei (.key):")
+        row_key = ctk.CTkFrame(f, fg_color="transparent")
+        row_key.pack(fill="x", padx=4, pady=2)
+        self.ent_ahpt_key = ctk.CTkEntry(row_key, fg_color=C_BG3, border_color="#44445a", text_color=C_TEXT)
+        self.ent_ahpt_key.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        ctk.CTkButton(row_key, text="📂 Auswählen", width=120, fg_color=C_BG3,
+                      hover_color="#3a3a5e", text_color=C_TEXT,
+                      command=lambda: self._choose_file(self.ent_ahpt_key, "*.key")).pack(side="right")
+
+        self._label(f, "Öffentlicher Schlüssel (für Android-App – nur lesbar):")
+        self.ent_ahpt_pubkey = ctk.CTkEntry(f, fg_color=C_BG3, border_color="#44445a",
+                                             text_color=C_TEAL, state="disabled", height=36)
+        self.ent_ahpt_pubkey.pack(fill="x", padx=4, pady=2)
+        ctk.CTkButton(f, text="🔄 Schlüssel anzeigen", width=160, height=30,
+                      fg_color=C_BG3, hover_color="#3a3a5e", text_color=C_MUTED,
+                      command=self._ahpt_load_pubkey).pack(anchor="w", padx=4, pady=(2, 6))
+
+        self._divider(f)
+
+        # ── Erlaubte Clients ──────────────────────────────────
+        self._section(f, "👥  Erlaubte Clients (Android-App Public Keys)", C_PURPLE)
+        self._hint_box(f,
+            "Kommagetrennte Public Keys der Android-App(s).\n"
+            "Den Key der Android-App erhältst du in den App-Einstellungen → 'Mein öffentlicher Key'.\n"
+            "Leer = alle abweisen (der Agent startet dann nicht)."
+        )
+        self._label(f, "Client-Public-Keys (kommagetrennt, 64 Zeichen Hex pro Key):")
+        self.ent_ahpt_clients = self._entry(f, placeholder="ae81dbb...fc63b,bb92acc...d4e7f")
+
+        self._divider(f)
+
+        # ── Dienste ───────────────────────────────────────────
+        self._section(f, "📁  Freigegebene Dienste", C_YELLOW)
+        self._hint_box(f,
+            "Konfiguriere welche Ordner via AHPT freigegeben werden.\n"
+            "Der 'dateien'-Dienst gibt den Root-Ordner frei (Lesen/Hochladen).\n"
+            "Der 'dms_import'-Dienst gibt den DMS-Import-Ordner frei (nur Hochladen)."
+        )
+
+        srv_frame = ctk.CTkFrame(f, fg_color=C_BG3, corner_radius=8)
+        srv_frame.pack(fill="x", padx=4, pady=4)
+
+        ctk.CTkLabel(srv_frame, text="Dienst: dateien  (Lesen + Schreiben)",
+                     font=ctk.CTkFont(size=11, weight="bold"), text_color=C_TEXT).pack(
+            anchor="w", padx=10, pady=(8, 2))
+        self._label(srv_frame, "Wurzel-Pfad:")
+        self.ent_ahpt_wurzel = ctk.CTkEntry(srv_frame, fg_color=C_BG2, border_color="#44445a",
+                                             text_color=C_TEXT, height=36)
+        self.ent_ahpt_wurzel.pack(fill="x", padx=10, pady=(0, 8))
+
+        srv2_frame = ctk.CTkFrame(f, fg_color=C_BG3, corner_radius=8)
+        srv2_frame.pack(fill="x", padx=4, pady=4)
+
+        ctk.CTkLabel(srv2_frame, text="Dienst: dms_import  (Nur Hochladen – DMS-Eingang)",
+                     font=ctk.CTkFont(size=11, weight="bold"), text_color=C_TEXT).pack(
+            anchor="w", padx=10, pady=(8, 2))
+        self.var_ahpt_dms = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(srv2_frame, text="DMS-Import-Dienst aktivieren",
+                        variable=self.var_ahpt_dms, text_color=C_TEXT,
+                        fg_color=C_TEAL, hover_color="#1a9fd4").pack(anchor="w", padx=10, pady=4)
+        self._label(srv2_frame, "Import-Pfad:")
+        self.ent_ahpt_dms_pfad = ctk.CTkEntry(srv2_frame, fg_color=C_BG2, border_color="#44445a",
+                                               text_color=C_TEXT, height=36)
+        self.ent_ahpt_dms_pfad.pack(fill="x", padx=10, pady=(0, 8))
+
+        self._divider(f)
+
+        # ── QR-Codes ──────────────────────────────────────────
+        self._section(f, "📱  QR-Codes", C_PURPLE)
+        self._hint_box(f,
+            "Scanne den Download-QR um die AHPT Android-App zu installieren.\n"
+            "Scanne den Koppelungs-QR direkt in der App → automatische Einrichtung\n"
+            "(enthält Relay-URL + Agent-Schlüssel; keine Secrets)."
+        )
+        ctk.CTkButton(f, text="📱  QR-Codes im Browser anzeigen", height=36, corner_radius=8,
+                      fg_color=C_PURPLE, hover_color="#8b3fc8", text_color="white",
+                      command=self._ahpt_show_qr).pack(fill="x", padx=4, pady=6)
+
+        self._divider(f)
+
+        # ── Agent-Status ──────────────────────────────────────
+        self._section(f, "⚡  Windows-Agent Status", C_GREEN)
+        self.lbl_ahpt_status = ctk.CTkLabel(f, text="⚫ Status: unbekannt",
+                                             font=ctk.CTkFont(size=11), text_color=C_MUTED)
+        self.lbl_ahpt_status.pack(anchor="w", padx=4, pady=(4, 8))
+
+        ahpt_btn_row = ctk.CTkFrame(f, fg_color="transparent")
+        ahpt_btn_row.pack(fill="x", padx=4, pady=4)
+
+        ctk.CTkButton(ahpt_btn_row, text="▶ Agent starten", width=140, height=36,
+                      fg_color=C_GREEN, hover_color="#00b86e", text_color="black",
+                      command=self._ahpt_start).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(ahpt_btn_row, text="⏹ Agent stoppen", width=140, height=36,
+                      fg_color="#3a1818", hover_color="#5a2020",
+                      command=self._ahpt_stop).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(ahpt_btn_row, text="🔄 Status prüfen", width=130, height=36,
+                      fg_color=C_BG3, hover_color="#3a3a5e", text_color=C_TEXT,
+                      command=self._ahpt_check_status).pack(side="left")
+
+    # ── AHPT Hilfsfunktionen ──────────────────────────────────────────────────
+    def _choose_file(self, entry_widget, file_filter="*"):
+        path = filedialog.askopenfilename(filetypes=[("Alle Dateien", file_filter)])
+        if path:
+            entry_widget.configure(state="normal")
+            entry_widget.delete(0, "end")
+            entry_widget.insert(0, path)
+            entry_widget.configure(state="normal")
+
+    def _ahpt_load_pubkey(self):
+        key_path = self.ent_ahpt_key.get().strip()
+        if not key_path or not os.path.exists(key_path):
+            messagebox.showwarning("Schlüssel nicht gefunden",
+                                   f"Bitte zuerst den Schlüssel-Pfad eintragen.\nPfad: {key_path}")
+            return
+        try:
+            pub = None
+            # Zuerst .pub-Datei lesen (kein krypto-Import nötig)
+            pub_path = key_path.rsplit(".", 1)[0] + ".pub"
+            if os.path.exists(pub_path):
+                with open(pub_path, "r") as f:
+                    pub = f.read().strip()
+            else:
+                # Fallback: krypto-Bibliothek
+                import sys as _sys
+                ahpt_dir = os.path.join(get_base_dir(), "..", "AHPT Cloud")
+                if ahpt_dir not in _sys.path:
+                    _sys.path.insert(0, ahpt_dir)
+                from ahpt.krypto import _oeffentlich
+                with open(key_path, "rb") as f:
+                    raw = f.read().strip()
+                # Datei ist 64-Hex oder 32 Bytes roh
+                priv = bytes.fromhex(raw.decode()) if len(raw) == 64 else raw
+                pub = _oeffentlich(priv).hex()
+            self.ent_ahpt_pubkey.configure(state="normal")
+            self.ent_ahpt_pubkey.delete(0, "end")
+            self.ent_ahpt_pubkey.insert(0, pub)
+            self.ent_ahpt_pubkey.configure(state="disabled")
+            self._log(f"AHPT öffentlicher Schlüssel: {pub[:16]}…")
+        except Exception as e:
+            messagebox.showerror("Fehler", f"Konnte Schlüssel nicht laden:\n{e}")
+
+    def _ahpt_check_status(self):
+        try:
+            import subprocess as _sp
+            if os.name == "nt":
+                r = _sp.run(
+                    ["wmic", "process", "where", "name='python.exe'", "get", "CommandLine"],
+                    capture_output=True, text=True, timeout=5)
+                running = "relay_agent" in r.stdout
+            else:
+                r = _sp.run(["pgrep", "-fa", "relay_agent.py"],
+                            capture_output=True, text=True, timeout=5)
+                running = r.returncode == 0
+            if running:
+                self.lbl_ahpt_status.configure(text="🟢 Agent: läuft", text_color=C_GREEN)
+            else:
+                self.lbl_ahpt_status.configure(text="⚫ Agent: gestoppt", text_color=C_MUTED)
+        except Exception:
+            self.lbl_ahpt_status.configure(text="⚠ Status: Fehler bei Abfrage", text_color=C_YELLOW)
+
+    def _ahpt_start(self):
+        import threading as _th
+        def run():
+            import subprocess as _sp
+            try:
+                if os.name == "nt":
+                    ahpt_konfig = os.path.join(os.path.expanduser("~"), ".ahpt", "agent_privat.toml")
+                    ahpt_script = os.path.join(get_base_dir(), "..", "AHPT Cloud", "relay_agent.py")
+                    if not os.path.exists(ahpt_script):
+                        messagebox.showerror("Nicht gefunden",
+                                             f"relay_agent.py nicht gefunden:\n{ahpt_script}")
+                        return
+                    si = _sp.STARTUPINFO()
+                    si.dwFlags |= _sp.STARTF_USESHOWWINDOW
+                    _sp.Popen(["python", ahpt_script, "--konfig", ahpt_konfig],
+                              startupinfo=si, cwd=os.path.dirname(ahpt_script))
+                else:
+                    env = {**os.environ, "XDG_RUNTIME_DIR": "/run/user/1000"}
+                    _sp.run(["sudo", "-u", "manuel", "systemctl", "--user",
+                             "start", "ahpt-elitebook"],
+                            capture_output=True, timeout=10, env=env)
+                self.after(1000, self._ahpt_check_status)
+            except Exception as e:
+                messagebox.showerror("Fehler", f"AHPT konnte nicht gestartet werden:\n{e}")
+        _th.Thread(target=run, daemon=True).start()
+        self._log("AHPT-Agent Startbefehl gesendet…")
+
+    def _ahpt_stop(self):
+        try:
+            import subprocess as _sp
+            if os.name == "nt":
+                r = _sp.run(
+                    ["wmic", "process", "where",
+                     "CommandLine like '%relay_agent%'", "get", "ProcessId"],
+                    capture_output=True, text=True, timeout=5)
+                for line in r.stdout.splitlines():
+                    pid = line.strip()
+                    if pid.isdigit():
+                        _sp.run(["taskkill", "/F", "/PID", pid], capture_output=True)
+            else:
+                env = {**os.environ, "XDG_RUNTIME_DIR": "/run/user/1000"}
+                _sp.run(["sudo", "-u", "manuel", "systemctl", "--user",
+                         "stop", "ahpt-elitebook"],
+                        capture_output=True, timeout=10, env=env)
+            self.lbl_ahpt_status.configure(text="⚫ Agent: gestoppt", text_color=C_MUTED)
+            self._log("AHPT-Agent gestoppt.")
+        except Exception as e:
+            messagebox.showerror("Fehler", f"Stopp fehlgeschlagen:\n{e}")
+
+    def _ahpt_show_qr(self):
+        """Generiert eine temporäre HTML-Seite mit AHPT-QR-Codes und öffnet sie im Browser."""
+        import tempfile
+        relay  = self.ent_ahpt_relay.get().strip()
+        pubkey = ""
+        # 1. Zuerst bereits geladenen Key aus dem Feld nehmen
+        saved = self.ent_ahpt_pubkey.get().strip()
+        if saved:
+            pubkey = saved
+        # 2. .pub-Datei neben der .key-Datei lesen (kein krypto-Import nötig)
+        if not pubkey:
+            key_path = self.ent_ahpt_key.get().strip()
+            if key_path and os.path.exists(key_path):
+                pub_path = key_path.rsplit(".", 1)[0] + ".pub"
+                if os.path.exists(pub_path):
+                    try:
+                        with open(pub_path, "r") as f:
+                            pubkey = f.read().strip()
+                    except Exception:
+                        pass
+                if not pubkey:
+                    try:
+                        import sys as _sys
+                        ahpt_dir = os.path.join(get_base_dir(), "..", "AHPT Cloud")
+                        if ahpt_dir not in _sys.path:
+                            _sys.path.insert(0, ahpt_dir)
+                        from ahpt.krypto import _oeffentlich
+                        with open(key_path, "rb") as f:
+                            priv = f.read().strip()
+                        pubkey = _oeffentlich(priv).hex()
+                    except Exception:
+                        pass
+
+        dl_url    = "https://github.com/Innobytix-IT/Asymmetric-HTTP-Polling-Tunnel/releases"
+        koppel_js = ""
+        if relay or pubkey:
+            import json as _json
+            payload = _json.dumps({"relay": relay, "agent_pub": pubkey}, ensure_ascii=False)
+            payload_js = payload.replace('"', '\\"')
+            koppel_js = f'new QRCode(document.getElementById("qr-koppeln"),{{text:"{payload_js}",width:200,height:200,colorDark:"#000000",colorLight:"#ffffff"}});'
+
+        html = f"""<!DOCTYPE html><html lang="de"><head>
+<meta charset="UTF-8"><title>AHPT QR-Codes</title>
+<style>
+body{{background:#0B1520;color:#E6EEF5;font-family:sans-serif;display:flex;gap:32px;justify-content:center;align-items:flex-start;padding:40px;flex-wrap:wrap}}
+.card{{background:#10202D;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:24px;text-align:center;width:260px}}
+h3{{color:#E6EEF5;font-size:.9rem;margin:0 0 14px}}
+p{{color:#4A6072;font-size:.7rem;margin:10px 0 0;line-height:1.5}}
+.qr-wrap{{background:#fff;display:inline-block;padding:8px;border-radius:6px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head><body>
+<div class="card">
+  <h3>📱 App herunterladen</h3>
+  <div class="qr-wrap"><div id="qr-download"></div></div>
+  <p>AHPT Android App<br>GitHub Releases</p>
+</div>
+<div class="card">
+  <h3>🔑 App koppeln</h3>
+  <div class="qr-wrap"><div id="qr-koppeln"></div></div>
+  <p>Relay-URL + Agent-Schlüssel<br>In der App einscannen</p>
+</div>
+<script>
+new QRCode(document.getElementById("qr-download"),{{text:"{dl_url}",width:200,height:200,colorDark:"#000000",colorLight:"#ffffff"}});
+{koppel_js}
+</script>
+</body></html>"""
+
+        try:
+            tf = tempfile.NamedTemporaryFile("w", suffix=".html", delete=False, encoding="utf-8")
+            tf.write(html)
+            tf.flush()
+            tf.close()
+            webbrowser.open(f"file:///{tf.name.replace(chr(92), '/')}")
+        except Exception as e:
+            messagebox.showerror("Fehler", f"Konnte QR-Seite nicht öffnen:\n{e}")
+
+    # ─────────────────────────────────────────────────────────────────────────
     # Logik
     # ─────────────────────────────────────────────────────────────────────────
     def _log(self, msg):
@@ -1212,6 +1610,26 @@ class IlijaApp(ctk.CTk):
         if letzte:
             self.lbl_sync_status.configure(text=f"Letzte Sync: {letzte}", text_color=C_MUTED)
 
+        # AHPT
+        ahpt_cfg = load_json_config(os.path.join(get_base_dir(), "data", "ahpt_config.json"))
+        _ahpt_home = os.path.join(os.path.expanduser("~"), ".ahpt")
+        # Auto-detect: elitebook files take priority if they exist (Linux/EliteBook)
+        _key_eb = os.path.join(_ahpt_home, "agent_elitebook.key")
+        _key_pr = os.path.join(_ahpt_home, "agent_privat.key")
+        _geh_eb = os.path.join(_ahpt_home, "geheimnis_elitebook")
+        _geh_pr = os.path.join(_ahpt_home, "geheimnis")
+        _default_key = _key_eb if os.path.exists(_key_eb) else _key_pr
+        _default_geh = _geh_eb if os.path.exists(_geh_eb) else _geh_pr
+        self.ent_ahpt_relay.insert(0, ahpt_cfg.get("relay", "http://innobytix-it.bplaced.net/privat"))
+        self.ent_ahpt_geheimnis.insert(0, ahpt_cfg.get("geheimnis", _default_geh))
+        self.ent_ahpt_key.insert(0, ahpt_cfg.get("key", _default_key))
+        self.ent_ahpt_clients.insert(0, ahpt_cfg.get("clients", ""))
+        _dms_cfg = load_json_config(os.path.join(get_base_dir(), "data", "dms", "dms_config.json"))
+        self.ent_ahpt_wurzel.insert(0, ahpt_cfg.get("wurzel", "D:\\"))
+        self.ent_ahpt_dms_pfad.insert(0, ahpt_cfg.get("dms_import", _dms_cfg.get("import_pfad", "")))
+        self.var_ahpt_dms.set(ahpt_cfg.get("dms_aktiv", True))
+        self._ahpt_check_status()
+
     # ── Einstellungen speichern ──────────────────────────────────────────────
     def save_all_settings(self):
         errors = []
@@ -1313,6 +1731,18 @@ class IlijaApp(ctk.CTk):
             os.makedirs(dms_import, exist_ok=True)
 
         save_json_config(dms_cfg_path, dms_cfg)
+
+        # 5. AHPT Config (keine Geheimnisse – nur Pfade und öffentliche Einstellungen)
+        ahpt_cfg = {
+            "relay":      self.ent_ahpt_relay.get().strip(),
+            "geheimnis":  self.ent_ahpt_geheimnis.get().strip(),
+            "key":        self.ent_ahpt_key.get().strip(),
+            "clients":    self.ent_ahpt_clients.get().strip(),
+            "wurzel":     self.ent_ahpt_wurzel.get().strip(),
+            "dms_import": self.ent_ahpt_dms_pfad.get().strip(),
+            "dms_aktiv":  self.var_ahpt_dms.get(),
+        }
+        save_json_config(os.path.join(get_data_dir(), "ahpt_config.json"), ahpt_cfg)
 
         if errors:
             messagebox.showwarning("Gespeichert mit Hinweisen",

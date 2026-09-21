@@ -235,6 +235,9 @@ input[type=number]{max-width:90px}
     <button class="sb-item" onclick="scrollToSection('sec-server')">
       <span class="sb-icon">🖥</span> Server
     </button>
+    <button class="sb-item" onclick="scrollToSection('sec-ahpt')" id="sb-ahpt">
+      <span class="sb-icon">🔗</span> AHPT
+    </button>
     <div style="margin-top:auto;padding-top:16px">
       <button class="sb-item" onclick="startWizard()" style="color:var(--g)">
         <span class="sb-icon">✨</span> Einrichtungsassistent
@@ -439,6 +442,57 @@ input[type=number]{max-width:90px}
         </div>
       </div>
 
+      <!-- ─── AHPT ─────────────────────────────────────────── -->
+      <div class="section" id="sec-ahpt">
+        <div class="sec-head">
+          <div class="sec-icon">🔗</div>
+          <div><div class="sec-title">AHPT – Asymmetric HTTP Polling Tunnel</div><div class="sec-sub">Sicherer Fernzugriff ohne offene Ports · DMS-Import via Android-App</div></div>
+        </div>
+        <div class="hint hint-blue">
+          <strong>Wie es funktioniert:</strong> Der AHPT-Agent läuft auf diesem Server und pollt den bplaced-Relay. Die Android-App verbindet sich über denselben Relay — Ende-zu-Ende-verschlüsselt via Noise&nbsp;IK. Endanwender können so Dokumente direkt in den DMS-Importordner hochladen, von überall, ohne VPN.
+        </div>
+
+        <!-- QR-Codes -->
+        <div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+          <div class="card" style="flex:1;min-width:190px;padding:18px;text-align:center">
+            <div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin-bottom:10px">📱 App herunterladen</div>
+            <div id="qr-download" style="display:flex;justify-content:center;margin-bottom:8px;background:#fff;padding:8px;border-radius:6px;width:fit-content;margin-left:auto;margin-right:auto"></div>
+            <div style="font-size:.65rem;color:var(--tx3)">AHPT Android App · GitHub Release</div>
+          </div>
+          <div class="card" style="flex:1;min-width:190px;padding:18px;text-align:center">
+            <div style="font-size:.75rem;font-weight:600;color:var(--tx2);margin-bottom:10px">🔑 App koppeln</div>
+            <div id="qr-koppeln" style="display:flex;justify-content:center;margin-bottom:8px;background:#fff;padding:8px;border-radius:6px;width:fit-content;margin-left:auto;margin-right:auto"></div>
+            <div style="font-size:.65rem;color:var(--tx3)">Relay-URL + Agent-Key · in App einscannen</div>
+          </div>
+        </div>
+
+        <!-- Relay & Clients -->
+        <div class="card" id="ahpt-relay-card"></div>
+        <div class="save-bar">
+          <button class="btn btn-prim btn-sm" onclick="saveAhpt()">Speichern</button>
+          <span class="save-msg" id="ahpt-msg"></span>
+        </div>
+
+        <!-- Agent-Status -->
+        <div class="sec-head" style="margin-top:24px">
+          <div class="sec-icon">⚡</div>
+          <div><div class="sec-title">Agent-Status</div><div class="sec-sub">systemd user service: ahpt-elitebook</div></div>
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="row-left">
+              <div class="row-label">Status</div>
+              <div class="row-hint" id="ahpt-status-text">Wird geladen…</div>
+            </div>
+            <div class="row-control" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+              <button class="btn btn-teal btn-sm" onclick="ahptControl('start')">▶ Start</button>
+              <button class="btn btn-danger btn-sm" onclick="ahptControl('stop')">⏹ Stop</button>
+              <button class="btn btn-ghost btn-sm" onclick="ahptControl('restart')">🔄 Restart</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ─── Server ────────────────────────────────────────── -->
       <div class="section" id="sec-server">
         <div class="sec-head">
@@ -451,6 +505,34 @@ input[type=number]{max-width:90px}
           <span class="save-msg" id="server-msg"></span>
         </div>
       </div>
+    </div>
+
+    <!-- noVNC Desktop-Fernzugriff (nur wenn Desktopumgebung aktiv) -->
+    <div id="novnc-bar" style="display:none;margin:18px 0 4px;padding:10px 16px;background:var(--s2);border:1px solid var(--bdr2);border-radius:8px;align-items:center;gap:10px">
+      <span style="font-size:1rem">🖥</span>
+      <div style="flex:1">
+        <div style="font-size:.77rem;font-weight:600;color:var(--tx2)">Desktop-Fernzugriff (noVNC)</div>
+        <div style="font-size:.72rem;color:var(--tx3);margin-top:1px">Desktopumgebung aktiv — du kannst diesen Server direkt im Browser steuern</div>
+        <div style="font-size:.70rem;color:var(--green);margin-top:3px">🔓 Kein VNC-Passwort erforderlich</div>
+      </div>
+      <a id="novnc-link" href="#" target="_blank" rel="noopener"
+         style="font-size:.75rem;font-weight:600;color:var(--teal);border:1px solid rgba(45,212,191,.25);border-radius:6px;padding:5px 12px;text-decoration:none;white-space:nowrap;background:var(--tdim)">
+        Im Browser öffnen →
+      </a>
+    </div>
+
+    <!-- SSH-Terminal-Zugang (nur wenn keine Desktopumgebung aktiv) -->
+    <div id="ssh-bar" style="display:none;margin:18px 0 4px;padding:10px 16px;background:var(--s2);border:1px solid var(--bdr2);border-radius:8px;align-items:center;gap:10px">
+      <span style="font-size:1rem">⌨️</span>
+      <div style="flex:1">
+        <div style="font-size:.77rem;font-weight:600;color:var(--tx2)">Terminal-Zugang (SSH)</div>
+        <div style="font-size:.72rem;color:var(--tx3);margin-top:1px">Kein Desktop installiert — Zugriff über SSH-Terminal</div>
+      </div>
+      <code id="ssh-cmd"
+         onclick="navigator.clipboard?.writeText(this.textContent).then(()=>{this.style.opacity='.5';setTimeout(()=>this.style.opacity='1',600)})"
+         title="Klicken zum Kopieren"
+         style="font-family:var(--m);font-size:.74rem;font-weight:600;color:var(--g);border:1px solid rgba(230,162,46,.2);border-radius:6px;padding:5px 12px;white-space:nowrap;background:var(--gd);cursor:pointer">
+      </code>
     </div>
 
   </main>
@@ -492,7 +574,7 @@ async function init() {
 }
 
 async function loadAllData() {
-  const [settings, email, tg, fritz, server, kanale, kal, google, dms, custom] = await Promise.allSettled([
+  const [settings, email, tg, fritz, server, kanale, kal, google, dms, custom, ahpt] = await Promise.allSettled([
     api('/api/settings'),
     api('/api/email-settings'),
     api('/api/telegram-settings'),
@@ -503,6 +585,7 @@ async function loadAllData() {
     api('/api/google-status'),
     api('/api/dms-settings'),
     api('/api/custom-endpoint'),
+    api('/api/ahpt-settings'),
   ]);
   allData.settings = settings.value || {};
   allData.email    = (email.value || {}).config || {};
@@ -514,7 +597,10 @@ async function loadAllData() {
   allData.google   = google.value || {};
   allData.dms      = dms.value || {};
   allData.custom   = custom.value || {};
+  allData.ahpt     = ahpt.value || {};
   updateChips();
+  updateAhptStatus(allData.ahpt.status);
+  renderAhptQr();
 }
 
 function updateChips() {
@@ -966,8 +1052,12 @@ function buildAllCards() {
   document.getElementById('fritz-card').innerHTML  = buildFritzCard().replace('<div class="card">','').replace(/<\/div>$/,'');
   document.getElementById('dms-card').innerHTML    = buildDmsCard().replace('<div class="card">','').replace(/<\/div>$/,'');
   document.getElementById('server-card').innerHTML = buildServerCard().replace('<div class="card">','').replace(/<\/div>$/,'');
+  const ahptRelayCard = document.getElementById('ahpt-relay-card');
+  if (ahptRelayCard) ahptRelayCard.innerHTML = buildAhptCard().replace('<div class="card">','').replace(/<\/div>$/,'');
   toggleSyncRows();
   updateChips();
+  updateAhptStatus(allData.ahpt?.status);
+  renderAhptQr();
 }
 
 // ── Save functions ────────────────────────────────────────────
@@ -1211,8 +1301,140 @@ function msg(id, ok) {
   setTimeout(()=> { el.className='save-msg'; }, 3000);
 }
 
+// ── AHPT ──────────────────────────────────────────────────────
+function buildAhptCard() {
+  const a = allData.ahpt || {};
+  const clients = (a.clients || []).join(',\n');
+  const dienste = (a.dienste || []);
+  const dmsD = dienste.find(d => d.name === 'dms_import') || {};
+  const datD = dienste.find(d => d.name === 'dateien') || {};
+  return `
+  <div class="card">
+    <div class="row row-wide">
+      <div class="row-label">Relay-Basis-URL</div>
+      <input type="text" id="ahpt-relay" placeholder="http://example.bplaced.net/privat" value="${esc(a.relay||'')}">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Agent öffentlicher Schlüssel <span style="color:var(--tx3);font-weight:400">(für Android-App – nur lesen)</span></div>
+      <input type="text" id="ahpt-pubkey" value="${esc(a.pubkey||'')}" readonly
+             style="font-family:var(--m);font-size:.72rem;cursor:text;color:var(--teal)">
+    </div>
+    <div class="row row-wide">
+      <div class="row-label">Erlaubte Clients <span style="color:var(--tx3);font-weight:400">(einen Public-Key pro Zeile oder kommagetrennt)</span></div>
+      <textarea id="ahpt-clients" placeholder="ae81dbb…fc63b&#10;bb92acc…d4e7f">${esc(clients)}</textarea>
+    </div>
+    <div class="row row-wide" style="background:var(--s1)">
+      <div class="row-label" style="color:var(--teal)">📁 Dienst: dms_import</div>
+      <input type="text" id="ahpt-dms-pfad" placeholder="/srv/ilija-ablage/DMS/import" value="${esc(dmsD.wurzel||'')}">
+    </div>
+    <div class="row row-wide" style="background:var(--s1)">
+      <div class="row-label" style="color:var(--tx2)">📂 Dienst: dateien (Hauptfreigabe)</div>
+      <input type="text" id="ahpt-dat-pfad" placeholder="/home/manuel" value="${esc(datD.wurzel||'')}" style="color:var(--tx3)" readonly>
+    </div>
+  </div>`;
+}
+
+async function saveAhpt() {
+  const clientsRaw = (document.getElementById('ahpt-clients')?.value||'').split(/[\n,]+/).map(s=>s.trim()).filter(s=>s.length===64);
+  const dmsPath = document.getElementById('ahpt-dms-pfad')?.value?.trim() || '';
+  const r = await post('/api/ahpt-settings', {clients: clientsRaw, dms_import_pfad: dmsPath});
+  msg('ahpt-msg', r.ok !== false);
+  if (r.ok !== false) {
+    allData.ahpt = await api('/api/ahpt-settings');
+    renderAhptQr();
+  }
+}
+
+async function ahptControl(action) {
+  const r = await post('/api/ahpt-control', {action});
+  updateAhptStatus(r.status);
+}
+
+function updateAhptStatus(status) {
+  const el = document.getElementById('ahpt-status-text');
+  if (!el) return;
+  const map = {
+    active:   ['🟢 Agent läuft (active)',   'var(--green)'],
+    inactive: ['⚫ Agent gestoppt',           'var(--tx3)'],
+    failed:   ['🔴 Agent fehlgeschlagen',     'var(--red)'],
+    unknown:  ['⚪ Status unbekannt',          'var(--tx3)'],
+  };
+  const [text, color] = map[status] || ['⚪ ' + (status||'…'), 'var(--tx3)'];
+  el.textContent = text;
+  el.style.color = color;
+}
+
+// ── QR-Code Generierung ────────────────────────────────────────
+function _qrMatrix(text) {
+  // Minimaler QR-Code via API-freiem Polyfill (qrcode.js von davidshimjs via cdn.jsdelivr)
+  // Wird lazy geladen wenn nötig
+  return new Promise((resolve) => {
+    if (window.QRCode) { resolve(null); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+    s.onload = () => resolve(null);
+    s.onerror = () => resolve(null);
+    document.head.appendChild(s);
+  });
+}
+
+async function renderAhptQr() {
+  await _qrMatrix();
+  if (!window.QRCode) return;
+
+  // Download-QR
+  const dlEl = document.getElementById('qr-download');
+  if (dlEl) {
+    dlEl.innerHTML = '';
+    new QRCode(dlEl, {
+      text: 'https://github.com/Innobytix-IT/Asymmetric-HTTP-Polling-Tunnel/releases',
+      width: 200, height: 200,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+    });
+  }
+
+  // Koppelungs-QR: Relay-URL + Agent-Public-Key
+  const a = allData.ahpt || {};
+  const relay = (document.getElementById('ahpt-relay')?.value || a.relay || '').trim();
+  const pubkey = a.pubkey || '';
+  if (!relay && !pubkey) return;
+
+  const payload = JSON.stringify({relay, agent_pub: pubkey});
+  const kopEl = document.getElementById('qr-koppeln');
+  if (kopEl) {
+    kopEl.innerHTML = '';
+    new QRCode(kopEl, {
+      text: payload,
+      width: 200, height: 200,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+    });
+  }
+}
+
+// ── noVNC / SSH-Bar ───────────────────────────────────────────
+async function checkNovnc() {
+  try {
+    const r = await fetch('/api/novnc-info');
+    const d = await r.json();
+    if (d.available) {
+      const bar  = document.getElementById('novnc-bar');
+      const link = document.getElementById('novnc-link');
+      if (bar)  { bar.style.display = 'flex'; }
+      if (link) { link.href = d.url; link.textContent = d.url.replace('http://','') + ' →'; }
+    } else {
+      const bar = document.getElementById('ssh-bar');
+      const cmd = document.getElementById('ssh-cmd');
+      if (bar) { bar.style.display = 'flex'; }
+      if (cmd) { cmd.textContent = d.ssh || `ssh ${d.user||'user'}@${d.host||''}`; }
+    }
+  } catch(_) {}
+}
+
 // ── Start ─────────────────────────────────────────────────────
 init();
+checkNovnc();
 {% endraw %}
 </script>
 </body>

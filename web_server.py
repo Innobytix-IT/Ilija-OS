@@ -65,6 +65,17 @@ register_agent_routes(app)
 from cloud_routes import register_cloud_routes
 register_cloud_routes(app)
 
+# ── AHPT-Routen einbinden ─────────────────────────────────────
+try:
+    from ahpt_routes import register_ahpt_routes
+    register_ahpt_routes(app)
+except Exception as _e:
+    print(f'AHPT-Routen nicht geladen: {_e}')
+
+# ── Fristen & Vorlagen einbinden ──────────────────────────────
+from fristen_routes import fristen_bp
+app.register_blueprint(fristen_bp)
+
 # ── Chat-Sessions einbinden ───────────────────────────────────
 from session_routes import register_session_routes
 register_session_routes(app, get_kernel, kernel_lock)
@@ -400,6 +411,27 @@ def whatsapp_connection_status():
 @app.route("/einstellungen")
 def einstellungen_page():
     return render_template("einstellungen.html")
+
+
+@app.route("/api/novnc-info")
+def novnc_info():
+    import socket as _sock
+    import getpass
+    available = False
+    try:
+        with _sock.create_connection(("127.0.0.1", 6080), timeout=0.5):
+            available = True
+    except OSError:
+        pass
+    host = request.host.split(":")[0]
+    user = getpass.getuser()
+    return jsonify({
+        "available": available,
+        "url": f"http://{host}:6080/vnc.html",
+        "ssh": f"ssh {user}@{host}",
+        "host": host,
+        "user": user,
+    })
 
 
 # ── Kalender-Einstellungen ────────────────────────────────────
