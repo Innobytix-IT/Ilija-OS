@@ -7,6 +7,9 @@ import os
 import json
 import uuid
 import re
+import base64
+import tempfile
+import shutil
 from datetime import datetime
 from flask import request, jsonify, render_template
 from werkzeug.utils import secure_filename
@@ -15,7 +18,9 @@ _BASE      = os.path.dirname(os.path.abspath(__file__))
 _DATA      = os.path.join(_BASE, "data", "fristen")
 _INDEX     = os.path.join(_DATA, "vorlagen.json")
 _FILES     = os.path.join(_DATA, "dateien")
-_ABSENDER  = os.path.join(_DATA, "absender.json")
+_ABSENDER          = os.path.join(_DATA, "absender.json")
+_UNTERSCHRIFT_BASE = os.path.join(_DATA, "unterschrift")
+_UNTERSCHRIFT_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".webp"]
 
 os.makedirs(_FILES, exist_ok=True)
 
@@ -64,6 +69,23 @@ def _tage_bis(datum_str: str) -> int:
         return (d - datetime.today().date()).days
     except Exception:
         return 9999
+
+
+def _find_unterschrift() -> str | None:
+    """Gibt den Pfad zur hinterlegten Unterschrift zurück, oder None."""
+    for ext in _UNTERSCHRIFT_EXTS:
+        p = _UNTERSCHRIFT_BASE + ext
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def _delete_unterschrift():
+    """Löscht alle hinterlegten Unterschrift-Dateien."""
+    for ext in _UNTERSCHRIFT_EXTS:
+        p = _UNTERSCHRIFT_BASE + ext
+        if os.path.exists(p):
+            os.remove(p)
 
 
 # ── Registrierung ─────────────────────────────────────────────────────────────
@@ -329,6 +351,126 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
+    # ── Unterschrift API ──────────────────────────────────────────────────────
+
+    @app.route("/api/fristen/unterschrift", methods=["GET"])
+    def fristen_unterschrift_get():
+        pfad = _find_unterschrift()
+        if not pfad:
+            return jsonify({"ok": True, "exists": False})
+        ext  = os.path.splitext(pfad)[1].lstrip(".")
+        mime = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+                "gif": "image/gif", "webp": "image/webp"}.get(ext, "image/png")
+        with open(pfad, "rb") as f:
+            data = base64.b64encode(f.read()).decode()
+        return jsonify({"ok": True, "exists": True, "data": f"data:{mime};base64,{data}"})
+
+    @app.route("/api/fristen/unterschrift", methods=["POST"])
+    def fristen_unterschrift_post():
+        if "datei" in request.files:
+            f   = request.files["datei"]
+            ext = os.path.splitext(f.filename)[1].lower()
+            if ext not in (".png", ".jpg", ".jpeg", ".gif", ".webp"):
+                return jsonify({"ok": False, "error": "Nur PNG, JPG, GIF, WebP erlaubt"}), 400
+            _delete_unterschrift()
+            os.makedirs(_DATA, exist_ok=True)
+            f.save(_UNTERSCHRIFT_BASE + ext)
+            return jsonify({"ok": True})
+        d        = request.get_json(force=True) or {}
+        data_url = d.get("data", "")
+        m = re.match(r"data:image/([^;]+);base64,(.+)", data_url, re.DOTALL)
+        if not m:
+            return jsonify({"ok": False, "error": "Ungültiges Format"}), 400
+        subtype = m.group(1).lower().replace("jpeg", "jpg")
+        ext     = "." + (subtype if subtype in ("png", "jpg", "gif", "webp") else "png")
+        raw     = base64.b64decode(m.group(2))
+        _delete_unterschrift()
+        os.makedirs(_DATA, exist_ok=True)
+        with open(_UNTERSCHRIFT_BASE + ext, "wb") as f:
+            f.write(raw)
+        return jsonify({"ok": True})
+
+    @app.route("/api/fristen/unterschrift", methods=["DELETE"])
+    def fristen_unterschrift_delete():
+        _delete_unterschrift()
+        return jsonify({"ok": True})
+
+    # ── PDF-Datei ausliefern (für PDF.js) ────────────────────────────────────
+
+    @app.route("/fristen/datei/<vid>")
+    def fristen_datei_raw(vid):
+        from flask import send_from_directory, abort
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v or not v.get("datei"):
+            abort(404)
+        return send_from_directory(_FILES, v["datei"])
+
+    # ── Unterschrift-Platzierung (Seite) ──────────────────────────────────────
+
+    @app.route("/fristen/unterschrift-setzen/<vid>")
+    def fristen_unterschrift_setzen_page(vid):
+        from flask import abort
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v or not v.get("datei") or v["datei"].endswith(".html"):
+            abort(404)
+        return render_template("unterschrift_setzen.html", vid=vid, name=v.get("name", "Dokument"))
+
+    # ── Unterschrift einbetten (PyMuPDF) ──────────────────────────────────────
+
+    @app.route("/api/fristen/<vid>/unterschrift-einbetten", methods=["POST"])
+    def fristen_unterschrift_einbetten(vid):
+        try:
+            import fitz
+        except ImportError:
+            return jsonify({"ok": False,
+                            "error": "PyMuPDF nicht installiert. Bitte: pip install pymupdf"}), 503
+
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v or not v.get("datei"):
+            return jsonify({"ok": False, "error": "Keine Datei vorhanden"}), 404
+        if not v["datei"].lower().endswith(".pdf"):
+            return jsonify({"ok": False,
+                            "error": "Unterschrift-Einbettung ist nur für PDF-Dateien möglich"}), 400
+
+        unterschrift_pfad = _find_unterschrift()
+        if not unterschrift_pfad:
+            return jsonify({"ok": False, "error": "Keine Unterschrift hinterlegt"}), 404
+
+        d        = request.get_json(force=True) or {}
+        page_num = max(0, int(d.get("page", 0)))
+        x        = float(d.get("x", 0))
+        y        = float(d.get("y", 0))
+        width    = max(10.0, float(d.get("width", 150)))
+        height   = max(5.0,  float(d.get("height", 50)))
+
+        src_path = os.path.join(_FILES, v["datei"])
+        out_name = f"{vid}_signed.pdf"
+        out_path = os.path.join(_FILES, out_name)
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False, dir=_FILES) as tmp:
+                tmp_path = tmp.name
+            doc  = fitz.open(src_path)
+            if page_num >= len(doc):
+                page_num = len(doc) - 1
+            page = doc[page_num]
+            rect = fitz.Rect(x, y, x + width, y + height)
+            page.insert_image(rect, filename=unterschrift_pfad, keep_proportion=True)
+            doc.save(tmp_path)
+            doc.close()
+            shutil.move(tmp_path, out_path)
+            tmp_path = None
+            v["datei"] = out_name
+            _save(vorlagen)
+            return jsonify({"ok": True})
+        except Exception as e:
+            if tmp_path and os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            return jsonify({"ok": False, "error": str(e)}), 500
+
 
 def _fmt_datum(datum_str: str) -> str:
     try:
@@ -340,6 +482,23 @@ def _fmt_datum(datum_str: str) -> str:
 def _baue_brief_html(v: dict, absender: dict, betreff: str, briefkoerper: str) -> str:
     """Baut ein druckbares DIN-5008-konformes HTML-Dokument."""
     heute = datetime.today().strftime("%d.%m.%Y")
+
+    # Hinterlegte Unterschrift laden
+    unterschrift_pfad = _find_unterschrift()
+    unterschrift_img_html = ""
+    name_margin = "margin-top:16mm"  # Leerraum für manuelle Unterschrift
+    if unterschrift_pfad:
+        ext  = os.path.splitext(unterschrift_pfad)[1].lstrip(".")
+        mime = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+                "gif": "image/gif", "webp": "image/webp"}.get(ext, "image/png")
+        with open(unterschrift_pfad, "rb") as uf:
+            udata = base64.b64encode(uf.read()).decode()
+        unterschrift_img_html = (
+            f'<img src="data:{mime};base64,{udata}" '
+            f'style="max-height:55px;max-width:180px;display:block;'
+            f'margin-top:12mm;margin-bottom:3mm">'
+        )
+        name_margin = "margin-top:0"
 
     def he(s: str) -> str:
         return str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
@@ -449,7 +608,6 @@ body {{
   font-size: 11pt;
 }}
 .unterschrift .name {{
-  margin-top: 16mm;
   font-weight: bold;
 }}
 /* Drucken-Leiste (nur am Bildschirm sichtbar) */
@@ -497,7 +655,8 @@ body {{
   <div class="betreff">{betreff_html}</div>
   <div class="brieftext">{koerper_html}</div>
   <div class="unterschrift">
-    <div class="name">{he(abs_name)}</div>
+    {unterschrift_img_html}
+    <div class="name" style="{name_margin}">{he(abs_name)}</div>
     {abs_email_html}
   </div>
 </div>

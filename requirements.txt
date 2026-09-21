@@ -46,6 +46,7 @@ PyPDF2>=3.0.0
 python-docx>=1.0.0
 openpyxl>=3.1.0
 python-pptx>=0.6.0
+pymupdf>=1.24.0        # PDF-Bearbeitung: Unterschrift einbetten
 
 # -- Bild-OCR (fuer Dokument-Scans) ----------------------------------
 Pillow>=10.0.0
