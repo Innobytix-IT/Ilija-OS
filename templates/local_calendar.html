@@ -147,6 +147,12 @@ select.fi { cursor: pointer; appearance: none; }
 .toast.info{border-color:rgba(90,164,255,.2);background:rgba(90,164,255,.09);color:var(--blue)}
 @keyframes tin{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
 
+/* ── Fristen-Banner (AllDay-Kopfzeile) ── */
+.frist-event { cursor: pointer !important; }
+.frist-event .fc-event-title { font-family: var(--f) !important; font-weight: 700 !important; }
+/* Frist-Banner in der Woche nicht in die Zeitraster-Zeilen fließen lassen */
+.fc-timegrid-event.frist-event { display: none !important; }
+
 /* Modal-Kopfzeile: kategoriespezifisches Pulsieren beim Bearbeiten */
 @keyframes pulse-blocker  {
   0%,100% { color: var(--red);  text-shadow: 0 0 8px rgba(255,92,106,.6); }
@@ -210,6 +216,13 @@ select.fi { cursor: pointer; appearance: none; }
       • <span style="color:#FF7A00">🟠 Wichtig</span> (Dringend)<br>
       • <span style="color:var(--blue)">🟦 Privat</span> (Persönliche Termine)<br>
       • <span style="color:#ffccd0">🔲 Blocker</span> (Blockiert KI-Buchungen)
+      <br><br>
+      <strong>Fristen-Banner:</strong><br>
+      • <span style="color:#22c97c">■</span> &gt; 4 Wochen<br>
+      • <span style="color:#f59e0b">■</span> ≤ 4 Wochen<br>
+      • <span style="color:#fb923c">■</span> ≤ 1 Woche<br>
+      • <span style="color:#ef4444">■</span> Überfällig<br>
+      <span style="font-size:.7rem">(Klick → Fristen-Seite)</span>
       <br><br>
       <strong>Hinweise:</strong><br>
       • Blocker verhindern das Buchen neuer Termine auf dieser Zeit.<br>
@@ -384,7 +397,9 @@ document.addEventListener('DOMContentLoaded', function() {
     selectable: true,
     selectMirror: true,
     dayMaxEvents: true,
-    events: function(fetchInfo, successCallback, failureCallback) {
+    eventSources: [
+      {
+        events: function(fetchInfo, successCallback, failureCallback) {
       fetch('/api/local_calendar/events')
         .then(r => r.json())
         .then(data => {
@@ -466,12 +481,45 @@ document.addEventListener('DOMContentLoaded', function() {
           successCallback(result);
         })
         .catch(failureCallback);
-    },
+        }
+      },
+      {
+        editable: false,
+        events: function(fetchInfo, successCallback, failureCallback) {
+          fetch('/api/fristen')
+            .then(r => r.json())
+            .then(fristen => {
+              successCallback(fristen.map(f => {
+                const t = (f._tage_bis_frist !== undefined) ? f._tage_bis_frist : 9999;
+                let bg, border, text;
+                if (t < 0)        { bg = '#ef4444'; border = '#dc2626'; text = '#fff'; }
+                else if (t <= 7)  { bg = '#fb923c'; border = '#ea580c'; text = '#fff'; }
+                else if (t <= 28) { bg = '#f59e0b'; border = '#d97706'; text = '#0B1520'; }
+                else              { bg = '#22c97c'; border = '#16a34a'; text = '#0B1520'; }
+                const icon = t < 0 ? '⚠️' : t <= 7 ? '⚡' : t <= 28 ? '⏰' : '📋';
+                return {
+                  id: 'frist-' + f.id,
+                  title: icon + ' ' + f.name,
+                  start: f.frist_datum,
+                  allDay: true,
+                  editable: false,
+                  overlap: true,
+                  backgroundColor: bg,
+                  borderColor: border,
+                  textColor: text,
+                  classNames: ['frist-event'],
+                  extendedProps: { isFrist: true, fristId: f.id, tage: t }
+                };
+              }));
+            })
+            .catch(failureCallback);
+        }
+      }
+    ],
     eventInteractive: true,
 
     selectOverlap: function(event) {
-      // Blocker verhindern das Aufziehen in Wochen-/Tagesansicht (visuelles Feedback)
-      // In der Monatsansicht wird nur ein Tag angeklickt – dort gilt die Prüfung beim Speichern
+      if (event.extendedProps && event.extendedProps.isFrist) return true;
       if (localCalendar.view.type === 'dayGridMonth') return true;
       if (event.display === 'background') return false;
       return true;
@@ -484,6 +532,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     eventClick: function(info) {
       const ev = info.event;
+
+      // Frist-Banner: direkt zur Fristen-Seite
+      if (ev.extendedProps && ev.extendedProps.isFrist) {
+        window.location.href = '/fristen';
+        return;
+      }
 
       const isBlocker = ev.display === 'background' ||
                         (ev.extendedProps.category === 'blocker');
@@ -514,6 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
     },
 
     eventDrop: function(info) {
+      if (info.event.extendedProps && info.event.extendedProps.isFrist) { info.revert(); return; }
       if (info.event.extendedProps.recurrence && info.event.extendedProps.recurrence !== 'none') {
         if (!confirm('Serientermin verschieben?\n\nACHTUNG: Das verschiebt den Beginn der gesamten Serie, nicht nur dieses Vorkommens.')) {
           info.revert();
@@ -523,6 +578,7 @@ document.addEventListener('DOMContentLoaded', function() {
       updateEventAPI(info.event);
     },
     eventResize: function(info) {
+      if (info.event.extendedProps && info.event.extendedProps.isFrist) { info.revert(); return; }
       if (info.event.extendedProps.recurrence && info.event.extendedProps.recurrence !== 'none') {
         if (!confirm('Serientermin anpassen?\n\nACHTUNG: Das ändert die Uhrzeit der gesamten Serie.')) {
           info.revert();
@@ -533,7 +589,7 @@ document.addEventListener('DOMContentLoaded', function() {
     },
 
     eventOverlap: function(stillEvent, movingEvent) {
-      // Verhindert das visuelle Einrasten beim Ziehen über einen Blocker
+      if (stillEvent.extendedProps && stillEvent.extendedProps.isFrist) return true;
       if (localCalendar.view.type === 'dayGridMonth') return true;
       if (stillEvent.display === 'background') return false;
       return true;
