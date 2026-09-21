@@ -712,6 +712,10 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
             shutil.move(tmp_path, out_path)
             tmp_path = None
             v["datei"] = out_name
+            v["unterschrift_position"] = {
+                "page": page_num, "x": x, "y": y,
+                "width": width, "height": height
+            }
             _save(vorlagen)
             return jsonify({"ok": True})
         except Exception as e:
@@ -1127,6 +1131,33 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
             shutil.move(tmp_path, out_path)
             tmp_path = None
             v["datei"] = out_name
+            # Auto-Unterschrift wenn Position für diese Vorlage gespeichert ist
+            upos = v.get("unterschrift_position")
+            if upos:
+                u_pfad = _find_unterschrift()
+                if u_pfad:
+                    s_out_name = f"{vid}_signed.pdf"
+                    s_out_path = os.path.join(_FILES, s_out_name)
+                    s_tmp = None
+                    try:
+                        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False, dir=_FILES) as sf:
+                            s_tmp = sf.name
+                        sdoc = fitz.open(out_path)
+                        pn = min(int(upos.get("page", 0)), len(sdoc) - 1)
+                        srect = fitz.Rect(
+                            upos["x"], upos["y"],
+                            upos["x"] + upos["width"], upos["y"] + upos["height"]
+                        )
+                        sdoc[pn].insert_image(srect, filename=u_pfad, keep_proportion=True)
+                        sdoc.save(s_tmp)
+                        sdoc.close()
+                        shutil.move(s_tmp, s_out_path)
+                        s_tmp = None
+                        v["datei"] = s_out_name
+                        out_name = s_out_name
+                    except Exception:
+                        if s_tmp and os.path.exists(s_tmp):
+                            os.remove(s_tmp)
             _save(vorlagen)
             return jsonify({"ok": True, "datei": out_name})
         except Exception as e:
