@@ -218,63 +218,74 @@ def register_fristen_routes(app, get_kernel_func=None, kernel_lock=None):
         if not v:
             return jsonify({"ok": False, "error": "Vorlage nicht gefunden"}), 404
 
-        absender = _load_absender()
-        typ = v.get("typ", "antrag")
-        heute = datetime.today().strftime("%d.%m.%Y")
-
-        empf = v["empfaenger"]
-        empf_block = empf.get("name", "")
-        if empf.get("adresse"):
-            empf_block += "\n" + empf["adresse"]
+        absender  = _load_absender()
+        typ       = v.get("typ", "antrag")
+        empf      = v["empfaenger"]
 
         if typ == "kuendigung":
-            betreff = f"Kündigung meines Vertrages"
+            betreff   = "Kündigung meines Vertrages"
             if v.get("kundennummer"):
-                betreff += f" (Kundennummer: {v['kundennummer']})"
-            anlass = (
-                f"Ich kündige hiermit meinen Vertrag fristgemäß zum {_fmt_datum(v['frist_datum'])}."
+                betreff += f"\nIhre Kundennummer: {v['kundennummer']}"
+            kontext   = (
+                f"Fristgemäße Kündigung zum {_fmt_datum(v.get('frist_datum',''))}."
+                + (f"\nVertrag/Beschreibung: {v['beschreibung']}" if v.get("beschreibung") else "")
+                + (f"\nKundennummer: {v['kundennummer']}" if v.get("kundennummer") else "")
             )
-            if v.get("kundennummer"):
-                anlass += f"\n\nMeine Kundennummer: {v['kundennummer']}"
-            if v.get("beschreibung"):
-                anlass += f"\n\nVertrag: {v['beschreibung']}"
-            typ_text = "Kündigung"
+            typ_text  = "Kündigung"
         else:
-            betreff = v["name"]
-            anlass = v.get("beschreibung") or f"Ich beantrage hiermit: {v['name']}"
-            typ_text = "Schreiben"
+            betreff   = v["name"]
+            kontext   = v.get("beschreibung") or f"Antrag/Schreiben betreffend: {v['name']}"
+            typ_text  = "Schreiben" if typ == "sonstiges" else "Antrag"
 
-        prompt = f"""Schreibe ein formelles {typ_text} auf Deutsch. Gib NUR den fertigen Brieftext aus, ohne Erklärungen oder Kommentare davor oder danach.
+        prompt = f"""Schreibe den Briefkörper für ein formelles deutsches {typ_text}-Schreiben.
 
-Absender:
-{absender.get('name') or '[Name des Absenders]'}
-{absender.get('adresse') or '[Adresse des Absenders]'}
-{absender.get('email') or ''}
+Empfänger: {empf.get('name') or 'die zuständige Stelle'}
+Betreff: {betreff.splitlines()[0]}
+Kontext: {kontext}
 
-Datum: {heute}
-
-Empfänger:
-{empf_block or '[Name und Adresse des Empfängers]'}
-
-Betreff: {betreff}
-
-Inhalt:
-{anlass}
-
-Bitte schreibe einen vollständigen, professionellen deutschen Geschäftsbrief im DIN-5008-Format. Schließe mit einer höflichen Schlussformel ab. Verwende keine Markdown-Formatierung."""
+Schreibe NUR: Anrede → Briefinhalt → Schlussformel ("Mit freundlichen Grüßen").
+NICHT: Datum, Adressen, Unterschrift — die werden automatisch hinzugefügt.
+Kein Markdown, kein Fettdruck, keine Überschriften."""
 
         try:
             lock = kernel_lock
             if lock:
                 with lock:
                     k = get_kernel_func()
-                    brief_text = k.chat(prompt)
+                    koerper = k.chat(prompt)
             else:
                 k = get_kernel_func()
-                brief_text = k.chat(prompt)
-            return jsonify({"ok": True, "brief": brief_text})
+                koerper = k.chat(prompt)
+
+            # DIN-5008-Dokument bauen und als Datei speichern
+            html = _baue_brief_html(v, absender, betreff, koerper)
+            filename = f"{vid}.html"
+            with open(os.path.join(_FILES, filename), "w", encoding="utf-8") as f:
+                f.write(html)
+
+            # Alte Datei löschen falls eine andere vorhanden war
+            if v.get("datei") and v["datei"] != filename:
+                old = os.path.join(_FILES, v["datei"])
+                if os.path.exists(old):
+                    os.remove(old)
+
+            v["datei"] = filename
+            _save(vorlagen)
+
+            return jsonify({"ok": True, "doc_url": f"/fristen/dokument/{vid}"})
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
+
+    # ── Brief-Dokument anzeigen ───────────────────────────────────────────────
+
+    @app.route("/fristen/dokument/<vid>")
+    def fristen_dokument(vid):
+        from flask import send_from_directory, abort
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v or not v.get("datei", "").endswith(".html"):
+            abort(404)
+        return send_from_directory(_FILES, v["datei"])
 
     # ── Kontaktdaten-Suche ────────────────────────────────────────────────────
 
@@ -324,3 +335,171 @@ def _fmt_datum(datum_str: str) -> str:
         return datetime.strptime(datum_str, "%Y-%m-%d").strftime("%d.%m.%Y")
     except Exception:
         return datum_str
+
+
+def _baue_brief_html(v: dict, absender: dict, betreff: str, briefkoerper: str) -> str:
+    """Baut ein druckbares DIN-5008-konformes HTML-Dokument."""
+    heute = datetime.today().strftime("%d.%m.%Y")
+
+    def he(s: str) -> str:
+        return str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    # Absender-Kurzzeile (über dem Empfängerfenster — sichtbar im Fensterkuvert)
+    abs_name    = absender.get("name", "")
+    abs_adresse = absender.get("adresse", "")
+    abs_kurz    = abs_name
+    if abs_adresse:
+        abs_kurz += " · " + abs_adresse.replace("\n", ", ").strip()
+
+    # Ort aus letzter Zeile der Absenderadresse extrahieren
+    ort = ""
+    if abs_adresse:
+        letzte = abs_adresse.strip().splitlines()[-1]
+        m = re.match(r"^\d{5}\s+(.+)", letzte.strip())
+        if m:
+            ort = m.group(1)
+    ort_datum = f"{ort + ', ' if ort else ''}{heute}"
+
+    # Empfänger-Block
+    empf       = v.get("empfaenger", {})
+    empf_zeile = "\n".join(z for z in [empf.get("name", ""), empf.get("adresse", "")] if z)
+
+    # Betreff (ggf. mehrzeilig — erste Zeile fett, Rest normal)
+    betreff_zeilen = betreff.strip().splitlines()
+    betreff_html   = "<strong>" + he(betreff_zeilen[0]) + "</strong>"
+    if len(betreff_zeilen) > 1:
+        betreff_html += "<br>" + "<br>".join(he(z) for z in betreff_zeilen[1:])
+
+    # Briefkörper: Zeilenumbrüche → <br>-Paare für Absätze
+    koerper_html = briefkoerper.strip().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    abs_email_html = (
+        f'<div style="font-size:9pt;color:#555;margin-top:2mm">{he(absender.get("email",""))}</div>'
+        if absender.get("email") else ""
+    )
+
+    return f"""<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>{he(v.get('name','Brief'))}</title>
+<style>
+@page {{ size: A4; margin: 10mm 20mm 19mm 25mm; }}
+@media print {{
+  .no-print {{ display: none !important; }}
+  body {{ background: white !important; }}
+  .page {{ box-shadow: none !important; margin: 0 !important; }}
+}}
+*, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+body {{
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11pt;
+  background: #dde3ea;
+  color: #000;
+}}
+.page {{
+  width: 210mm;
+  min-height: 297mm;
+  background: white;
+  margin: 16px auto 40px;
+  padding: 10mm 20mm 25mm 25mm;
+  box-shadow: 0 3px 18px rgba(0,0,0,.18);
+}}
+/* Absender-Kurzzeile (DIN 5008: Angabe über dem Empfängerfenster) */
+.abs-kurz {{
+  font-size: 7.5pt;
+  color: #555;
+  border-bottom: 0.4pt solid #bbb;
+  padding-bottom: 1.5mm;
+  margin-bottom: 3mm;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}}
+/* Empfänger-Block: 40mm Höhe passt ins Fensterkuvert */
+.empf-block {{
+  height: 40mm;
+  font-size: 11pt;
+  line-height: 1.45;
+  white-space: pre-line;
+  padding-top: 5mm;
+}}
+/* Datum rechtsbündig */
+.datum {{
+  text-align: right;
+  margin-top: 8mm;
+  margin-bottom: 12mm;
+  font-size: 11pt;
+}}
+/* Betreff fett */
+.betreff {{
+  margin-bottom: 8mm;
+  font-size: 11pt;
+  line-height: 1.5;
+}}
+/* Brieftext — white-space:pre-wrap erhält Absätze */
+.brieftext {{
+  white-space: pre-wrap;
+  line-height: 1.65;
+  font-size: 11pt;
+}}
+/* Unterschrift-Block */
+.unterschrift {{
+  margin-top: 12mm;
+  font-size: 11pt;
+}}
+.unterschrift .name {{
+  margin-top: 16mm;
+  font-weight: bold;
+}}
+/* Drucken-Leiste (nur am Bildschirm sichtbar) */
+.print-bar {{
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 100;
+  display: flex;
+  gap: 8px;
+  background: #10202D;
+  border: 1px solid rgba(255,255,255,.12);
+  padding: 10px 14px;
+  border-radius: 9px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.5);
+}}
+.print-bar button {{
+  padding: 7px 18px;
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}}
+.btn-print {{ background: #E0A82E; color: #0B1520; }}
+.btn-print:hover {{ background: #C8871B; }}
+.btn-close {{ background: #1E3547; color: #E6EEF5; }}
+.btn-close:hover {{ background: #274257; }}
+@media (max-width: 680px) {{
+  .page {{ width: 100%; margin: 0; padding: 8mm 6mm 15mm 8mm; box-shadow: none; }}
+}}
+</style>
+</head>
+<body>
+<div class="print-bar no-print">
+  <button class="btn-print" onclick="window.print()">🖨&nbsp;Drucken / Als PDF speichern</button>
+  <button class="btn-close" onclick="window.close()">✕&nbsp;Schließen</button>
+</div>
+
+<div class="page">
+  <div class="abs-kurz">{he(abs_kurz)}</div>
+  <div class="empf-block">{he(empf_zeile)}</div>
+  <div class="datum">{he(ort_datum)}</div>
+  <div class="betreff">{betreff_html}</div>
+  <div class="brieftext">{koerper_html}</div>
+  <div class="unterschrift">
+    <div class="name">{he(abs_name)}</div>
+    {abs_email_html}
+  </div>
+</div>
+</body>
+</html>"""
