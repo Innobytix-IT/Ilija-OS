@@ -960,7 +960,7 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
         felder  = data.get("felder", [])
         absender = _load_absender()
         feld_liste = "\n".join(
-            "- " + f["name"] + " (" + f["type"] + ")"
+            "- " + f["name"] + " (" + f.get("type", "Text") + ")"
             + (" [Optionen: " + ", ".join(f["choices"][:6]) + "]" if f.get("choices") else "")
             for f in felder
         )
