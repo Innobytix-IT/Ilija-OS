@@ -216,6 +216,16 @@ def select_provider(mode: str = "auto") -> tuple:
             if mode == "openai":
                 raise
 
+    # Eigener Endpunkt vor Gemini wenn active=True gesetzt
+    _cep_cfg = _load_custom_endpoint_cfg()
+    if mode == "custom" or (mode == "auto" and _cep_cfg.get("url") and _cep_cfg.get("active")):
+        try:
+            p = CustomEndpointProvider()
+            return "Eigener Endpunkt", p
+        except Exception:
+            if mode == "custom":
+                raise
+
     if mode == "gemini" or (mode == "auto" and (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"))):
         try:
             p = GeminiProvider()
@@ -224,13 +234,12 @@ def select_provider(mode: str = "auto") -> tuple:
             if mode == "gemini":
                 raise
 
-    if mode == "custom" or (mode == "auto" and _load_custom_endpoint_cfg().get("url")):
+    if mode == "auto" and _cep_cfg.get("url") and not _cep_cfg.get("active"):
         try:
             p = CustomEndpointProvider()
             return "Eigener Endpunkt", p
         except Exception:
-            if mode == "custom":
-                raise
+            pass
 
     # Ollama als letzter Fallback
     try:
