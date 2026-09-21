@@ -593,8 +593,14 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
       <input type="checkbox" id="smtpSsl">
       <label for="smtpSsl">SSL (Port 465) statt STARTTLS (Port 587)</label>
     </div>
-    <div class="smtp-save-row">
+    <div class="field" style="margin-top:12px">
+      <label>Benachrichtigungs-E-Mail <span class="opt">(optional — leer = Absender-Adresse)</span></label>
+      <input class="inp" id="smtpNotifEmail" type="email" placeholder="deine-email@beispiel.de">
+      <div style="font-size:.68rem;color:var(--tx3);margin-top:4px">An diese Adresse werden Fristen-Erinnerungen gesendet.</div>
+    </div>
+    <div class="smtp-save-row" style="flex-wrap:wrap;gap:8px">
       <button class="btn btn-ghost btn-sm" onclick="saveSmtp()">💾 SMTP-Daten speichern</button>
+      <button class="btn btn-ghost btn-sm" onclick="testBenachrichtigungen()" id="btnTestNotif">🔔 Jetzt testen</button>
       <span class="smtp-ok" id="smtpSaveOk">✓ Gespeichert</span>
     </div>
 
@@ -1162,10 +1168,11 @@ async function loadSmtpConfig() {
   try {
     const r = await fetch('/api/fristen/email-config');
     const d = await r.json();
-    document.getElementById('smtpServer').value = d.smtp_server || '';
-    document.getElementById('smtpPort').value   = d.smtp_port   || 587;
-    document.getElementById('smtpUser').value   = d.smtp_user   || '';
-    document.getElementById('smtpSsl').checked  = !!d.use_ssl;
+    document.getElementById('smtpServer').value     = d.smtp_server    || '';
+    document.getElementById('smtpPort').value       = d.smtp_port      || 587;
+    document.getElementById('smtpUser').value       = d.smtp_user      || '';
+    document.getElementById('smtpSsl').checked      = !!d.use_ssl;
+    document.getElementById('smtpNotifEmail').value = d.notif_email    || '';
     const hint = document.getElementById('smtpPassHint');
     if (hint) hint.style.display = d.hat_passwort ? 'inline' : 'none';
     _smtpKonfiguriert = !!(d.smtp_server && d.smtp_user && d.hat_passwort);
@@ -1179,6 +1186,7 @@ async function saveSmtp() {
     smtp_user:     document.getElementById('smtpUser').value.trim(),
     smtp_password: document.getElementById('smtpPass').value,
     use_ssl:       document.getElementById('smtpSsl').checked,
+    notif_email:   document.getElementById('smtpNotifEmail').value.trim(),
   };
   try {
     const r = await fetch('/api/fristen/email-config', {
@@ -1196,6 +1204,23 @@ async function saveSmtp() {
       if (body.smtp_password && hint) hint.style.display = 'inline';
     } else toast(d.error || 'Fehler', false);
   } catch { toast('Netzwerkfehler', false); }
+}
+
+async function testBenachrichtigungen() {
+  const btn = document.getElementById('btnTestNotif');
+  btn.disabled = true; btn.textContent = '⏳ Wird gesendet…';
+  try {
+    const r = await fetch('/api/fristen/benachrichtigungen-jetzt', { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) {
+      const n = (d.gesendet || []).length;
+      const f = (d.fehler   || []).length;
+      if (n > 0)       toast(`${n} Benachrichtigung${n!==1?'en':''} gesendet ✓`);
+      else if (f > 0)  toast(`${f} Fehler beim Senden`, false);
+      else             toast('Keine fälligen Benachrichtigungen heute');
+    } else toast('Fehler: ' + (d.error || 'Unbekannt'), false);
+  } catch (e) { toast('Netzwerkfehler: ' + e.message, false); }
+  btn.disabled = false; btn.textContent = '🔔 Jetzt testen';
 }
 
 // ── E-Mail senden ─────────────────────────────────────────────

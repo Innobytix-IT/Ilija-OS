@@ -10,6 +10,7 @@ import re
 import base64
 import tempfile
 import shutil
+import threading
 from datetime import datetime
 from flask import request, jsonify, render_template
 from werkzeug.utils import secure_filename
@@ -20,6 +21,8 @@ _INDEX     = os.path.join(_DATA, "vorlagen.json")
 _FILES     = os.path.join(_DATA, "dateien")
 _ABSENDER          = os.path.join(_DATA, "absender.json")
 _EMAIL_CONFIG      = os.path.join(_DATA, "email_config.json")
+_NOTIF_LOG         = os.path.join(_DATA, "notif_log.json")
+_TG_CONFIG         = os.path.join(_BASE, "data", "telegram", "telegram_config.json")
 _UNTERSCHRIFT_BASE = os.path.join(_DATA, "unterschrift")
 _UNTERSCHRIFT_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".webp"]
 
@@ -90,7 +93,7 @@ def _delete_unterschrift():
 
 
 _EMAIL_DEFAULTS = {"smtp_server": "", "smtp_port": 587, "smtp_user": "",
-                   "smtp_password": "", "use_ssl": False}
+                   "smtp_password": "", "use_ssl": False, "notif_email": ""}
 
 def _load_email_config() -> dict:
     if not os.path.exists(_EMAIL_CONFIG):
@@ -107,9 +110,196 @@ def _save_email_config(data: dict):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+# ── Benachrichtigungs-Hilfsfunktionen ─────────────────────────────────────────
+
+def _load_notif_log() -> dict:
+    if not os.path.exists(_NOTIF_LOG):
+        return {}
+    try:
+        with open(_NOTIF_LOG, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def _save_notif_log(log: dict):
+    os.makedirs(_DATA, exist_ok=True)
+    with open(_NOTIF_LOG, "w", encoding="utf-8") as f:
+        json.dump(log, f, ensure_ascii=False, indent=2)
+
+def _notif_bereits_gesendet(log: dict, vid: str, kanal: str, heute: str) -> bool:
+    return log.get(f"{vid}__{kanal}__{heute}", False)
+
+def _notif_markieren(log: dict, vid: str, kanal: str, heute: str):
+    log[f"{vid}__{kanal}__{heute}"] = True
+    # Log-Einträge älter als 90 Tage bereinigen
+    try:
+        cutoff = (datetime.today().date().toordinal() - 90)
+        log = {k: v for k, v in log.items()
+               if datetime.strptime(k.split("__")[-1], "%Y-%m-%d").date().toordinal() >= cutoff}
+    except Exception:
+        pass
+    return log
+
+
+def _telegram_senden(text: str) -> bool:
+    """Sendet Text an den konfigurierten Telegram-Chat. Gibt True bei Erfolg zurück."""
+    try:
+        import requests as _req
+        if not os.path.exists(_TG_CONFIG):
+            return False
+        with open(_TG_CONFIG, encoding="utf-8") as f:
+            cfg = json.load(f)
+        token = cfg.get("token", "").strip()
+        chat_id = cfg.get("chat_id", "").strip()
+        if not token or not chat_id:
+            return False
+        r = _req.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
+            timeout=15,
+        )
+        return r.ok
+    except Exception as e:
+        print(f"[FristenNotif] Telegram-Fehler: {e}")
+        return False
+
+
+def _email_notif_senden(subject: str, body: str) -> bool:
+    """Sendet eine Benachrichtigungs-E-Mail an die konfigurierte Adresse."""
+    import smtplib, ssl as _ssl
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text      import MIMEText
+    try:
+        cfg = _load_email_config()
+        if not cfg.get("smtp_server") or not cfg.get("smtp_user") or not cfg.get("smtp_password"):
+            return False
+        empfaenger = cfg.get("notif_email", "").strip() or cfg["smtp_user"]
+        msg = MIMEMultipart("alternative")
+        msg["From"]    = cfg["smtp_user"]
+        msg["To"]      = empfaenger
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        ctx = _ssl.create_default_context()
+        if cfg.get("use_ssl"):
+            with smtplib.SMTP_SSL(cfg["smtp_server"], int(cfg["smtp_port"]), context=ctx) as srv:
+                srv.login(cfg["smtp_user"], cfg["smtp_password"])
+                srv.sendmail(cfg["smtp_user"], [empfaenger], msg.as_bytes())
+        else:
+            with smtplib.SMTP(cfg["smtp_server"], int(cfg["smtp_port"])) as srv:
+                srv.ehlo(); srv.starttls(context=ctx)
+                srv.login(cfg["smtp_user"], cfg["smtp_password"])
+                srv.sendmail(cfg["smtp_user"], [empfaenger], msg.as_bytes())
+        return True
+    except Exception as e:
+        print(f"[FristenNotif] E-Mail-Fehler: {e}")
+        return False
+
+
+def _sende_fristen_benachrichtigungen() -> dict:
+    """Prüft alle Vorlagen und sendet fällige Benachrichtigungen. Gibt Zusammenfassung zurück."""
+    heute   = datetime.today().date()
+    heute_s = heute.isoformat()
+    vorlagen = _load()
+    log      = _load_notif_log()
+    gesendet = []
+    fehler   = []
+
+    for v in vorlagen:
+        try:
+            fd   = datetime.strptime(v["frist_datum"], "%Y-%m-%d").date()
+            tage = (fd - heute).days
+        except Exception:
+            continue
+
+        # Fällige Erinnerungsstufen für diese Vorlage berechnen
+        erinn_wochen = v.get("erinnerung_wochen", [4, 2, 1])
+        trigger_tage = set()
+        for w in erinn_wochen:
+            t = round(float(w) * 7)
+            trigger_tage.add(t)
+        # Immer am Fristtag selbst und bei Überfälligkeit (Tag 0 und -1)
+        trigger_tage.update({0, -1})
+
+        if tage not in trigger_tage:
+            continue
+
+        # Benachrichtigungstext aufbauen
+        if tage < 0:
+            dring = f"⚠️ ÜBERFÄLLIG (seit {abs(tage)} Tag{'en' if abs(tage)!=1 else ''})"
+        elif tage == 0:
+            dring = "🚨 HEUTE fällig"
+        elif tage <= 3:
+            dring = f"⚡ {tage} Tag{'e' if tage!=1 else ''} verbleibend"
+        elif tage <= 7:
+            dring = f"⏰ {tage} Tage verbleibend"
+        else:
+            wochen = tage // 7
+            dring  = f"📋 {wochen} Woche{'n' if wochen!=1 else ''} verbleibend"
+
+        name     = v.get("name", "Unbekannt")
+        datum_de = _fmt_datum(v["frist_datum"])
+        kanäle   = v.get("benachrichtigung", ["chat"])
+
+        for kanal in kanäle:
+            if kanal == "chat":
+                continue  # Chat-Benachrichtigung läuft client-seitig
+            if _notif_bereits_gesendet(log, v["id"], kanal, heute_s):
+                continue
+
+            ok = False
+            if kanal == "telegram":
+                text = (
+                    f"<b>Ilija · Fristen-Erinnerung</b>\n\n"
+                    f"{dring}\n"
+                    f"📄 <b>{name}</b>\n"
+                    f"📅 Frist: {datum_de}"
+                )
+                ok = _telegram_senden(text)
+
+            elif kanal == "email":
+                betreff = f"Ilija Frist-Erinnerung: {name} — {datum_de}"
+                inhalt  = (
+                    f"Ilija · Fristen-Erinnerung\n"
+                    f"{'─'*40}\n\n"
+                    f"{dring}\n\n"
+                    f"Vorlage:  {name}\n"
+                    f"Frist:    {datum_de}\n"
+                )
+                if v.get("beschreibung"):
+                    inhalt += f"Hinweis:  {v['beschreibung']}\n"
+                inhalt += f"\n→ Jetzt öffnen: http://localhost:5001/fristen\n"
+                ok = _email_notif_senden(betreff, inhalt)
+
+            if ok:
+                log = _notif_markieren(log, v["id"], kanal, heute_s)
+                gesendet.append({"vid": v["id"], "name": name, "kanal": kanal})
+            else:
+                fehler.append({"vid": v["id"], "name": name, "kanal": kanal})
+
+    _save_notif_log(log)
+    return {"gesendet": gesendet, "fehler": fehler}
+
+
+def _start_fristen_notif_scheduler():
+    """Hintergrund-Thread: prüft täglich zwischen 7–9 Uhr auf fällige Benachrichtigungen."""
+    import time as _time
+    while True:
+        _time.sleep(1800)  # alle 30 Minuten prüfen
+        try:
+            stunde = datetime.now().hour
+            if 7 <= stunde < 9:
+                _sende_fristen_benachrichtigungen()
+        except Exception as e:
+            print(f"[FristenNotif] Scheduler-Fehler: {e}")
+
+
 # ── Registrierung ─────────────────────────────────────────────────────────────
 
 def register_fristen_routes(app, get_kernel_func=None, kernel_lock=None):
+
+    # Benachrichtigungs-Scheduler einmalig starten
+    threading.Thread(target=_start_fristen_notif_scheduler,
+                     daemon=True, name="fristen-notif").start()
 
     # ── Seite ─────────────────────────────────────────────────────────────────
 
@@ -154,6 +344,22 @@ def register_fristen_routes(app, get_kernel_func=None, kernel_lock=None):
                 pass
         urgent.sort(key=lambda x: x["tage"])
         return jsonify(urgent)
+
+    @app.route("/api/fristen/benachrichtigungen-jetzt", methods=["POST"])
+    def fristen_benachrichtigungen_jetzt():
+        """Manueller Trigger — sendet alle heute fälligen Benachrichtigungen."""
+        try:
+            result = _sende_fristen_benachrichtigungen()
+            return jsonify({"ok": True, **result})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @app.route("/api/fristen/benachrichtigungen-log", methods=["GET"])
+    def fristen_benachrichtigungen_log():
+        log = _load_notif_log()
+        heute_s = datetime.today().date().isoformat()
+        heute_log = {k: v for k, v in log.items() if k.endswith(f"__{heute_s}")}
+        return jsonify({"heute": heute_log, "gesamt": len(log)})
 
     @app.route("/api/fristen", methods=["POST"])
     def fristen_create():
@@ -526,10 +732,11 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
     def fristen_email_config_post():
         d   = request.get_json(force=True) or {}
         cfg = _load_email_config()
-        if "smtp_server" in d: cfg["smtp_server"] = d["smtp_server"].strip()
-        if "smtp_port"   in d: cfg["smtp_port"]   = int(d["smtp_port"])
-        if "smtp_user"   in d: cfg["smtp_user"]   = d["smtp_user"].strip()
-        if "use_ssl"     in d: cfg["use_ssl"]     = bool(d["use_ssl"])
+        if "smtp_server"  in d: cfg["smtp_server"]  = d["smtp_server"].strip()
+        if "smtp_port"    in d: cfg["smtp_port"]    = int(d["smtp_port"])
+        if "smtp_user"    in d: cfg["smtp_user"]    = d["smtp_user"].strip()
+        if "use_ssl"      in d: cfg["use_ssl"]      = bool(d["use_ssl"])
+        if "notif_email"  in d: cfg["notif_email"]  = d["notif_email"].strip()
         if d.get("smtp_password"):
             cfg["smtp_password"] = d["smtp_password"]
         _save_email_config(cfg)
