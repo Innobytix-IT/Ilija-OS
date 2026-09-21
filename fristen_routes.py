@@ -606,6 +606,81 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
+    # ── Fax senden (Mail2Fax via simple-fax.de) ──────────────────────────────
+
+    @app.route("/api/fristen/<vid>/fax-senden", methods=["POST"])
+    def fristen_fax_senden(vid):
+        import smtplib, ssl as _ssl
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text      import MIMEText
+        from email.mime.base      import MIMEBase
+        from email                import encoders as _enc
+        import mimetypes, re as _re
+
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v:
+            return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
+
+        datei = v.get("datei", "")
+        if not datei or not datei.lower().endswith(".pdf"):
+            return jsonify({"ok": False,
+                            "error": "Fax-Versand erfordert eine PDF-Datei."}), 400
+
+        cfg = _load_email_config()
+        if not cfg.get("smtp_server") or not cfg.get("smtp_user") or not cfg.get("smtp_password"):
+            return jsonify({"ok": False,
+                            "error": "SMTP nicht konfiguriert. Bitte unter 👤 Meine Daten einrichten."}), 400
+
+        d = request.get_json(force=True) or {}
+        fax_nummer = d.get("fax_nummer", "").strip()
+        if not fax_nummer:
+            return jsonify({"ok": False, "error": "Keine Faxnummer angegeben"}), 400
+
+        # Normalisieren: nur Ziffern, +, führende Leerzeichen/Sonderzeichen entfernen
+        fax_clean = _re.sub(r"[\s\-\(\)/]", "", fax_nummer)
+        if not _re.match(r"^\+?[\d]{5,}$", fax_clean):
+            return jsonify({"ok": False, "error": "Ungültige Faxnummer"}), 400
+
+        fax_to = f"{fax_clean}@simple-fax.de"
+        subject = d.get("subject", v.get("name", "Fax")).strip() or "Fax"
+        body    = d.get("body", "").strip()
+
+        msg           = MIMEMultipart("mixed")
+        msg["From"]   = cfg["smtp_user"]
+        msg["To"]     = fax_to
+        msg["Subject"] = subject
+
+        msg.attach(MIMEText(body or " ", "plain", "utf-8"))
+
+        datei_pfad = os.path.join(_FILES, datei)
+        if os.path.exists(datei_pfad):
+            mime_type, _ = mimetypes.guess_type(datei_pfad)
+            maintype, subtype = (mime_type or "application/pdf").split("/", 1)
+            with open(datei_pfad, "rb") as af:
+                part = MIMEBase(maintype, subtype)
+                part.set_payload(af.read())
+            _enc.encode_base64(part)
+            part.add_header("Content-Disposition",
+                            f'attachment; filename="{datei}"')
+            msg.attach(part)
+
+        try:
+            ctx = _ssl.create_default_context()
+            if cfg.get("use_ssl"):
+                with smtplib.SMTP_SSL(cfg["smtp_server"], int(cfg["smtp_port"]), context=ctx) as srv:
+                    srv.login(cfg["smtp_user"], cfg["smtp_password"])
+                    srv.sendmail(cfg["smtp_user"], [fax_to], msg.as_bytes())
+            else:
+                with smtplib.SMTP(cfg["smtp_server"], int(cfg["smtp_port"])) as srv:
+                    srv.ehlo()
+                    srv.starttls(context=ctx)
+                    srv.login(cfg["smtp_user"], cfg["smtp_password"])
+                    srv.sendmail(cfg["smtp_user"], [fax_to], msg.as_bytes())
+            return jsonify({"ok": True})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
     # ── Formular ausfüllen ────────────────────────────────────────────────────
 
     @app.route("/fristen/formular-ausfuellen/<vid>")

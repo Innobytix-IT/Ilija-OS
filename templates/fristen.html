@@ -458,6 +458,54 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
   </div>
 </div>
 
+<!-- ════ Fax-Modal ════ -->
+<div class="modal-bg" id="faxModal" onclick="if(event.target===this)closeFaxModal()">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">
+      <span>📠 Per Fax senden</span>
+      <button class="modal-close" onclick="closeFaxModal()">✕</button>
+    </div>
+
+    <!-- SMTP nicht konfiguriert -->
+    <div id="fNoSMTP" style="display:none">
+      <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:14px;margin-bottom:16px;font-size:.8rem;color:var(--tx2);line-height:1.65">
+        ⚠️ <strong>SMTP ist noch nicht konfiguriert.</strong><br>
+        Der Fax-Versand läuft über <strong>simple-fax.de Mail2Fax</strong> und benötigt einen konfigurierten E-Mail-Server.<br><br>
+        Bitte unter <strong>👤 Meine Daten → E-Mail-Versand</strong> einrichten.
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeFaxModal()">Schließen</button>
+        <button class="btn btn-prim" onclick="closeFaxModal();openAbsenderModal()">→ Meine Daten öffnen</button>
+      </div>
+    </div>
+
+    <!-- Compose Form -->
+    <div id="fForm" style="display:none">
+      <p style="font-size:.75rem;color:var(--tx3);margin-bottom:14px;line-height:1.5">
+        Das PDF wird per <strong>Mail2Fax</strong> über <strong>simple-fax.de</strong> versendet.<br>
+        Der Fax-Versand wird über dein simple-fax.de-Guthaben abgerechnet.
+      </p>
+      <div class="field">
+        <label>Faxnummer *</label>
+        <input class="inp" id="fFaxNr" type="tel" placeholder="z. B. 0531123456 oder +49531123456">
+      </div>
+      <div class="field">
+        <label>Betreff <span class="opt">(optional)</span></label>
+        <input class="inp" id="fSubject" placeholder="Betreff">
+      </div>
+      <div class="field">
+        <label>Deckblatt-Text <span class="opt">(optional)</span></label>
+        <textarea class="inp" id="fBody" rows="3" style="resize:vertical;min-height:72px" placeholder="Kurzer Begleittext…"></textarea>
+      </div>
+      <div id="fAnhangInfo" style="font-size:.75rem;color:var(--tx2);margin-bottom:4px"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeFaxModal()">Abbrechen</button>
+        <button class="btn btn-prim" id="fBtnSend" onclick="sendFax()">📠 Fax senden</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ════ Absender-Modal ════ -->
 <div class="modal-bg" id="absenderModal" onclick="if(event.target===this)closeAbsenderModal()">
   <div class="modal">
@@ -684,6 +732,7 @@ function render(data) {
             <button class="btn btn-teal btn-sm" onclick="openBrief('${v.id}')">✍️ Brief aufsetzen</button>
             <button class="btn btn-ghost btn-sm" onclick="uploadFile('${v.id}')">📎 Formular hochladen</button>
             <button class="btn btn-ghost btn-sm" onclick="openEmailModal('${v.id}')">📧 Senden</button>
+            ${v.datei && v.datei.toLowerCase().endsWith('.pdf') ? `<button class="btn btn-ghost btn-sm" onclick="openFaxModal('${v.id}')">📠 Fax</button>` : ''}
             <button class="btn btn-red btn-sm" onclick="confirmDelete('${v.id}','${esc(v.name)}')">🗑</button>
           </div>
         </div>
@@ -1227,10 +1276,78 @@ async function sendEmail() {
   }
 }
 
+// ── Fax Modal ─────────────────────────────────────────────────
+
+let _faxVid = null;
+
+async function openFaxModal(vid) {
+  _faxVid = vid;
+  const cfg = await fetch('/api/fristen/email-config').then(r => r.json()).catch(() => ({}));
+  const hasSMTP = cfg.smtp_server && cfg.smtp_user && cfg.hat_passwort;
+  document.getElementById('fNoSMTP').style.display = hasSMTP ? 'none' : '';
+  document.getElementById('fForm').style.display   = hasSMTP ? '' : 'none';
+
+  if (hasSMTP) {
+    // Faxnummer aus Empfänger-Daten vorbelegen wenn vorhanden
+    const vorlagen = await fetch('/api/fristen').then(r => r.json()).catch(() => []);
+    const v = vorlagen.find(x => x.id === vid);
+    document.getElementById('fFaxNr').value  = v?.empfaenger?.fax || '';
+    document.getElementById('fSubject').value = v?.name || '';
+    document.getElementById('fBody').value   = '';
+
+    const anhang = document.getElementById('fAnhangInfo');
+    if (v?.datei) {
+      anhang.textContent = '📎 ' + v.datei;
+      anhang.style.display = '';
+    } else {
+      anhang.style.display = 'none';
+    }
+    document.getElementById('fBtnSend').disabled = false;
+    document.getElementById('fBtnSend').textContent = '📠 Fax senden';
+  }
+  document.getElementById('faxModal').classList.add('open');
+}
+
+function closeFaxModal() {
+  document.getElementById('faxModal').classList.remove('open');
+  _faxVid = null;
+}
+
+async function sendFax() {
+  if (!_faxVid) return;
+  const nr = document.getElementById('fFaxNr').value.trim();
+  if (!nr) { toast('Faxnummer fehlt', false); return; }
+
+  const btn = document.getElementById('fBtnSend');
+  btn.disabled = true; btn.textContent = '⏳ Wird gesendet…';
+
+  try {
+    const r = await fetch(`/api/fristen/${_faxVid}/fax-senden`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        fax_nummer: nr,
+        subject:    document.getElementById('fSubject').value.trim(),
+        body:       document.getElementById('fBody').value.trim(),
+      })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast('Fax gesendet ✓');
+      closeFaxModal();
+    } else {
+      toast('Fehler: ' + (d.error || 'Unbekannt'), false);
+      btn.disabled = false; btn.textContent = '📠 Fax senden';
+    }
+  } catch (e) {
+    toast('Netzwerkfehler: ' + e.message, false);
+    btn.disabled = false; btn.textContent = '📠 Fax senden';
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeModal(); closeBrief(); closeAbsenderModal(); closeEmailModal(); closeConfirm(); }
+  if (e.key === 'Escape') { closeModal(); closeBrief(); closeAbsenderModal(); closeEmailModal(); closeFaxModal(); closeConfirm(); }
 });
 
 load();
