@@ -247,7 +247,7 @@ class IlijaApp(ctk.CTk):
         self._tab_names = [
             "1. KI Modelle", "2. Telegram", "3. Google", "4. E-Mail",
             "5. DMS", "6. Server", "7. FritzBox", "8. Eingangskanäle",
-            "9. Start", "10. AHPT",
+            "9. Start", "10. AHPT", "11. Fristen",
         ]
         for name in self._tab_names:
             self.tabview.add(name)
@@ -262,6 +262,7 @@ class IlijaApp(ctk.CTk):
         self._tab_eingangskanale()
         self._tab_start()
         self._tab_ahpt()
+        self._tab_fristen()
 
     # ── Status-Bar ────────────────────────────────────────────────────────────
     def _build_status_bar(self):
@@ -1515,6 +1516,87 @@ new QRCode(document.getElementById("qr-download"),{{text:"{dl_url}",width:200,he
         except Exception as e:
             messagebox.showerror("Fehler", f"Ordner konnte nicht geöffnet werden:\n{e}")
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # TAB 11: Fristen & Vorlagen
+    # ─────────────────────────────────────────────────────────────────────────
+    def _tab_fristen(self):
+        f = self._scrollable("11. Fristen")
+
+        self._section(f, "📋  Fristen & Vorlagen", "#22c97c")
+        self._hint_box(f,
+            "Das Fristen-Modul erinnert an Fristen (Kündigungen, Anträge, Behörden)\n"
+            "und hilft beim Ausfüllen, Unterschreiben und Versenden von Dokumenten.\n\n"
+            "Erreichbar im Web-UI unter: /fristen\n"
+            "Alle weiteren Einstellungen (Unterschrift, Benachrichtigung) direkt im Modul."
+        )
+
+        self._divider(f)
+        self._section(f, "👤  Absender-Profil", "#22c97c")
+        self._hint_box(f,
+            "Wird automatisch in KI-Briefe eingesetzt (Briefkopf, Unterschrift-Zeile)\n"
+            "und für das KI-Vorausfüllen von PDF-Formularen genutzt."
+        )
+        self._label(f, "Vollständiger Name:")
+        self.ent_frist_name = self._entry(f, placeholder="Max Mustermann")
+
+        self._label(f, "Adresse (Straße, PLZ Ort):")
+        self.txt_frist_adresse = ctk.CTkTextbox(
+            f, height=56, fg_color="#1E3547", border_color="#44445a",
+            border_width=1, text_color="#E6EEF5", font=ctk.CTkFont(size=12), wrap="word")
+        self.txt_frist_adresse.pack(fill="x", padx=4, pady=2)
+
+        self._label(f, "E-Mail-Adresse:")
+        self.ent_frist_email = self._entry(f, placeholder="max@beispiel.de")
+
+        self._divider(f)
+        self._section(f, "📧  SMTP-Versand (E-Mail & Fax)", "#a78bfa")
+        self._hint_box(f,
+            "Eigene SMTP-Konfiguration für den Versand aus dem Fristen-Modul.\n"
+            "Unabhängig vom globalen E-Mail-Setup (Tab 4).\n\n"
+            "Gmail: 2FA aktivieren → App-Passwort erstellen (kein normales Passwort!).\n"
+            "Outlook/GMX/Web.de analog."
+        )
+
+        row_smtp = ctk.CTkFrame(f, fg_color="transparent")
+        row_smtp.pack(fill="x", padx=4, pady=2)
+        ctk.CTkLabel(row_smtp, text="SMTP-Server:", text_color="#8FA6B8", width=110, anchor="w").pack(side="left")
+        self.ent_frist_smtp_host = ctk.CTkEntry(
+            row_smtp, placeholder_text="smtp.gmail.com",
+            fg_color="#1E3547", border_color="#44445a", text_color="#E6EEF5")
+        self.ent_frist_smtp_host.pack(side="left", fill="x", expand=True, padx=(4, 8))
+        ctk.CTkLabel(row_smtp, text="Port:", text_color="#8FA6B8", width=40, anchor="w").pack(side="left")
+        self.ent_frist_smtp_port = ctk.CTkEntry(
+            row_smtp, placeholder_text="587", width=70,
+            fg_color="#1E3547", border_color="#44445a", text_color="#E6EEF5")
+        self.ent_frist_smtp_port.pack(side="right")
+
+        self._label(f, "Benutzername (E-Mail-Adresse):")
+        self.ent_frist_smtp_user = self._entry(f, placeholder="absender@gmail.com")
+
+        self._label(f, "App-Passwort:")
+        self.ent_frist_smtp_pw = self._entry(f, show="*", placeholder="Neu eingeben zum Ändern")
+
+        self.var_frist_ssl = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(f, text="SSL verwenden (Port 465) statt STARTTLS (Port 587)",
+                        variable=self.var_frist_ssl,
+                        fg_color="#a78bfa", hover_color="#8b6bda",
+                        text_color="#E6EEF5").pack(anchor="w", padx=4, pady=(6, 2))
+
+        self._label(f, "Benachrichtigungs-E-Mail (leer = Absender-Adresse):")
+        self.ent_frist_notif_email = self._entry(f, placeholder="deine-email@beispiel.de")
+
+        self._divider(f)
+        self._section(f, "📠  Fax-Versand über simple-fax.de", "#fb923c")
+        self._hint_box(f,
+            "Der Fax-Versand nutzt simple-fax.de Mail2Fax — kein Faxgerät nötig.\n\n"
+            "Was du brauchst:\n"
+            "  1. Kostenloses Konto auf simple-fax.de anlegen\n"
+            "  2. Guthaben aufladen (ab 7 Cent / Seite, Deutschland)\n"
+            "  3. Die dort hinterlegte E-Mail als SMTP-Benutzername oben eintragen\n\n"
+            "Ilija sendet das PDF als E-Mail an {Faxnummer}@simple-fax.de —\n"
+            "simple-fax.de liefert es als echtes Fax aus."
+        )
+
     # ── Einstellungen laden ──────────────────────────────────────────────────
     def load_all_settings(self):
         env = load_env_dict()
@@ -1630,6 +1712,19 @@ new QRCode(document.getElementById("qr-download"),{{text:"{dl_url}",width:200,he
         self.var_ahpt_dms.set(ahpt_cfg.get("dms_aktiv", True))
         self._ahpt_check_status()
 
+        # Fristen & Vorlagen
+        frist_abs = load_json_config(os.path.join(get_data_dir(), "fristen", "absender.json"))
+        self.ent_frist_name.insert(0, frist_abs.get("name", ""))
+        self.txt_frist_adresse.insert("1.0", frist_abs.get("adresse", ""))
+        self.ent_frist_email.insert(0, frist_abs.get("email", ""))
+
+        frist_smtp = load_json_config(os.path.join(get_data_dir(), "fristen", "email_config.json"))
+        self.ent_frist_smtp_host.insert(0, frist_smtp.get("smtp_server", ""))
+        self.ent_frist_smtp_port.insert(0, str(frist_smtp.get("smtp_port", 587)))
+        self.ent_frist_smtp_user.insert(0, frist_smtp.get("smtp_user", ""))
+        self.var_frist_ssl.set(bool(frist_smtp.get("use_ssl", False)))
+        self.ent_frist_notif_email.insert(0, frist_smtp.get("notif_email", ""))
+
     # ── Einstellungen speichern ──────────────────────────────────────────────
     def save_all_settings(self):
         errors = []
@@ -1743,6 +1838,39 @@ new QRCode(document.getElementById("qr-download"),{{text:"{dl_url}",width:200,he
             "dms_aktiv":  self.var_ahpt_dms.get(),
         }
         save_json_config(os.path.join(get_data_dir(), "ahpt_config.json"), ahpt_cfg)
+
+        # Fristen & Vorlagen – Absender
+        frist_name  = self.ent_frist_name.get().strip()
+        frist_addr  = self.txt_frist_adresse.get("1.0", "end").strip()
+        frist_email = self.ent_frist_email.get().strip()
+        if frist_name or frist_addr or frist_email:
+            frist_abs_path = os.path.join(get_data_dir(), "fristen", "absender.json")
+            os.makedirs(os.path.dirname(frist_abs_path), exist_ok=True)
+            save_json_config(frist_abs_path, {
+                "name": frist_name, "adresse": frist_addr, "email": frist_email})
+
+        # Fristen & Vorlagen – SMTP
+        frist_smtp_host = self.ent_frist_smtp_host.get().strip()
+        frist_smtp_user = self.ent_frist_smtp_user.get().strip()
+        frist_smtp_pw   = self.ent_frist_smtp_pw.get()
+        if frist_smtp_host or frist_smtp_user:
+            try:
+                frist_smtp_port = int(self.ent_frist_smtp_port.get().strip() or "587")
+            except ValueError:
+                frist_smtp_port = 587
+            frist_smtp_path = os.path.join(get_data_dir(), "fristen", "email_config.json")
+            frist_smtp_cfg  = load_json_config(frist_smtp_path)
+            frist_smtp_cfg.update({
+                "smtp_server": frist_smtp_host,
+                "smtp_port":   frist_smtp_port,
+                "smtp_user":   frist_smtp_user,
+                "use_ssl":     self.var_frist_ssl.get(),
+                "notif_email": self.ent_frist_notif_email.get().strip(),
+            })
+            if frist_smtp_pw:
+                frist_smtp_cfg["smtp_password"] = frist_smtp_pw
+            os.makedirs(os.path.dirname(frist_smtp_path), exist_ok=True)  # noqa
+            save_json_config(frist_smtp_path, frist_smtp_cfg)
 
         if errors:
             messagebox.showwarning("Gespeichert mit Hinweisen",
