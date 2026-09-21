@@ -986,23 +986,60 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
 
     @app.route("/api/fristen/<vid>/referenz-upload", methods=["POST"])
     def fristen_referenz_upload(vid):
-        try:
-            import fitz
-        except ImportError:
-            return jsonify({"ok": False, "error": "PyMuPDF nicht installiert"}), 503
+        _IMG_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".bmp"}
         vorlagen = _load()
         v = _find(vorlagen, vid)
         if not v:
             return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
         f = request.files.get("file")
-        if not f or not f.filename.lower().endswith(".pdf"):
-            return jsonify({"ok": False, "error": "Nur PDF erlaubt"}), 400
-        doc = fitz.open(stream=f.read(), filetype="pdf")
-        text_parts = []
-        for page in doc:
-            text_parts.append(page.get_text())
-        doc.close()
-        full_text = "\n".join(text_parts).strip()
+        if not f:
+            return jsonify({"ok": False, "error": "Keine Datei"}), 400
+        ext = os.path.splitext(f.filename.lower())[1]
+        if ext not in _IMG_EXTS and ext != ".pdf":
+            return jsonify({"ok": False,
+                            "error": "Nur PDF oder Bild (JPG, PNG, WEBP, TIFF) erlaubt"}), 400
+
+        full_text = ""
+        if ext == ".pdf":
+            try:
+                import fitz
+            except ImportError:
+                return jsonify({"ok": False, "error": "PyMuPDF nicht installiert"}), 503
+            doc = fitz.open(stream=f.read(), filetype="pdf")
+            parts = []
+            for page in doc:
+                # Digitaler Text aus AcroForm-PDFs
+                t = page.get_text().strip()
+                if t:
+                    parts.append(t)
+                else:
+                    # Gescannte Seite → OCR via Pixmap
+                    try:
+                        import pytesseract
+                        from PIL import Image
+                        import io
+                        pix = page.get_pixmap(dpi=150)
+                        img = Image.open(io.BytesIO(pix.tobytes("png")))
+                        parts.append(pytesseract.image_to_string(img, lang="deu+eng"))
+                    except Exception:
+                        pass
+            doc.close()
+            full_text = "\n".join(parts).strip()
+        else:
+            # Bild (Handy-Foto, Scan)
+            try:
+                import pytesseract
+                from PIL import Image, ImageOps
+                import io
+                img = Image.open(io.BytesIO(f.read()))
+                img = ImageOps.exif_transpose(img)  # EXIF-Rotation für Handyfotos
+                full_text = pytesseract.image_to_string(img, lang="deu+eng").strip()
+            except ImportError:
+                return jsonify({"ok": False,
+                                "error": "pytesseract/Pillow nicht installiert"}), 503
+            except Exception as e:
+                return jsonify({"ok": False, "error": f"OCR-Fehler: {e}"}), 500
+
         v["referenz_text"] = full_text[:4000]
         v["referenz_name"] = f.filename
         _save(vorlagen)
