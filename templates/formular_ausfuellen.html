@@ -93,7 +93,9 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
 .ov-cb{pointer-events:auto;cursor:pointer;width:100%;height:100%;margin:0;-webkit-appearance:none;appearance:none;background:rgba(255,255,180,.55);border:1.5px solid rgba(80,130,0,.45);border-radius:2px;box-sizing:border-box;position:relative}
 .ov-cb:checked{background:rgba(26,122,26,.2);border-color:#1a7a1a}
 .ov-cb:checked::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#1a7a1a;font-weight:700;font-size:11px;line-height:1}
-.ov-radio-dot{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:10px;color:#1a7a1a;font-weight:bold}
+.ov-radio{pointer-events:auto;cursor:pointer;width:100%;height:100%;margin:0;-webkit-appearance:none;appearance:none;background:rgba(255,255,180,.55);border:1.5px solid rgba(80,130,0,.45);border-radius:50%;box-sizing:border-box;position:relative}
+.ov-radio:checked{background:rgba(26,122,26,.2);border-color:#1a7a1a}
+.ov-radio:checked::after{content:'●';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#1a7a1a;font-weight:700;font-size:10px;line-height:1}
 .ov-sel{border:none;background:rgba(255,255,100,.38);font-family:Arial,sans-serif;color:#111;outline:none;pointer-events:auto;width:100%;height:100%;font-size:9px;padding:0 2px;box-sizing:border-box}
 </style>
 </head>
@@ -318,12 +320,29 @@ function renderOverlay(pageNum) {
       });
       div.appendChild(cb);
     } else if (f.type === 'RadioButton') {
-      const checkedR = Array.from(rightRad).find(r => r.checked);
-      const span = document.createElement('span');
-      span.className = 'ov-radio-dot';
-      span.textContent = checkedR ? '●' : '';
-      span.title = checkedR ? checkedR.value : '';
-      div.appendChild(span);
+      const choices = f.choices || [];
+      const cRects = f.choice_rects || [];
+      choices.forEach((choice, i) => {
+        const cr = cRects[i];
+        if (!cr) return;
+        const ccx = cr[0] * sc, ccy = cr[1] * sc;
+        const ccw = (cr[2] - cr[0]) * sc, cch = (cr[3] - cr[1]) * sc;
+        if (ccw < 2 || cch < 2) return;
+        const cdiv = document.createElement('div');
+        cdiv.className = 'ov-field';
+        cdiv.style.cssText = `left:${ccx}px;top:${ccy}px;width:${ccw}px;height:${cch}px`;
+        const rightMatch = Array.from(rightRad).find(r => r.value === choice);
+        const ri = document.createElement('input');
+        ri.type = 'radio'; ri.name = 'ov_' + f.name; ri.value = choice;
+        ri.className = 'ov-radio';
+        ri.checked = rightMatch ? rightMatch.checked : false;
+        ri.addEventListener('change', () => {
+          if (rightMatch) { rightMatch.checked = true; rightMatch.dispatchEvent(new Event('change', {bubbles:true})); }
+        });
+        cdiv.appendChild(ri);
+        overlay.appendChild(cdiv);
+      });
+      return; // eigene Divs pro Choice angehängt – Haupt-Div überspringen
     } else if (f.type === 'ComboBox') {
       const sel = document.createElement('select');
       sel.className = 'ov-sel';

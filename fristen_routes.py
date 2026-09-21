@@ -932,27 +932,32 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
                 choices = list(widget.choice_values or [])
                 raw_label = getattr(widget, "field_label", None)
                 display_label = (raw_label.strip() if raw_label and raw_label.strip() else None) or _camel_to_label(name)
+                w_rect = [widget.rect.x0, widget.rect.y0,
+                          widget.rect.x1, widget.rect.y1]
                 if ft == "RadioButton":
                     if name in seen_radio:
-                        # add choice to existing entry
-                        felder[seen_radio[name]]["choices"].extend(
-                            c for c in choices if c not in felder[seen_radio[name]]["choices"]
+                        existing = felder[seen_radio[name]]
+                        existing["choices"].extend(
+                            c for c in choices if c not in existing["choices"]
                         )
+                        existing["choice_rects"].append(w_rect)
                         if val_str and val_str != "Off":
-                            felder[seen_radio[name]]["value"] = val_str
+                            existing["value"] = val_str
                         continue
                     else:
                         seen_radio[name] = len(felder)
-                felder.append({
+                entry = {
                     "name":    name,
                     "label":   display_label,
                     "type":    ft,
                     "value":   val_str if val_str != "Off" else "",
                     "choices": choices,
                     "page":    page_num,
-                    "rect":    [widget.rect.x0, widget.rect.y0,
-                                widget.rect.x1, widget.rect.y1],
-                })
+                    "rect":    w_rect,
+                }
+                if ft == "RadioButton":
+                    entry["choice_rects"] = [w_rect]
+                felder.append(entry)
         total_pages = doc.page_count
         doc.close()
         return jsonify({"ok": True, "felder": felder, "total_pages": total_pages})
