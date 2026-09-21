@@ -123,13 +123,20 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
       <button class="btn btn-ghost btn-sm" id="btnKI2" onclick="kiBefuellen()" disabled>🤖 KI</button>
     </div>
     <div class="ki-kontext-wrap" id="kiKontextWrap" style="display:none;padding:8px 12px;border-bottom:1px solid var(--bdr2)">
-      <label style="font-size:.7rem;font-weight:600;color:var(--tx2);display:block;margin-bottom:4px">
-        💡 Zusatzinfos für KI (optional)
-      </label>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <label style="font-size:.7rem;font-weight:600;color:var(--tx2)">💡 Zusatzinfos für KI</label>
+        <span id="kiSaveStatus" style="font-size:.65rem;color:var(--tx3)"></span>
+      </div>
       <textarea id="kiKontext" rows="3"
         placeholder="z.B.: BG-Nummer: 123456, Jobcenter: Stuttgart Mitte, Bewilligungszeitraum: 01.01.–30.06.2027"
         style="width:100%;font-size:.75rem;padding:6px 8px;border-radius:6px;background:var(--s2);border:1px solid var(--bdr2);color:var(--tx);font-family:var(--f);resize:vertical;box-sizing:border-box"></textarea>
-      <p style="font-size:.67rem;color:var(--tx3);margin:3px 0 0">KI befüllt nur die aktuelle Seite.</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px">
+        <p style="font-size:.67rem;color:var(--tx3);margin:0">KI befüllt nur die aktuelle Seite.</p>
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.7rem;color:var(--g)">
+          <input type="file" id="referenzInput" accept=".pdf" style="display:none" onchange="referenzHochladen()">
+          📎 <span id="referenzLabel">Referenz-PDF</span>
+        </label>
+      </div>
     </div>
     <div class="fp-body" id="fieldsBody">
       <div class="state-msg" style="padding:32px 16px">
@@ -153,6 +160,59 @@ let totalPages  = 1;
 let currentScale= 1.4;
 let currentVP   = null;
 let alleFelder  = [];  // [{name, type, value, choices, page, rect}, ...]
+
+// ── Vorlage-Kontext laden ──────────────────────────────────────
+async function ladeVorlageKontext() {
+  try {
+    const r = await fetch(`/api/fristen/${VID}/vorlage`);
+    const d = await r.json();
+    if (!d.ok) return;
+    const ta = document.getElementById('kiKontext');
+    if (ta && d.ki_kontext) ta.value = d.ki_kontext;
+    if (d.referenz_name) {
+      document.getElementById('referenzLabel').textContent = '✅ ' + d.referenz_name;
+    }
+  } catch(e) {}
+}
+
+// Auto-Save Kontext bei Verlassen des Textfeldes
+let kiSaveTimer = null;
+function kiKontextChanged() {
+  const status = document.getElementById('kiSaveStatus');
+  if (status) status.textContent = '…';
+  clearTimeout(kiSaveTimer);
+  kiSaveTimer = setTimeout(async () => {
+    const val = (document.getElementById('kiKontext') || {}).value || '';
+    try {
+      await fetch(`/api/fristen/${VID}/ki-kontext`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ kontext: val })
+      });
+      if (status) { status.textContent = '✓ gespeichert'; setTimeout(() => { status.textContent = ''; }, 2000); }
+    } catch(e) { if (status) status.textContent = '⚠️'; }
+  }, 800);
+}
+
+// Referenz-PDF hochladen
+async function referenzHochladen() {
+  const inp = document.getElementById('referenzInput');
+  if (!inp.files.length) return;
+  const lbl = document.getElementById('referenzLabel');
+  lbl.textContent = '⏳ wird verarbeitet…';
+  const fd = new FormData();
+  fd.append('file', inp.files[0]);
+  try {
+    const r = await fetch(`/api/fristen/${VID}/referenz-upload`, { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) {
+      lbl.textContent = '✅ ' + d.name;
+      toast(`📎 Referenz geladen (${d.zeichen} Zeichen extrahiert)`);
+    } else {
+      lbl.textContent = '❌ Fehler';
+      toast('Fehler: ' + (d.error || 'Unbekannt'));
+    }
+  } catch(e) { lbl.textContent = '❌ ' + e.message; }
+}
 
 // ── PDF laden ──────────────────────────────────────────────────
 async function ladePDF() {
@@ -414,7 +474,9 @@ function toast(msg) {
 
 // ── Init ─────────────────────────────────────────────────────
 (async () => {
-  await Promise.all([ladePDF(), ladeFelder()]);
+  await Promise.all([ladePDF(), ladeFelder(), ladeVorlageKontext()]);
+  const ta = document.getElementById('kiKontext');
+  if (ta) ta.addEventListener('input', kiKontextChanged);
 })();
 </script>
 </body>

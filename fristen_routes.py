@@ -957,6 +957,48 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
         doc.close()
         return jsonify({"ok": True, "felder": felder, "total_pages": total_pages})
 
+    @app.route("/api/fristen/<vid>/vorlage", methods=["GET"])
+    def fristen_vorlage_get(vid):
+        v = _find(_load(), vid)
+        if not v:
+            return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
+        return jsonify({"ok": True, "ki_kontext": v.get("ki_kontext", ""),
+                        "referenz_name": v.get("referenz_name", "")})
+
+    @app.route("/api/fristen/<vid>/ki-kontext", methods=["POST"])
+    def fristen_ki_kontext_save(vid):
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v:
+            return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
+        v["ki_kontext"] = (request.get_json(force=True) or {}).get("kontext", "").strip()
+        _save(vorlagen)
+        return jsonify({"ok": True})
+
+    @app.route("/api/fristen/<vid>/referenz-upload", methods=["POST"])
+    def fristen_referenz_upload(vid):
+        try:
+            import fitz
+        except ImportError:
+            return jsonify({"ok": False, "error": "PyMuPDF nicht installiert"}), 503
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v:
+            return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
+        f = request.files.get("file")
+        if not f or not f.filename.lower().endswith(".pdf"):
+            return jsonify({"ok": False, "error": "Nur PDF erlaubt"}), 400
+        doc = fitz.open(stream=f.read(), filetype="pdf")
+        text_parts = []
+        for page in doc:
+            text_parts.append(page.get_text())
+        doc.close()
+        full_text = "\n".join(text_parts).strip()
+        v["referenz_text"] = full_text[:4000]
+        v["referenz_name"] = f.filename
+        _save(vorlagen)
+        return jsonify({"ok": True, "zeichen": len(v["referenz_text"]), "name": f.filename})
+
     @app.route("/api/fristen/<vid>/formular-ki-vorschlag", methods=["POST"])
     def fristen_formular_ki(vid):
         if not get_kernel_func or not kernel_lock:
@@ -967,7 +1009,7 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
             return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
         data     = request.get_json(force=True) or {}
         felder   = data.get("felder", [])
-        kontext  = data.get("kontext", "").strip()
+        kontext  = data.get("kontext", "").strip() or v.get("ki_kontext", "").strip()
         absender = _load_absender()
         feld_liste = "\n".join(
             "- " + f["name"] + ' ("' + f.get("label", f["name"]) + '", ' + f.get("type", "Text") + ")"
@@ -975,7 +1017,11 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
             for f in felder
         )
         adresse_einz = absender.get("adresse", "").replace("\n", ", ").strip()
-        kontext_block = f"\nZusatzinfos vom Nutzer:\n{kontext}\n" if kontext else ""
+        kontext_block = f"\nZusatzinfos:\n{kontext}\n" if kontext else ""
+        referenz_block = (
+            f"\nReferenzdokument \"{v.get('referenz_name','')}\" (Auszug):\n"
+            + v["referenz_text"][:3000] + "\n"
+        ) if v.get("referenz_text") else ""
         prompt = (
             "Du befüllst ein PDF-Formular. Antworte NUR mit einem JSON-Objekt "
             "(kein Markdown, keine Erklärungen, nur roher JSON-Text).\n\n"
@@ -984,9 +1030,10 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
             f"- Adresse: {adresse_einz}\n"
             f"- E-Mail: {absender.get('email', '')}\n"
             f"- Formulartitel: {v.get('name', '')}\n"
-            f"{kontext_block}\n"
+            f"{kontext_block}"
+            f"{referenz_block}\n"
             "Formularfelder — Format: Feldname (Bezeichnung, Typ) [Optionen].\n"
-            "Befülle sinnvoll basierend auf Nutzerdaten; leerer String falls unbekannt:\n"
+            "Befülle sinnvoll basierend auf allen Quellen oben; leerer String falls unbekannt:\n"
             f"{feld_liste}\n\n"
             'Format: {"Feldname": "Wert", ...}'
         )
