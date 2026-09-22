@@ -635,7 +635,7 @@ def save_kalender_settings():
 
 # ── Auto-Update Einstellungen ────────────────────────────────
 _UPDATE_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "update_settings.json")
-_UPDATE_SCRIPT = os.path.join(os.path.expanduser("~"), "ilija-update.sh")
+_UPDATE_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ilija-update.sh")
 
 def _load_update_settings():
     try:
