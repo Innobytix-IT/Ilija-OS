@@ -169,15 +169,8 @@ class IlijaApp(ctk.CTk):
         self.configure(fg_color=C_BG)
 
         # Fenster-Icon (Titelleiste & Taskleiste)
-        try:
-            from PIL import Image, ImageTk
-            _icon_path = os.path.join(get_base_dir(), "branding", "ilija-icon.png")
-            if os.path.exists(_icon_path):
-                _icon_img = Image.open(_icon_path).resize((32, 32), Image.LANCZOS)
-                self._tk_icon = ImageTk.PhotoImage(_icon_img)
-                self.iconphoto(True, self._tk_icon)
-        except Exception:
-            pass
+        # after() nötig: CTk überschreibt iconphoto() auf Linux in seiner eigenen __init__-Phase
+        self.after(200, self._apply_window_icon)
 
         self.server_thread   = None
         self.telegram_thread = None
@@ -197,6 +190,18 @@ class IlijaApp(ctk.CTk):
         self._build_footer_buttons()
 
         self.load_all_settings()
+
+    def _apply_window_icon(self):
+        try:
+            from PIL import Image, ImageTk
+            _icon_path = os.path.join(get_base_dir(), "branding", "ilija-icon.png")
+            if os.path.exists(_icon_path):
+                _img = Image.open(_icon_path).resize((64, 64), Image.LANCZOS)
+                self._tk_icon = ImageTk.PhotoImage(_img)
+                self.iconphoto(True, self._tk_icon)
+                self.wm_iconphoto(True, self._tk_icon)
+        except Exception:
+            pass
 
     # ── Header ────────────────────────────────────────────────────────────────
     def _build_header(self):
