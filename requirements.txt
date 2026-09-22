@@ -24,6 +24,7 @@ sentence-transformers>=2.2.0
 
 # -- Telegram --------------------------------------------------------
 python-telegram-bot>=20.0
+pyTelegramBotAPI>=4.14.0   # telegram_skill.py (telebot)
 
 # -- WhatsApp Web / Outlook (Selenium-Automatisierung) ---------------
 selenium>=4.0.0
