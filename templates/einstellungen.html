@@ -256,11 +256,12 @@ input[type=number]{max-width:90px}
       </div>
 
       <div class="progress-bar" id="progress-bar">
-        <div class="pb-step active" id="ps-0"><div class="pb-dot">1</div><div class="pb-label">KI-Anbieter</div></div>
+        <div class="pb-step active" id="ps-0"><div class="pb-dot">1</div><div class="pb-label">KI & Dienste</div></div>
         <div class="pb-step" id="ps-1"><div class="pb-dot">2</div><div class="pb-label">E-Mail</div></div>
         <div class="pb-step" id="ps-2"><div class="pb-dot">3</div><div class="pb-label">Kalender & Sync</div></div>
         <div class="pb-step" id="ps-3"><div class="pb-dot">4</div><div class="pb-label">Eingangskanäle</div></div>
-        <div class="pb-step" id="ps-4"><div class="pb-dot">5</div><div class="pb-label">Fertig</div></div>
+        <div class="pb-step" id="ps-4"><div class="pb-dot">5</div><div class="pb-label">System</div></div>
+        <div class="pb-step" id="ps-5"><div class="pb-dot">6</div><div class="pb-label">Fertig</div></div>
       </div>
 
       <!-- Step 0: KI-Anbieter -->
@@ -302,26 +303,30 @@ input[type=number]{max-width:90px}
         <div class="wiz-nav">
           <button class="btn btn-ghost" onclick="wizStep(2)">← Zurück</button>
           <div style="display:flex;gap:8px">
-            <button class="btn-skip" onclick="wizDone()">Überspringen</button>
-            <button class="btn btn-prim" onclick="saveKanaleAndDone()">Speichern & Fertig →</button>
+            <button class="btn-skip" onclick="wizStep(4)">Überspringen</button>
+            <button class="btn btn-prim" onclick="saveKanaleAndNext()">Weiter →</button>
           </div>
         </div>
       </div>
 
-      <!-- Step 4: Fertig -->
+      <!-- Step 4: System -->
       <div class="wiz-step" id="ws-4">
+        <div id="wiz-system-content"></div>
+        <div class="wiz-nav">
+          <button class="btn btn-ghost" onclick="wizStep(3)">← Zurück</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn-skip" onclick="wizDone()">Überspringen</button>
+            <button class="btn btn-prim" onclick="saveSystemAndDone()">Speichern & Fertig →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5: Fertig -->
+      <div class="wiz-step" id="ws-5">
         <div style="text-align:center;padding:40px 0">
           <div style="font-size:3rem;margin-bottom:16px">🎉</div>
           <div style="font-size:1.25rem;font-weight:700;color:var(--tx);margin-bottom:8px">Ilija ist einsatzbereit!</div>
-          <div style="font-size:.85rem;color:var(--tx3);margin-bottom:20px">Die wichtigsten Einstellungen wurden gespeichert.</div>
-          <div style="background:var(--s2);border:1px solid var(--bdr2);border-radius:10px;padding:14px 18px;text-align:left;margin-bottom:24px;font-size:.8rem;color:var(--tx2);line-height:1.7">
-            <div style="font-weight:600;color:var(--tx);margin-bottom:8px">Weitere Einstellungen in der Sidebar:</div>
-            <div>🔵 <strong>Google</strong> — OAuth-Zugang für Google Kalender &amp; Gmail</div>
-            <div>☎ <strong>FritzBox SIP</strong> — Telefonie über die Fritzbox</div>
-            <div>🗂 <strong>DMS</strong> — Dokumentenmanagement &amp; OCR</div>
-            <div>🖥 <strong>Server</strong> — Hostname, Port und Systempfade</div>
-            <div>🔗 <strong>AHPT</strong> — Mobiler Zugang von unterwegs</div>
-          </div>
+          <div style="font-size:.85rem;color:var(--tx3);margin-bottom:32px">Alle Einstellungen wurden gespeichert. Du kannst sie jederzeit in der Sidebar anpassen.</div>
           <button class="btn btn-prim" style="font-size:.9rem;padding:11px 28px" onclick="showSettings()">Zu den Einstellungen →</button>
         </div>
       </div>
@@ -664,9 +669,15 @@ function wizStep(n) {
 }
 
 function buildWizardContents() {
-  document.getElementById('wiz-ki-content').innerHTML    = buildKiCard();
-  document.getElementById('wiz-email-content').innerHTML = buildEmailCard();
-  document.getElementById('wiz-kal-content').innerHTML   = buildKalCard();
+  function wizHead(icon, title, sub) {
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--bdr)">
+      <div style="font-size:1.3rem">${icon}</div>
+      <div>
+        <div style="font-size:1rem;font-weight:600;color:var(--tx)">${title}</div>
+        <div style="font-size:.78rem;color:var(--tx3);margin-top:2px">${sub}</div>
+      </div>
+    </div>`;
+  }
   function wrapSection(icon, title, sub, card) {
     return `<div style="margin-bottom:28px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
@@ -679,17 +690,33 @@ function buildWizardContents() {
       ${card}
     </div>`;
   }
+  document.getElementById('wiz-ki-content').innerHTML =
+    wizHead('🤖', 'KI & Dienste', 'API-Keys, Modelle und Google-Zugang') +
+    wrapSection('🤖', 'KI-Anbieter', 'API-Keys und Standardmodell für Ilija', buildKiCard()) +
+    wrapSection('🔵', 'Google', 'OAuth-Zugang für Google Kalender &amp; Gmail', buildGoogleCard());
+  document.getElementById('wiz-email-content').innerHTML =
+    wizHead('📧', 'E-Mail (IMAP/SMTP)', 'Ilija kann E-Mails lesen und senden') + buildEmailCard();
+  document.getElementById('wiz-kal-content').innerHTML =
+    wizHead('📅', 'Kalender &amp; Sync', 'Persönlicher Kalender und Cloud-Synchronisation') + buildKalCard();
   document.getElementById('wiz-kanale-content').innerHTML =
+    wizHead('📡', 'Eingangskanäle', 'Über welche Wege Ilija erreichbar ist') +
     wrapSection('✈', 'Telegram', 'Bot-Token für Nachrichten &amp; Benachrichtigungen', buildTgCard()) +
     wrapSection('📞', 'Telefon', 'Firmenname und Begrüßung für Telefonanrufe', buildPhoneCard()) +
     wrapSection('💬', 'WhatsApp', 'Automatische Antworten auf WhatsApp-Nachrichten', buildWaCard());
+  document.getElementById('wiz-system-content').innerHTML =
+    wizHead('🖥', 'System', 'Telefonie, Dokumentenmanagement und Konfiguration') +
+    wrapSection('☎', 'FritzBox SIP', 'Telefonie über die Fritzbox', buildFritzCard()) +
+    wrapSection('🗂', 'DMS', 'Dokumentenmanagement &amp; OCR-Einstellungen', buildDmsCard()) +
+    wrapSection('🖥', 'Server', 'Hostname, Port und Systempfade', buildServerCard()) +
+    wrapSection('🔗', 'AHPT', 'Mobiler Zugang von unterwegs', buildAhptCard());
 }
 
 async function saveKiAndNext() { await saveKi(); wizStep(1); }
 async function saveEmailAndNext() { await saveEmail(); wizStep(2); }
 async function saveKalAndNext() { await saveKal(); wizStep(3); }
-async function saveKanaleAndDone() { await saveTelegram(); await savePhone(); await saveWa(); wizDone(); }
-function wizDone() { wizStep(4); }
+async function saveKanaleAndNext() { await saveTelegram(); await savePhone(); await saveWa(); wizStep(4); }
+async function saveSystemAndDone() { await saveFritz(); await saveDms(); await saveServer(); await saveAhpt(); wizDone(); }
+function wizDone() { wizStep(5); }
 
 // ── Build Cards ───────────────────────────────────────────────
 function buildKiCard() {
