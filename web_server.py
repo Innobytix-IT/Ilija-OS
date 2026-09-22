@@ -2,6 +2,7 @@
 web_server.py – Web-Interface für Ilija Public Edition
 Starten: python web_server.py
 Browser: http://localhost:5000
+Version: 2.1.0
 
 Erweitert um n8n-ähnliches Workflow Studio.
 """
