@@ -544,7 +544,7 @@ button{font-family:var(--f)}
 }
 .rp-select:focus{border-color:var(--blue)}
 .rp-select option{background:#16293A;color:var(--tx)}
-.rp-hint{font-size:.69rem;color:var(--tx3);line-height:1.6}
+.rp-hint{font-size:.69rem;color:var(--tx3);line-height:1.6}.rp-checkbox-row{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.8rem;color:var(--tx2)}.rp-checkbox-row input[type=checkbox]{width:15px;height:15px;accent-color:var(--blue);cursor:pointer;flex-shrink:0}
 .rp-hint code{
   font-family:var(--m);font-size:.67rem;
   color:var(--blue);background:var(--blue-dim);
@@ -2155,7 +2155,7 @@ async function openPanel(id) {
 
   // Bind data-cfg inputs
   body.querySelectorAll('[data-cfg]').forEach(el => {
-    el.addEventListener('input', e => {
+    const _cfgUpdate = e => {
       const key = e.target.dataset.cfg;
       if (key === '__name') {
         state.nodes[id].name = e.target.value;
@@ -2163,10 +2163,12 @@ async function openPanel(id) {
         const hname = document.querySelector(`#node-${id} .node-head-name`);
         if (hname) hname.textContent = e.target.value;
       } else {
-        state.nodes[id].config[key] = e.target.value;
+        state.nodes[id].config[key] = el.type === 'checkbox' ? el.checked : e.target.value;
       }
       refreshNodeBody(id);
-    });
+    };
+    el.addEventListener('input', _cfgUpdate);
+    if (el.type === 'checkbox') el.addEventListener('change', _cfgUpdate);
   });
 
   // Email operation toggle
@@ -2224,6 +2226,13 @@ function buildPanelHtml(node, def) {
         <textarea class="rp-input rp-textarea" data-cfg="message"
                   placeholder="Nachricht… Tipp: {{input}} für vorherigen Output">${esc(node.config.message||'')}</textarea>
         <div class="rp-hint">Nutze <code>{{input}}</code> um den Output des vorherigen Nodes einzufügen.</div>
+      </div>
+      <div class="rp-field">
+        <label class="rp-checkbox-row">
+          <input type="checkbox" data-cfg="include_input" ${node.config.include_input ? 'checked' : ''}>
+          <span>Vorherigen Output automatisch anhängen</span>
+        </label>
+        <div class="rp-hint">Fügt den Output aller verbundenen Vorgänger-Nodes ans Ende der Nachricht an.</div>
       </div>
     `;
   } else if (node.type === 'skill') {

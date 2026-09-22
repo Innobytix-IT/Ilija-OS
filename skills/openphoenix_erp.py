@@ -78,6 +78,8 @@ def _db_url() -> str:
 # DECORATOR – Session-Management (Gemini-Tipp 1)
 # ══════════════════════════════════════════════════════════════════════════
 
+_erp_db_ready = False  # Tabellen einmalig anlegen (idempotent, aber Overhead sparen)
+
 def erp_skill(func):
     """
     Decorator für alle ERP-Skill-Funktionen.
@@ -87,6 +89,7 @@ def erp_skill(func):
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
+        global _erp_db_ready
         if not _erp_einbinden():
             return (
                 "❌ OpenPhoenix ERP ist nicht konfiguriert.\n"
@@ -94,8 +97,12 @@ def erp_skill(func):
                 "oder erp_pfad_setzen(pfad=\"C:/Pfad/zu/OpenPhoenixERP_V3\")"
             )
         try:
+            import core.models  # Alle Modelle in Base.metadata registrieren (Voraussetzung für create_all)
             from core.db.engine import db
             db.initialize(_db_url())
+            if not _erp_db_ready:
+                db.create_all_tables()  # Erstellt alle fehlenden Tabellen (idempotent)
+                _erp_db_ready = True
             session = db.get_session()
             try:
                 result = func(session, *args, **kwargs)
@@ -307,14 +314,16 @@ def erp_ueberfaellige_pruefen(session) -> str:
     """
     from core.services.mahnwesen_service import MahnwesenService
 
-    eskaliert = MahnwesenService().pruefe_und_eskaliere(session)
+    ergebnis = MahnwesenService().pruefe_und_eskaliere(session)
+    anzahl = ergebnis.get("eskaliert", 0)
+    details = ergebnis.get("details", [])
 
-    if not eskaliert:
+    if anzahl == 0:
         return "✅ Keine Eskalationen notwendig."
 
-    zeilen = [f"📬 {len(eskaliert)} Rechnung(en) eskaliert:\n"]
-    for r in eskaliert:
-        zeilen.append(f"  [{r.rechnungsnummer}] → {r.status}")
+    zeilen = [f"📬 {anzahl} Rechnung(en) eskaliert:\n"]
+    for r in details:
+        zeilen.append(f"  [{r['nummer']}] {r['alter_status']} → {r['neuer_status']} ({r['tage_ueberfaellig']}d überfällig)")
     return "\n".join(zeilen)
 
 

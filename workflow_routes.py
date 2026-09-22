@@ -420,6 +420,9 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                         ctx = context
                         if len(ctx) > 5000:
                             ctx = ctx[:5000] + "\n\n[... Inhalt gekürzt ...]"
+                        # Checkbox "include_input": {{input}} automatisch anhängen
+                        if config.get("include_input") and ctx and "{{input}}" not in message:
+                            message = (message.rstrip() + "\n\n{{input}}") if message else "{{input}}"
                         # Template: {{input}} durch Vorgänger-Output ersetzen
                         if "{{input}}" in message and ctx:
                             message = message.replace("{{input}}", ctx)
