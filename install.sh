@@ -78,7 +78,7 @@ cd "$INSTALL_DIR"
 # =============================================================================
 # SCHRITT 1: Python prüfen
 # =============================================================================
-print_header "SCHRITT 1/7 – Python prüfen"
+print_header "SCHRITT 1/8 – Python prüfen"
 
 if ! command -v python3 &> /dev/null; then
     print_error "Python3 nicht gefunden!"
@@ -99,7 +99,7 @@ print_ok "Python $PYTHON_VERSION ✓"
 # =============================================================================
 # SCHRITT 2: Lokales KI-Modell (Ollama)
 # =============================================================================
-print_header "SCHRITT 2/7 – Lokales KI-Modell (Ollama)"
+print_header "SCHRITT 2/8 – Lokales KI-Modell (Ollama)"
 
 OLLAMA_INSTALLED=false
 OLLAMA_HAS_MODELS=false
@@ -172,7 +172,7 @@ fi
 # =============================================================================
 # SCHRITT 3: Python-Abhängigkeiten
 # =============================================================================
-print_header "SCHRITT 3/7 – Python-Abhängigkeiten installieren"
+print_header "SCHRITT 3/8 – Python-Abhängigkeiten installieren"
 
 if [ ! -d "venv" ]; then
     print_step "Erstelle virtuelle Python-Umgebung..."
@@ -285,7 +285,7 @@ SentenceTransformer('all-MiniLM-L6-v2')
 # =============================================================================
 # SCHRITT 4: Cloud-Provider & API-Keys
 # =============================================================================
-print_header "SCHRITT 4/7 – Cloud-Provider & API-Keys"
+print_header "SCHRITT 4/8 – Cloud-Provider & API-Keys"
 
 EXISTING_CLAUDE=$(grep "^ANTHROPIC_API_KEY=" .env 2>/dev/null | cut -d'=' -f2 || echo "")
 EXISTING_OPENAI=$(grep "^OPENAI_API_KEY="    .env 2>/dev/null | cut -d'=' -f2 || echo "")
@@ -334,7 +334,7 @@ esac
 # =============================================================================
 # SCHRITT 5: Telegram-Bot
 # =============================================================================
-print_header "SCHRITT 5/7 – Telegram-Bot einrichten (optional)"
+print_header "SCHRITT 5/8 – Telegram-Bot einrichten (optional)"
 
 EXISTING_TG=$(grep "^TELEGRAM_BOT_TOKEN=" .env 2>/dev/null | cut -d'=' -f2 || echo "")
 TG_SKIP=false
@@ -379,7 +379,7 @@ fi
 # =============================================================================
 # SCHRITT 6: Info
 # =============================================================================
-print_header "SCHRITT 6/7 – Was kann Ilija Public Edition?"
+print_header "SCHRITT 6/8 – Was kann Ilija Public Edition?"
 
 echo -e "${BOLD}  🗂  DMS – Dokumentenmanagementsystem${RESET}"
 echo "     Dokumente automatisch per KI kategorisieren & archivieren"
@@ -399,9 +399,80 @@ divider
 read -rp "  Drücke ENTER um fortzufahren..." _
 
 # =============================================================================
+# SCHRITT 7: Auto-Update einrichten
+# =============================================================================
+print_header "SCHRITT 7/8 – Auto-Update einrichten"
+
+echo "  Ilija kann sich jede Nacht automatisch von GitHub aktualisieren."
+echo "  Dabei werden zuerst System-Updates (apt) und danach Ilija-Updates eingespielt."
+echo ""
+read -rp "  Auto-Update einrichten? [J/n]: " UPDATE_CHOICE
+
+if [[ ! "$UPDATE_CHOICE" =~ ^[nN]$ ]]; then
+    echo ""
+    read -rp "  Update-Uhrzeit [Standard: 03:00, Format HH:MM]: " UPDATE_TIME_INPUT
+    UPDATE_TIME="${UPDATE_TIME_INPUT:-03:00}"
+    UPDATE_HOUR=$(echo "$UPDATE_TIME" | cut -d: -f1 | sed 's/^0*//' )
+    UPDATE_MIN=$(echo  "$UPDATE_TIME" | cut -d: -f2 | sed 's/^0*//' )
+    UPDATE_HOUR="${UPDATE_HOUR:-3}"; UPDATE_MIN="${UPDATE_MIN:-0}"
+
+    CURRENT_USER=$(whoami)
+    UPDATE_SCRIPT="$HOME/ilija-update.sh"
+
+    # Update-Skript erstellen
+    cat > "$UPDATE_SCRIPT" << UPDATEEOF
+#!/bin/bash
+export DEBIAN_FRONTEND=noninteractive
+cd "${INSTALL_DIR}"
+git fetch origin main --quiet
+LOCAL=\$(git rev-parse HEAD)
+REMOTE=\$(git rev-parse origin/main)
+if [ "\$LOCAL" != "\$REMOTE" ]; then
+    sudo apt-get update -qq
+    sudo apt-get upgrade -y -qq
+    sudo apt-get autoremove -y -qq
+    git pull origin main --quiet
+    source "${INSTALL_DIR}/venv/bin/activate"
+    pip install -r "${INSTALL_DIR}/requirements.txt" --quiet
+    sudo systemctl restart ilija 2>/dev/null || true
+fi
+UPDATEEOF
+    chmod +x "$UPDATE_SCRIPT"
+    print_ok "Update-Skript erstellt: $UPDATE_SCRIPT"
+
+    # Sudoers-Regeln (ohne Passwort für den aktuellen Nutzer)
+    if command -v sudo &>/dev/null; then
+        echo "$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get" \
+            | sudo tee /etc/sudoers.d/ilija-apt > /dev/null
+        sudo chmod 440 /etc/sudoers.d/ilija-apt
+        echo "$CURRENT_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija" \
+            | sudo tee /etc/sudoers.d/ilija-restart > /dev/null
+        sudo chmod 440 /etc/sudoers.d/ilija-restart
+        print_ok "Sudoers-Regeln eingerichtet (apt-get, systemctl restart ilija)"
+    fi
+
+    # Cron-Job einrichten
+    (crontab -l 2>/dev/null | grep -v "ilija-update.sh"; \
+     echo "${UPDATE_MIN} ${UPDATE_HOUR} * * * ${UPDATE_SCRIPT} >> ${HOME}/ilija-update.log 2>&1") \
+        | crontab -
+    print_ok "Cron-Job eingerichtet: täglich um $(printf '%02d:%02d' $UPDATE_HOUR $UPDATE_MIN) Uhr"
+
+    # Einstellungen für die Web-UI speichern
+    mkdir -p "${INSTALL_DIR}/data"
+    printf '{\n  "auto_update_enabled": true,\n  "update_time": "%02d:%02d"\n}\n' \
+        "$UPDATE_HOUR" "$UPDATE_MIN" > "${INSTALL_DIR}/data/update_settings.json"
+    print_ok "Update-Einstellungen gespeichert (änderbar unter Einstellungen → Auto-Update)"
+else
+    print_info "Auto-Update übersprungen. Kann später unter Einstellungen → Auto-Update aktiviert werden."
+    mkdir -p "${INSTALL_DIR}/data"
+    echo '{"auto_update_enabled": false, "update_time": "03:00"}' \
+        > "${INSTALL_DIR}/data/update_settings.json"
+fi
+
+# =============================================================================
 # SCHRITT 7: Starten
 # =============================================================================
-print_header "SCHRITT 7/7 – Ilija starten"
+print_header "SCHRITT 8/8 – Ilija starten"
 
 TG_TOKEN_SET=$(grep "^TELEGRAM_BOT_TOKEN=" .env 2>/dev/null | cut -d'=' -f2 || echo "")
 
