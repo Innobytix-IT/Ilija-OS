@@ -327,19 +327,30 @@ def _auto_update_einrichten(e: dict, ilija_dir: str, dry: bool, log) -> None:
     # Update-Skript erstellen
     skript = f"""#!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
+echo "=== Ilija OS Update gestartet ==="
+
+echo "--- System-Update (apt) ---"
+sudo apt-get update -qq
+sudo apt-get upgrade -y -qq
+sudo apt-get autoremove -y -qq
+echo "--- System-Update abgeschlossen ---"
+
+echo "--- Ilija OS Update (GitHub) ---"
+git config --global --add safe.directory {ilija_dir} 2>/dev/null || true
 cd {ilija_dir}
 git fetch origin main --quiet
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)
 if [ "$LOCAL" != "$REMOTE" ]; then
-    sudo apt-get update -qq
-    sudo apt-get upgrade -y -qq
-    sudo apt-get autoremove -y -qq
     git pull origin main --quiet
     source {ilija_dir}/venv/bin/activate
     pip install -r {ilija_dir}/requirements.txt --quiet
     sudo systemctl restart ilija 2>/dev/null || true
+    echo "--- Ilija OS aktualisiert ---"
+else
+    echo "--- Ilija OS ist aktuell (kein Update noetig) ---"
 fi
+echo "=== Fertig ==="
 """
     log(f"  Update-Skript: {update_script}")
     if not dry:

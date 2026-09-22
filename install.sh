@@ -423,19 +423,30 @@ if [[ ! "$UPDATE_CHOICE" =~ ^[nN]$ ]]; then
     cat > "$UPDATE_SCRIPT" << UPDATEEOF
 #!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
+echo "=== Ilija OS Update gestartet ==="
+
+echo "--- System-Update (apt) ---"
+sudo apt-get update -qq
+sudo apt-get upgrade -y -qq
+sudo apt-get autoremove -y -qq
+echo "--- System-Update abgeschlossen ---"
+
+echo "--- Ilija OS Update (GitHub) ---"
+git config --global --add safe.directory "${INSTALL_DIR}" 2>/dev/null || true
 cd "${INSTALL_DIR}"
 git fetch origin main --quiet
 LOCAL=\$(git rev-parse HEAD)
 REMOTE=\$(git rev-parse origin/main)
 if [ "\$LOCAL" != "\$REMOTE" ]; then
-    sudo apt-get update -qq
-    sudo apt-get upgrade -y -qq
-    sudo apt-get autoremove -y -qq
     git pull origin main --quiet
     source "${INSTALL_DIR}/venv/bin/activate"
     pip install -r "${INSTALL_DIR}/requirements.txt" --quiet
     sudo systemctl restart ilija 2>/dev/null || true
+    echo "--- Ilija OS aktualisiert ---"
+else
+    echo "--- Ilija OS ist aktuell (kein Update noetig) ---"
 fi
+echo "=== Fertig ==="
 UPDATEEOF
     chmod +x "$UPDATE_SCRIPT"
     print_ok "Update-Skript erstellt: $UPDATE_SCRIPT"
