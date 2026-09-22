@@ -141,6 +141,7 @@ printf '%s' "$(du -sx --block-size=1 / 2>/dev/null | cut -f1)" > "$ISO/casper/fi
 dpkg-query -W --showformat='${Package} ${Version}\n' > "$ISO/casper/filesystem.manifest"
 cp "$ISO/casper/filesystem.manifest" "$ISO/casper/filesystem.manifest-desktop"
 # Live-only-Pakete, die der Installer NICHT ins Zielsystem übernimmt:
+for p in casper calamares live-boot live-boot-initramfs-tools; do
   sed -i "/^$p /d" "$ISO/casper/filesystem.manifest-desktop" 2>/dev/null || true
 done
 
