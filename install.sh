@@ -459,6 +459,15 @@ UPDATEEOF
         echo "$CURRENT_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija" \
             | sudo tee /etc/sudoers.d/ilija-restart > /dev/null
         sudo chmod 440 /etc/sudoers.d/ilija-restart
+
+        # Falls ein dedizierter Dienst-User existiert (z.B. 'ilija' im ISO-Betrieb),
+        # darf dieser das Update-Script als aktueller Nutzer ausführen (für Web-UI-Button).
+        if id "ilija" &>/dev/null && [ "$CURRENT_USER" != "ilija" ]; then
+            echo "ilija ALL=($CURRENT_USER) NOPASSWD: /bin/bash $UPDATE_SCRIPT" \
+                | sudo tee /etc/sudoers.d/ilija-update > /dev/null
+            sudo chmod 440 /etc/sudoers.d/ilija-update
+            print_ok "Dienst-User 'ilija' darf Update-Script als $CURRENT_USER ausführen"
+        fi
         print_ok "Sudoers-Regeln eingerichtet (apt-get, systemctl restart ilija)"
     fi
 

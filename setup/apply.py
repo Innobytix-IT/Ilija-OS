@@ -378,6 +378,22 @@ echo "=== Fertig ==="
                 except Exception as ex:
                     log(f"  ⚠ sudoers {name} konnte nicht gesetzt werden: {ex}")
 
+        # Falls dedizierter Dienst-User 'ilija' existiert (ISO-Betrieb),
+        # darf er das Update-Script als Installer-User ausführen (Web-UI-Button).
+        import shutil
+        if not dry and shutil.which("id") and current_user != "ilija":
+            import subprocess as _sp2
+            if _sp2.run(["id", "ilija"], capture_output=True).returncode == 0:
+                rule2 = f"ilija ALL=({current_user}) NOPASSWD: /bin/bash {update_script}\n"
+                try:
+                    _sp2.run(["sudo", "tee", "/etc/sudoers.d/ilija-update"],
+                             input=rule2, text=True, capture_output=True, check=True)
+                    _sp2.run(["sudo", "chmod", "440", "/etc/sudoers.d/ilija-update"],
+                             capture_output=True, check=True)
+                    log(f"  sudoers: ilija-update (Dienst-User → {current_user})")
+                except Exception as ex:
+                    log(f"  ⚠ sudoers ilija-update konnte nicht gesetzt werden: {ex}")
+
     # Cron-Job
     log(f"  Cron-Job: taeglich um {h}:{m} Uhr")
     if not dry:

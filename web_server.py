@@ -636,12 +636,15 @@ def save_kalender_settings():
 # ── Auto-Update Einstellungen ────────────────────────────────
 _UPDATE_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "update_settings.json")
 _UPDATE_SCRIPT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ilija-update.sh"))
-# Script als Repo-Besitzer ausführen, damit git/apt-Rechte stimmen (ilija-Dienst läuft als anderer User)
+# Script als Repo-Besitzer ausführen, damit git/apt-Rechte stimmen.
+# Wenn Flask bereits als Repo-Besitzer läuft (Normalfall bei install.sh), kein sudo-u nötig.
 try:
-    import stat as _stat
     _UPDATE_SCRIPT_USER = __import__("pwd").getpwuid(
         os.stat(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".git")).st_uid
     ).pw_name
+    _CURRENT_SERVICE_USER = __import__("pwd").getpwuid(os.getuid()).pw_name
+    if _UPDATE_SCRIPT_USER == _CURRENT_SERVICE_USER:
+        _UPDATE_SCRIPT_USER = None  # gleicher User → direkt ausführen, kein sudo-u
 except Exception:
     _UPDATE_SCRIPT_USER = None
 
