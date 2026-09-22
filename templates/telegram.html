@@ -189,6 +189,40 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
         Bitte zuerst Token und Chat-ID unter <a href="/einstellungen" style="color:var(--g)">Einstellungen → Telegram</a> eintragen.
       </div>
     </div>
+
+    <!-- Kurzanleitung (immer sichtbar, aufklappbar) -->
+    <div style="margin-top:28px;border-top:1px solid var(--bdr);padding-top:20px">
+      <button onclick="toggleGuide()" style="background:none;border:none;cursor:pointer;font-family:var(--f);font-size:.78rem;font-weight:600;color:var(--tx3);display:flex;align-items:center;gap:6px;padding:0;text-transform:uppercase;letter-spacing:.08em">
+        <span id="guide-arrow">▸</span> Neuen Bot bei BotFather einrichten
+      </button>
+      <div id="guide-body" style="display:none;margin-top:16px">
+        <div class="setup-card" style="margin-top:0">
+          <div class="setup-title">Schritt 1 – Bot erstellen</div>
+          <div class="setup-step"><span class="step-n">1</span><span>Telegram öffnen → <strong>@BotFather</strong> suchen und öffnen</span></div>
+          <div class="setup-step"><span class="step-n">2</span><span><strong>/newbot</strong> eingeben und einen Namen wählen (z.B. <em>MeinIlija</em>)</span></div>
+          <div class="setup-step"><span class="step-n">3</span><span>Einen Benutzernamen wählen – muss auf <strong>_bot</strong> enden (z.B. <em>mein_ilija_bot</em>)</span></div>
+          <div class="setup-step"><span class="step-n">4</span><span>BotFather antwortet mit dem <strong>Token</strong> (Format: <code style="background:var(--s3);padding:1px 5px;border-radius:3px;font-family:var(--m);font-size:.75rem">123456789:ABCdef...</code>)</span></div>
+        </div>
+
+        <div class="setup-card" style="margin-top:12px">
+          <div class="setup-title">Schritt 2 – Chat-ID ermitteln</div>
+          <div class="setup-step"><span class="step-n">1</span><span>Den neuen Bot in Telegram suchen und <strong>/start</strong> senden</span></div>
+          <div class="setup-step"><span class="step-n">2</span><span>Im Browser öffnen:<br><code style="background:var(--s3);padding:2px 6px;border-radius:3px;font-family:var(--m);font-size:.73rem;word-break:break-all">https://api.telegram.org/bot<em>TOKEN</em>/getUpdates</code></span></div>
+          <div class="setup-step"><span class="step-n">3</span><span>Im JSON nach <code style="background:var(--s3);padding:1px 5px;border-radius:3px;font-family:var(--m);font-size:.75rem">"chat":{"id": 123456789}</code> suchen — das ist die Chat-ID</span></div>
+        </div>
+
+        <div class="setup-card" style="margin-top:12px">
+          <div class="setup-title">Schritt 3 – In Ilija eintragen</div>
+          <div class="setup-step"><span class="step-n">1</span><span><a href="/einstellungen" style="color:var(--g)">Einstellungen → Telegram</a> öffnen</span></div>
+          <div class="setup-step"><span class="step-n">2</span><span><strong>Bot-Token</strong> und <strong>Standard-Chat-ID</strong> eintragen und speichern</span></div>
+          <div class="setup-step"><span class="step-n">3</span><span>Zurück hier: <strong>Bot starten</strong> — fertig</span></div>
+        </div>
+
+        <div style="margin-top:14px;padding:10px 14px;background:var(--blue-dim);border:1px solid rgba(44,165,224,.2);border-radius:8px;font-size:.78rem;color:var(--tx2);line-height:1.5">
+          💡 <strong style="color:var(--tx)">Tipp:</strong> Über <strong>@BotFather → /mybots → Bot auswählen → Bot Settings → Allow Groups</strong> kannst du einstellen ob der Bot auch in Gruppen genutzt werden darf.
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -284,6 +318,14 @@ try {
     setDialog(false)
   }
 } catch(e) {}
+
+function toggleGuide() {
+  const body  = document.getElementById('guide-body')
+  const arrow = document.getElementById('guide-arrow')
+  const open  = body.style.display === 'none'
+  body.style.display  = open ? 'block' : 'none'
+  arrow.textContent   = open ? '▾' : '▸'
+}
 
 poll()
 </script>
