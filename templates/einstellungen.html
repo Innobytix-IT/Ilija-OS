@@ -242,6 +242,9 @@ input[type=number]{max-width:90px}
     <button class="sb-item" onclick="scrollToSection('sec-ahpt')" id="sb-ahpt">
       <span class="sb-icon">🔗</span> AHPT
     </button>
+    <button class="sb-item" onclick="scrollToSection('sec-update')">
+      <span class="sb-icon">🔄</span> Auto-Update
+    </button>
     <div style="margin-top:auto;padding-top:16px">
       <button class="sb-item" onclick="startWizard()" style="color:var(--g)">
         <span class="sb-icon">✨</span> Einrichtungsassistent
@@ -536,6 +539,43 @@ input[type=number]{max-width:90px}
       </div>
     </div>
 
+      <!-- ─── Auto-Update ──────────────────────────────────────── -->
+      <div class="section" id="sec-update">
+        <div class="sec-head">
+          <div class="sec-icon">🔄</div>
+          <div><div class="sec-title">Auto-Update</div><div class="sec-sub">Ilija OS automatisch von GitHub aktualisieren</div></div>
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="row-left">
+              <div class="row-label">Automatische Updates</div>
+              <div class="row-hint">Ilija holt täglich Updates von GitHub und startet ggf. neu</div>
+            </div>
+            <div class="row-control">
+              <label class="toggle-wrap">
+                <input type="checkbox" id="upd-enabled" onchange="toggleUpdateTime()">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="row" id="upd-time-row" style="display:none">
+            <div class="row-left">
+              <div class="row-label">Update-Uhrzeit</div>
+              <div class="row-hint">Uhrzeit für das nächtliche Update (Lokalzeit des Servers)</div>
+            </div>
+            <div class="row-control">
+              <input type="time" id="upd-time" value="03:00" style="font-family:var(--m);font-size:.85rem;padding:5px 8px;background:var(--s3);border:1px solid var(--bdr2);border-radius:6px;color:var(--tx)">
+            </div>
+          </div>
+        </div>
+        <div class="save-bar" style="gap:10px;flex-wrap:wrap">
+          <button class="btn btn-prim btn-sm" onclick="saveUpdateSettings()">Speichern</button>
+          <button class="btn btn-teal btn-sm" onclick="updateNow()" id="upd-now-btn">⬇ Jetzt Update starten</button>
+          <span class="save-msg" id="upd-msg"></span>
+        </div>
+      </div>
+    </div>
+
     <!-- noVNC Desktop-Fernzugriff (nur wenn Desktopumgebung aktiv) -->
     <div id="novnc-bar" style="display:none;margin:18px 0 4px;padding:10px 16px;background:var(--s2);border:1px solid var(--bdr2);border-radius:8px;align-items:center;gap:10px">
       <span style="font-size:1rem">🖥</span>
@@ -616,6 +656,7 @@ async function loadAllData() {
     api('/api/custom-endpoint'),
     api('/api/ahpt-settings'),
   ]);
+  loadUpdateSettings();
   allData.settings = settings.value || {};
   allData.email    = (email.value || {}).config || {};
   allData.tg       = tg.value || {};
@@ -1502,9 +1543,53 @@ async function checkNovnc() {
   } catch(_) {}
 }
 
+// ── Auto-Update ───────────────────────────────────────────────
+async function loadUpdateSettings() {
+  try {
+    const d = await api('/api/update-settings');
+    const cb = document.getElementById('upd-enabled');
+    const ti = document.getElementById('upd-time');
+    if (cb) cb.checked = !!d.auto_update_enabled;
+    if (ti) ti.value = d.update_time || '03:00';
+    toggleUpdateTime();
+  } catch(_) {}
+}
+
+function toggleUpdateTime() {
+  const enabled = document.getElementById('upd-enabled')?.checked;
+  const row = document.getElementById('upd-time-row');
+  if (row) row.style.display = enabled ? '' : 'none';
+}
+
+async function saveUpdateSettings() {
+  const enabled = document.getElementById('upd-enabled')?.checked;
+  const time = document.getElementById('upd-time')?.value || '03:00';
+  const msg = document.getElementById('upd-msg');
+  try {
+    const r = await api('/api/update-settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({auto_update_enabled: enabled, update_time: time})});
+    if (msg) { msg.textContent = r.message || 'Gespeichert'; msg.style.color = 'var(--green)'; setTimeout(()=>msg.textContent='', 3000); }
+  } catch(_) {
+    if (msg) { msg.textContent = 'Fehler beim Speichern'; msg.style.color = 'var(--red)'; }
+  }
+}
+
+async function updateNow() {
+  const btn = document.getElementById('upd-now-btn');
+  const msg = document.getElementById('upd-msg');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Läuft…'; }
+  try {
+    const r = await api('/api/update-now', {method:'POST'});
+    if (msg) { msg.textContent = r.message || 'Update gestartet'; msg.style.color = 'var(--teal)'; setTimeout(()=>msg.textContent='', 5000); }
+  } catch(_) {
+    if (msg) { msg.textContent = 'Fehler'; msg.style.color = 'var(--red)'; }
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '⬇ Jetzt Update starten'; }
+}
+
 // ── Start ─────────────────────────────────────────────────────
 init();
 checkNovnc();
+loadUpdateSettings();
 {% endraw %}
 </script>
 </body>

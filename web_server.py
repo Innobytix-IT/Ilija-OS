@@ -633,6 +633,63 @@ def save_kalender_settings():
     return jsonify({"ok": True, "message": "Kalender-Einstellungen gespeichert."})
 
 
+# ── Auto-Update Einstellungen ────────────────────────────────
+_UPDATE_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "update_settings.json")
+_UPDATE_SCRIPT = os.path.join(os.path.expanduser("~"), "ilija-update.sh")
+
+def _load_update_settings():
+    try:
+        with open(_UPDATE_CONFIG_PATH, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {"auto_update_enabled": True, "update_time": "03:00"}
+
+def _save_update_settings(cfg):
+    os.makedirs(os.path.dirname(_UPDATE_CONFIG_PATH), exist_ok=True)
+    with open(_UPDATE_CONFIG_PATH, "w") as f:
+        json.dump(cfg, f, indent=2)
+
+def _rewrite_crontab(enabled, time_str):
+    import subprocess as _sp
+    try:
+        result = _sp.run(["crontab", "-l"], capture_output=True, text=True)
+        lines = [l for l in result.stdout.splitlines() if "ilija-update.sh" not in l]
+        if enabled and time_str:
+            h, m = time_str.split(":")
+            lines.append(f"{m} {h} * * * {_UPDATE_SCRIPT} >> ~/ilija-update.log 2>&1")
+        new_crontab = "\n".join(lines) + "\n"
+        _sp.run(["crontab", "-"], input=new_crontab, text=True, check=True)
+        return True
+    except Exception:
+        return False
+
+@app.route("/api/update-settings", methods=["GET"])
+def get_update_settings():
+    return jsonify(_load_update_settings())
+
+@app.route("/api/update-settings", methods=["POST"])
+def save_update_settings_route():
+    data = request.get_json() or {}
+    cfg = _load_update_settings()
+    if "auto_update_enabled" in data:
+        cfg["auto_update_enabled"] = bool(data["auto_update_enabled"])
+    if "update_time" in data:
+        cfg["update_time"] = str(data["update_time"])
+    _save_update_settings(cfg)
+    _rewrite_crontab(cfg["auto_update_enabled"], cfg["update_time"])
+    return jsonify({"ok": True, "message": "Update-Einstellungen gespeichert."})
+
+@app.route("/api/update-now", methods=["POST"])
+def update_now():
+    import subprocess as _sp, threading as _th
+    def _run():
+        _sp.run(["/bin/bash", _UPDATE_SCRIPT], capture_output=True)
+    if not os.path.isfile(_UPDATE_SCRIPT):
+        return jsonify({"ok": False, "message": "Update-Skript nicht gefunden."})
+    _th.Thread(target=_run, daemon=True).start()
+    return jsonify({"ok": True, "message": "Update gestartet. Ilija startet ggf. neu."})
+
+
 # ── Setup-Status (Wizard / Settings Erkennung) ───────────────
 @app.route("/api/setup-status")
 def setup_status():
