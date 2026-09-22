@@ -1,0 +1,10 @@
+[Unit]
+Description=Ilija OS Update (GitHub Pull)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ilija-update
+StandardOutput=journal
+StandardError=journal

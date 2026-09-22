@@ -1,0 +1,56 @@
+#!/bin/bash
+# ilija-update – Zieht die neueste Version von GitHub und startet Ilija neu.
+# Aufruf: sudo ilija-update  oder  automatisch per systemd-Timer
+
+set -euo pipefail
+
+ILIJA_DIR="/opt/ilija-os/ilija"
+VENV_PIP="$ILIJA_DIR/venv/bin/pip"
+LOG_TAG="ilija-update"
+
+log() { echo "[$LOG_TAG] $*"; logger -t "$LOG_TAG" "$*"; }
+
+log "Starte Update..."
+
+# ── 1. Git Pull ────────────────────────────────────────────────────────────────
+cd "$ILIJA_DIR"
+BEFORE=$(sudo -u ilija git rev-parse HEAD)
+
+if ! sudo -u ilija git pull --ff-only 2>&1 | tee /dev/stderr | grep -q "Already up to date"; then
+    AFTER=$(sudo -u ilija git rev-parse HEAD)
+    if [ "$BEFORE" != "$AFTER" ]; then
+        log "Neue Version: $BEFORE → $AFTER"
+        CHANGED=1
+    else
+        log "Bereits aktuell."
+        CHANGED=0
+    fi
+else
+    AFTER=$(sudo -u ilija git rev-parse HEAD)
+    CHANGED=0
+    log "Bereits aktuell ($AFTER)."
+fi
+
+# ── 2. Python-Abhängigkeiten ───────────────────────────────────────────────────
+if [ "${CHANGED:-0}" = "1" ] && sudo -u ilija git diff "$BEFORE" "$AFTER" -- requirements.txt | grep -q '^[+-]'; then
+    log "requirements.txt geändert – installiere Pakete..."
+    sudo -u ilija "$VENV_PIP" install -r "$ILIJA_DIR/requirements.txt" --quiet
+    log "Pakete aktualisiert."
+fi
+
+# ── 3. Dienst neu starten ──────────────────────────────────────────────────────
+if [ "${CHANGED:-0}" = "1" ]; then
+    log "Starte ilija.service neu..."
+    systemctl restart ilija.service
+    sleep 2
+    if systemctl is-active --quiet ilija.service; then
+        log "ilija.service läuft."
+    else
+        log "FEHLER: ilija.service ist nicht aktiv nach Neustart!"
+        exit 1
+    fi
+else
+    log "Kein Neustart nötig."
+fi
+
+log "Update abgeschlossen."

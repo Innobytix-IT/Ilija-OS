@@ -1,0 +1,10 @@
+[Unit]
+Description=Ilija OS Update täglich um 03:00 Uhr
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target
