@@ -101,7 +101,18 @@ def _load_email_config() -> dict:
         return dict(_EMAIL_DEFAULTS)
     try:
         with open(_EMAIL_CONFIG, encoding="utf-8") as f:
-            return {**_EMAIL_DEFAULTS, **json.load(f)}
+            raw = json.load(f)
+        # web_server.py speichert smtp_host/email_adresse/passwort –
+        # fristen_routes erwartet smtp_server/smtp_user/smtp_password
+        normalized = {
+            "smtp_server":   raw.get("smtp_host")      or raw.get("smtp_server", ""),
+            "smtp_port":     raw.get("smtp_port", 587),
+            "smtp_user":     raw.get("email_adresse")  or raw.get("smtp_user", ""),
+            "smtp_password": raw.get("passwort")       or raw.get("smtp_password", ""),
+            "use_ssl":       raw.get("use_ssl", False),
+            "notif_email":   raw.get("notif_email", ""),
+        }
+        return {**_EMAIL_DEFAULTS, **normalized}
     except Exception:
         return dict(_EMAIL_DEFAULTS)
 
