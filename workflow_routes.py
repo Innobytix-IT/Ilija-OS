@@ -1144,6 +1144,52 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                         else:
                             output = f"⚠️ Unbekannte Operation: {operation}"
 
+                    elif ntype == "lokaler_kalender":
+                        import datetime as _dt
+                        from lokaler_kalender_skill import (
+                            lokaler_kalender_lesen,
+                            lokaler_kalender_freie_slots_finden,
+                            lokaler_kalender_termin_eintragen,
+                            lokaler_kalender_termin_loeschen,
+                        )
+                        operation = config.get("operation", "termine_lesen")
+                        datum_raw = config.get("datum", "").strip()
+                        if datum_raw == "{{input}}":
+                            datum_raw = context.strip().split("\n")[0].strip() if context else ""
+                        if not datum_raw:
+                            datum_raw = _dt.datetime.today().strftime("%d.%m.%Y")
+                        try:
+                            _dt.datetime.strptime(datum_raw, "%d.%m.%Y")
+                        except Exception:
+                            output = f"❌ Ungültiges Datum: '{datum_raw}' (Format: TT.MM.JJJJ)"
+                            results[nid]  = str(output)
+                            statuses[nid] = "error"
+                            continue
+
+                        if operation == "termine_lesen":
+                            output = lokaler_kalender_lesen(datum_raw)
+                        elif operation == "slots_finden":
+                            dauer = int(config.get("dauer_minuten", 60))
+                            output = lokaler_kalender_freie_slots_finden(datum_raw, dauer)
+                        elif operation == "termin_eintragen":
+                            titel = config.get("titel", "").strip()
+                            if not titel and context:
+                                titel = context.strip().split("\n")[0][:60]
+                            uhrzeit_von  = config.get("uhrzeit_von", "").strip()
+                            uhrzeit_bis  = config.get("uhrzeit_bis", "").strip()
+                            kontaktinfos = config.get("kontaktinfos", "").strip()
+                            beschreibung = config.get("beschreibung", "").strip()
+                            output = lokaler_kalender_termin_eintragen(
+                                titel=titel, datum=datum_raw,
+                                uhrzeit_von=uhrzeit_von, uhrzeit_bis=uhrzeit_bis,
+                                kontaktinfos=kontaktinfos, beschreibung=beschreibung,
+                            )
+                        elif operation == "termin_loeschen":
+                            titel = config.get("titel", "").strip()
+                            output = lokaler_kalender_termin_loeschen(titel=titel, datum=datum_raw)
+                        else:
+                            output = f"⚠️ Unbekannte Operation: {operation}"
+
                     elif ntype == "gmail":
                         import base64 as _b64
                         import email  as _eml

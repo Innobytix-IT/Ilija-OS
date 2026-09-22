@@ -1358,6 +1358,13 @@ const NODE_TYPES = {
     desc:'Rollende KI-Zusammenfassung',
     accentColor:'#a855f7',
   },
+  lokaler_kalender: {
+    label:'Lokaler Kalender', icon:'🗓️',
+    color:'#2196f3', bg:'rgba(33,150,243,.14)',
+    hasIn:true, hasOut:true,
+    desc:'Lokale Termine lesen, eintragen & löschen',
+    accentColor:'#2196f3',
+  },
   google_kalender: {
     label:'Google Kalender', icon:'📅',
     color:'#34a853', bg:'rgba(52,168,83,.14)',
@@ -1749,6 +1756,12 @@ function buildNodeBodyHtml(node) {
       return `<div class="node-body-skill">🧠 ${esc(node.config.memory_key||'default')} · letzte ${node.config.window_size||10}</div>`;
     case 'memory_summary':
       return `<div class="node-body-skill">📋 ${esc(node.config.memory_key||'default')} · Zusammenfassung</div>`;
+    case 'lokaler_kalender': {
+      const lkOp  = node.config.operation || 'termine_lesen';
+      const lkLbl = lkOp === 'termine_lesen' ? '📖 Termine lesen' : lkOp === 'slots_finden' ? '🔍 Freie Slots' : lkOp === 'termin_eintragen' ? '➕ Eintragen' : '🗑️ Löschen';
+      const lkInfo = node.config.datum || 'heute';
+      return `<div class="node-body-skill">${lkLbl} · ${esc(lkInfo)}</div>`;
+    }
     case 'google_kalender': {
       const gkOp  = node.config.operation || 'slots_lesen';
       const gkLbl = gkOp === 'slots_lesen' ? '🔍 Freie Slots' : gkOp === 'termin_eintragen' ? '➕ Eintragen' : '🗑️ Löschen';
@@ -2427,6 +2440,99 @@ function buildPanelHtml(node, def) {
           <input class="rp-input" data-cfg="anzahl" type="number" min="1" max="50"
                  value="${esc(String(node.config.anzahl||5))}">
           <div class="rp-hint">Gibt nur <b>neue</b> Nachrichten seit dem letzten Lesen aus. Bei keinen neuen Nachrichten: <code>📭</code>-Signal ausgeben → mit <strong>Chat-Filter</strong>-Node abfangen.</div>
+        </div>
+      </div>
+    `;
+  } else if (node.type === 'lokaler_kalender') {
+    const lkOp = node.config.operation || 'termine_lesen';
+    h += `
+      <div class="rp-field">
+        <div class="rp-label">Operation</div>
+        <select class="rp-select" data-cfg="operation" onchange="var v=this.value;['lk-lesen-fields','lk-slots-fields','lk-eintragen-fields','lk-loeschen-fields'].forEach(function(id,i){document.getElementById(id).style.display=(['termine_lesen','slots_finden','termin_eintragen','termin_loeschen'][i]===v?'block':'none');});">
+          <option value="termine_lesen"   ${lkOp==='termine_lesen'   ?'selected':''}>📖 Termine lesen</option>
+          <option value="slots_finden"    ${lkOp==='slots_finden'    ?'selected':''}>🔍 Freie Slots finden</option>
+          <option value="termin_eintragen"${lkOp==='termin_eintragen'?'selected':''}>➕ Termin eintragen</option>
+          <option value="termin_loeschen" ${lkOp==='termin_loeschen' ?'selected':''}>🗑️ Termin löschen</option>
+        </select>
+      </div>
+      <div class="rp-separator"></div>
+
+      <div id="lk-lesen-fields" style="display:${lkOp==='termine_lesen'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Datum</div>
+          <input class="rp-input" data-cfg="datum"
+                 value="${esc(node.config.datum||'')}"
+                 placeholder="TT.MM.JJJJ oder {{input}} oder leer = heute">
+          <div class="rp-hint">Leer lassen für heute. Mit <code>{{input}}</code> kommt das Datum aus dem Vorgänger-Node.</div>
+        </div>
+      </div>
+
+      <div id="lk-slots-fields" style="display:${lkOp==='slots_finden'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Datum</div>
+          <input class="rp-input" data-cfg="datum"
+                 value="${esc(node.config.datum||'')}"
+                 placeholder="TT.MM.JJJJ oder leer = heute">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Termindauer (Minuten)</div>
+          <input class="rp-input" data-cfg="dauer_minuten" type="number"
+                 value="${esc(String(node.config.dauer_minuten||60))}"
+                 placeholder="60">
+        </div>
+      </div>
+
+      <div id="lk-eintragen-fields" style="display:${lkOp==='termin_eintragen'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Datum</div>
+          <input class="rp-input" data-cfg="datum"
+                 value="${esc(node.config.datum||'')}"
+                 placeholder="TT.MM.JJJJ oder leer = heute">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Titel</div>
+          <input class="rp-input" data-cfg="titel"
+                 value="${esc(node.config.titel||'')}"
+                 placeholder="z.B. Kundengespräch oder leer = aus Vorgänger">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Von</div>
+          <input class="rp-input" data-cfg="uhrzeit_von"
+                 value="${esc(node.config.uhrzeit_von||'')}"
+                 placeholder="HH:MM  z.B. 10:00">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Bis</div>
+          <input class="rp-input" data-cfg="uhrzeit_bis"
+                 value="${esc(node.config.uhrzeit_bis||'')}"
+                 placeholder="HH:MM  z.B. 11:00">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Kontakt <span style="opacity:.6;font-weight:400">(optional)</span></div>
+          <input class="rp-input" data-cfg="kontaktinfos"
+                 value="${esc(node.config.kontaktinfos||'')}"
+                 placeholder="Name oder Tel/E-Mail">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Beschreibung <span style="opacity:.6;font-weight:400">(optional)</span></div>
+          <input class="rp-input" data-cfg="beschreibung"
+                 value="${esc(node.config.beschreibung||'')}"
+                 placeholder="Zusatzinfo">
+        </div>
+      </div>
+
+      <div id="lk-loeschen-fields" style="display:${lkOp==='termin_loeschen'?'block':'none'}">
+        <div class="rp-field">
+          <div class="rp-label">Datum</div>
+          <input class="rp-input" data-cfg="datum"
+                 value="${esc(node.config.datum||'')}"
+                 placeholder="TT.MM.JJJJ oder leer = heute">
+        </div>
+        <div class="rp-field">
+          <div class="rp-label">Titel (Suchbegriff)</div>
+          <input class="rp-input" data-cfg="titel"
+                 value="${esc(node.config.titel||'')}"
+                 placeholder="Genauer Terminname">
         </div>
       </div>
     `;
