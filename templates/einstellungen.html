@@ -1575,14 +1575,13 @@ async function saveUpdateSettings() {
 
 async function updateNow() {
   const btn = document.getElementById('upd-now-btn');
-  const msg = document.getElementById('upd-msg');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Läuft…'; }
   try {
     const r = await fetch('/api/update-now', {method:'POST'});
     const j = await r.json();
-    if (msg) { msg.textContent = j.message || 'Update gestartet'; msg.style.color = 'var(--teal)'; setTimeout(()=>msg.textContent='', 5000); }
+    toast(j.message || 'Update gestartet', j.ok !== false ? 'ok' : 'err');
   } catch(_) {
-    if (msg) { msg.textContent = 'Fehler'; msg.style.color = 'var(--red)'; }
+    toast('Verbindungsfehler', 'err');
   }
   if (btn) { btn.disabled = false; btn.textContent = '⬇ Jetzt Update starten'; }
 }
