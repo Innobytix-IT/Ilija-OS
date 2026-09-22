@@ -798,6 +798,10 @@ function buildKiCard() {
       </div>
     </div>` : `
     <div class="row"><div class="row-left"><div class="row-hint" style="color:var(--tx3);font-size:.74rem">💡 Nach dem Speichern eines API-Keys erscheint hier die Modell-Auswahl</div></div></div>`}
+    <div class="row">
+      <div class="row-left"><div class="row-label">Whisper-Modell</div><div class="row-hint">Lokal: tiny / base / small / medium / large — leer = base</div></div>
+      <div class="row-control"><input type="text" id="ki-whisper" placeholder="base" value="${esc((s.models||{}).whisper||'')}"></div>
+    </div>
     <div class="row" style="background:var(--s1);border-top:1px solid var(--bdr)">
       <div class="row-left">
         <div class="row-label" style="color:var(--g);display:flex;align-items:center;gap:6px">
@@ -1139,7 +1143,7 @@ async function saveKi() {
     provider: gv('ki-provider') || 'auto',
     skills_enabled: document.getElementById('ki-skills-enabled')?.checked !== false,
     keys:   {anthropic: gv('ki-anthropic'), openai: gv('ki-openai'), gemini: gv('ki-gemini')},
-    models: {claude: gv('ki-m-claude'), openai: gv('ki-m-openai'), gemini: gv('ki-m-gemini'), ollama: gv('ki-m-ollama')},
+    models: {claude: gv('ki-m-claude'), openai: gv('ki-m-openai'), gemini: gv('ki-m-gemini'), ollama: gv('ki-m-ollama'), whisper: gv('ki-whisper')},
   };
   const r = await post('/api/settings', data);
   msg('ki-msg', r.ok !== false);

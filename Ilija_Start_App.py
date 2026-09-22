@@ -401,6 +401,23 @@ class IlijaApp(ctk.CTk):
     # BUILD: KI Modelle content
     # ─────────────────────────────────────────────────────────────────────────
     def _build_ki(self, f):
+        self._section(f, "⚙️  Standard-Einstellungen", C_GREEN)
+        self._hint_box(f, "Lege fest, welchen KI-Anbieter Ilija bevorzugt, und ob Ilija Skills\n"
+                          "(Kalender, E-Mail, WhatsApp …) automatisch aufrufen darf.")
+        self._label(f, "Standard-Provider:")
+        self.cbo_ki_provider = ctk.CTkOptionMenu(
+            f, values=["auto", "claude", "openai", "gemini", "ollama", "custom"],
+            fg_color=C_BG3, button_color=C_MUTED, button_hover_color=C_GREEN,
+            text_color=C_TEXT, font=ctk.CTkFont(size=13))
+        self.cbo_ki_provider.pack(anchor="w", padx=4, pady=4)
+
+        self.var_ki_skills = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(f, text="Skills verwenden (Kalender, E-Mail, WhatsApp automatisch aufrufen)",
+                        variable=self.var_ki_skills, text_color=C_TEXT,
+                        font=ctk.CTkFont(size=13), fg_color=C_GREEN,
+                        hover_color="#00b86e").pack(anchor="w", padx=4, pady=6)
+
+        self._divider(f)
         self._section(f, "☁️  Cloud-Modelle (API-Keys)", C_YELLOW)
         self._hint_box(f, "Trage mindestens einen API-Key ein. Empfohlen: Google Gemini (kostenlos). "
                           "Die Keys werden sicher in der .env-Datei gespeichert und niemals übertragen.")
@@ -449,6 +466,17 @@ class IlijaApp(ctk.CTk):
         self.ent_gemini_model = self._entry(f, placeholder="gemini-2.5-flash")
         self._label(f, "Standard-OpenAI-Modell (leer = gpt-4o)")
         self.ent_openai_model = self._entry(f, placeholder="gpt-4o")
+
+        self._divider(f)
+        self._section(f, "🔌  Eigener Endpunkt (OpenAI-kompatibler Server)", C_MUTED)
+        self._hint_box(f, "Für Ollama im Netzwerk, LM Studio, vLLM oder eigene KI-Server.\n"
+                          "Beispiel-URL: http://192.168.1.50:11434/v1")
+        self._label(f, "URL:")
+        self.ent_custom_url = self._entry(f, placeholder="http://192.168.1.50:11434/v1")
+        self._label(f, "API-Key (leer lassen wenn nicht benötigt):")
+        self.ent_custom_key = self._entry(f, show="*", placeholder="Leer lassen wenn nicht benötigt")
+        self._label(f, "Modell:")
+        self.ent_custom_model = self._entry(f, placeholder="llama3.2")
 
     # ─────────────────────────────────────────────────────────────────────────
     # TAB 2: Telegram
@@ -958,10 +986,12 @@ class IlijaApp(ctk.CTk):
         path = os.path.join(get_base_dir(), "data", "kalender_sync.json")
         os.makedirs(os.path.dirname(path), exist_ok=True)
         cfg = {
-            "provider":       self.cbo_sync_provider.get(),
-            "pull_intervall": self.cbo_sync_intervall.get(),
-            "auto_push":      self.var_auto_push.get(),
-            "letzte_sync":    "",
+            "persoenlicher_kalender": self.cbo_kal_pers.get(),
+            "buchungskalender":       self.cbo_kal_buch.get(),
+            "provider":               self.cbo_sync_provider.get(),
+            "pull_intervall":         self.cbo_sync_intervall.get(),
+            "auto_push":              self.var_auto_push.get(),
+            "letzte_sync":            "",
         }
         # letzte_sync behalten falls vorhanden
         if os.path.exists(path):
@@ -1577,7 +1607,25 @@ new QRCode(document.getElementById("qr-download"),{{text:"{dl_url}",width:200,he
     def _tab_kalender(self):
         f = self._scrollable("3. Kalender & Sync")
 
-        self._section(f, "📅  Kalender-Synchronisation", C_GREEN)
+        self._section(f, "📅  Meine Kalender", C_GREEN)
+        self._hint_box(f, "Lege fest, welchen Kalender Ilija für eigene Termine und für Kundenbuchungen nutzen soll.")
+
+        self._label(f, "Persönlicher Kalender (für eigene Termine):")
+        self.cbo_kal_pers = ctk.CTkOptionMenu(
+            f, values=["outlook", "google", "lokal"],
+            fg_color=C_BG3, button_color=C_MUTED, button_hover_color=C_GREEN,
+            text_color=C_TEXT, font=ctk.CTkFont(size=13))
+        self.cbo_kal_pers.pack(anchor="w", padx=4, pady=4)
+
+        self._label(f, "Buchungskalender (für Kundentermine via WhatsApp oder Telefon):")
+        self.cbo_kal_buch = ctk.CTkOptionMenu(
+            f, values=["outlook", "google", "lokal"],
+            fg_color=C_BG3, button_color=C_MUTED, button_hover_color=C_GREEN,
+            text_color=C_TEXT, font=ctk.CTkFont(size=13))
+        self.cbo_kal_buch.pack(anchor="w", padx=4, pady=4)
+
+        self._divider(f)
+        self._section(f, "🔄  Cloud-Synchronisation", C_BLUE)
         self._hint_box(f,
             "Ilija nutzt intern immer den lokalen Kalender.\n"
             "Push (Lokal → Provider): Nach jedem Anruf wird die neue Buchung automatisch übertragen.\n"
@@ -1653,6 +1701,16 @@ new QRCode(document.getElementById("qr-download"),{{text:"{dl_url}",width:200,he
         self.ent_openai_model.insert(0, env.get("OPENAI_MODEL", ""))
         self._refresh_ollama()
 
+        # KI Standard-Einstellungen (models_config.json)
+        mc = load_json_config(os.path.join(get_base_dir(), "models_config.json"))
+        self.cbo_ki_provider.set(mc.get("default_provider", "auto"))
+        self.var_ki_skills.set(mc.get("skills_enabled", True))
+
+        # Eigener Endpunkt
+        ce = load_json_config(os.path.join(get_data_dir(), "custom_endpoint.json"))
+        self.ent_custom_url.insert(0, ce.get("url", ""))
+        self.ent_custom_model.insert(0, ce.get("model", ""))
+
         # Telegram
         self.ent_tg_token.insert(0, env.get("TELEGRAM_BOT_TOKEN", ""))
         self.ent_tg_users.insert(0, env.get("TELEGRAM_ALLOWED_USERS", ""))
@@ -1726,6 +1784,8 @@ new QRCode(document.getElementById("qr-download"),{{text:"{dl_url}",width:200,he
 
         # Kalender-Synchronisation
         sync_cfg = load_json_config(os.path.join(get_base_dir(), "data", "kalender_sync.json"))
+        self.cbo_kal_pers.set(sync_cfg.get("persoenlicher_kalender", "outlook"))
+        self.cbo_kal_buch.set(sync_cfg.get("buchungskalender", "lokal"))
         self.cbo_sync_provider.set(sync_cfg.get("provider", "keiner"))
         self.cbo_sync_intervall.set(sync_cfg.get("pull_intervall", "3x_taeglich"))
         self.var_auto_push.set(sync_cfg.get("auto_push", True))
@@ -1801,6 +1861,29 @@ new QRCode(document.getElementById("qr-download"),{{text:"{dl_url}",width:200,he
             "SIP_MIC_ID":         self.ent_sip_mic_id.get().strip(),
         }
         save_env_dict(new_env)
+
+        # 1b. models_config.json (Standard-Provider + Skills)
+        mc_path = os.path.join(get_base_dir(), "models_config.json")
+        mc = load_json_config(mc_path) or {}
+        mc["default_provider"] = self.cbo_ki_provider.get()
+        mc["skills_enabled"] = self.var_ki_skills.get()
+        try:
+            with open(mc_path, "w", encoding="utf-8") as _f:
+                json.dump(mc, _f, ensure_ascii=False, indent=2)
+        except Exception as _e:
+            errors.append(f"models_config.json: {_e}")
+
+        # 1c. custom_endpoint.json
+        ce_path = os.path.join(get_data_dir(), "custom_endpoint.json")
+        os.makedirs(os.path.dirname(ce_path), exist_ok=True)
+        ce = {"url": self.ent_custom_url.get().strip(),
+              "api_key": self.ent_custom_key.get().strip(),
+              "model": self.ent_custom_model.get().strip()}
+        try:
+            with open(ce_path, "w", encoding="utf-8") as _f:
+                json.dump(ce, _f, ensure_ascii=False, indent=2)
+        except Exception as _e:
+            errors.append(f"custom_endpoint.json: {_e}")
 
         # 2. Telegram Config (chat_id)
         tg_chat_id = self.ent_tg_chat_id.get().strip()

@@ -305,7 +305,8 @@ def save_settings():
     if models.get("claude"): env_lines = set_env_key(env_lines, "ANTHROPIC_MODEL", models["claude"])
     if models.get("openai"): env_lines = set_env_key(env_lines, "OPENAI_MODEL",    models["openai"])
     if models.get("gemini"): env_lines = set_env_key(env_lines, "GOOGLE_MODEL",    models["gemini"])
-    if models.get("ollama"): env_lines = set_env_key(env_lines, "OLLAMA_MODEL",    models["ollama"])
+    if models.get("ollama"):   env_lines = set_env_key(env_lines, "OLLAMA_MODEL",   models["ollama"])
+    if models.get("whisper"):  env_lines = set_env_key(env_lines, "WHISPER_MODEL",  models["whisper"])
 
     with open(env_path, "w", encoding="utf-8") as f:
         f.writelines(env_lines)
