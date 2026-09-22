@@ -315,7 +315,7 @@ def telegram_starten() -> str:
 
         print(f"[Telegram] Bot gestartet. Warte auf Nachrichten...")
         try:
-            bot.infinity_polling(timeout=30, long_polling_timeout=20, stop_polling_event=_stop_event)
+            bot.infinity_polling(timeout=30, long_polling_timeout=20)
         except Exception as e:
             print(f"[Telegram] Bot gestoppt: {e}")
         finally:
