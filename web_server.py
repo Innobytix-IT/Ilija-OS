@@ -458,6 +458,92 @@ def whatsapp_bridge_service_status():
         return jsonify({"ok": False, "running": False, "error": str(e)})
 
 
+# ── Telegram Bot (Eingehende Nachrichten) ─────────────────────────────────
+
+_TG_STATE      = {"running": False, "connected_since": None, "msg_count": 0}
+_tg_state_lock = threading.Lock()
+_TG_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "telegram", "telegram_config.json")
+
+def _tg_autostart():
+    """Startet den Telegram-Bot automatisch wenn Token + Chat-ID konfiguriert sind."""
+    import time as _t
+    _t.sleep(4)
+    try:
+        if not os.path.exists(_TG_CONFIG_PATH):
+            return
+        with open(_TG_CONFIG_PATH, encoding="utf-8") as f:
+            cfg = json.load(f)
+        if not cfg.get("token") or not cfg.get("chat_id") or cfg["chat_id"] == "DEINE_CHAT_ID":
+            return
+        from skills.telegram_skill import telegram_starten as _tg_start, _bot_running
+        if not _bot_running:
+            _tg_start()
+            with _tg_state_lock:
+                _TG_STATE["running"]         = True
+                _TG_STATE["connected_since"] = _t.time()
+    except Exception as e:
+        print(f"[Telegram] Autostart fehlgeschlagen: {e}")
+
+threading.Thread(target=_tg_autostart, daemon=True).start()
+
+
+@app.route("/telegram")
+def telegram_page():
+    return render_template("telegram.html")
+
+
+@app.route("/api/telegram/status")
+def telegram_bot_status():
+    try:
+        from skills.telegram_skill import _bot_running, _cfg_laden
+        cfg = _cfg_laden()
+        with _tg_state_lock:
+            since = _TG_STATE.get("connected_since")
+            count = _TG_STATE.get("msg_count", 0)
+        return jsonify({
+            "ok":      True,
+            "running": _bot_running,
+            "configured": bool(cfg.get("token") and cfg.get("chat_id") and cfg.get("chat_id") != "DEINE_CHAT_ID"),
+            "connected_since": since,
+            "msg_count": count,
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "running": False, "error": str(e)})
+
+
+@app.route("/api/telegram/control", methods=["POST"])
+def telegram_bot_control():
+    data   = request.get_json(silent=True) or {}
+    action = data.get("action", "start")
+    try:
+        if action == "start":
+            from skills.telegram_skill import telegram_starten as _tg_s
+            result = _tg_s()
+            with _tg_state_lock:
+                _TG_STATE["running"]         = True
+                _TG_STATE["connected_since"] = _time.time()
+            return jsonify({"ok": True, "message": result})
+        elif action == "stop":
+            from skills.telegram_skill import telegram_stoppen as _tg_stop
+            result = _tg_stop()
+            with _tg_state_lock:
+                _TG_STATE["running"]         = False
+                _TG_STATE["connected_since"] = None
+            return jsonify({"ok": True, "message": result})
+        else:
+            return jsonify({"ok": False, "error": "Unbekannte Aktion"}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/telegram/msg-count", methods=["POST"])
+def telegram_msg_count():
+    """Wird intern nach jeder verarbeiteten Nachricht aufgerufen."""
+    with _tg_state_lock:
+        _TG_STATE["msg_count"] = _TG_STATE.get("msg_count", 0) + 1
+    return jsonify({"ok": True})
+
+
 @app.route("/einstellungen")
 def einstellungen_page():
     return render_template("einstellungen.html")

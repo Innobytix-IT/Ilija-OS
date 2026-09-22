@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ilija · Telegram</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B1520;
+  --s1:#10202D;--s2:#16293A;--s3:#1E3547;--s4:#274257;
+  --bdr:rgba(255,255,255,.055);--bdr2:rgba(255,255,255,.1);
+  --g:#E0A82E;--g2:#C8871B;--gd:rgba(224,168,46,.07);--gg:rgba(224,168,46,.12);
+  --tx:#E6EEF5;--tx2:#8FA6B8;--tx3:#4A6072;
+  --green:#22c97c;--green-dim:rgba(34,201,124,.12);
+  --yellow:#f59e0b;--yellow-dim:rgba(245,158,11,.1);
+  --red:#ef4444;--red-dim:rgba(239,68,68,.1);
+  --blue:#2ca5e0;--blue-dim:rgba(44,165,224,.12);
+  --f:'Inter',sans-serif;--m:'JetBrains Mono',monospace;
+  --r:9px;
+}
+html{font-size:16px;color-scheme:dark}
+body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--s4);border-radius:2px}
+
+.topbar{display:flex;align-items:center;gap:0;height:52px;padding:0 20px;background:var(--s1);border-bottom:1px solid var(--bdr);flex-shrink:0;position:relative;z-index:100;overflow-x:auto}
+.topbar::-webkit-scrollbar{height:0}
+.logo{display:flex;align-items:center;gap:9px;text-decoration:none;flex-shrink:0}
+.logo-gem{width:30px;height:30px;background:var(--g);border-radius:7px;display:grid;place-items:center;font-family:var(--m);font-weight:500;font-size:14px;color:var(--bg)}
+.logo-name{font-size:.9rem;font-weight:500;color:var(--tx)}
+.logo-name em{font-style:italic;color:var(--g)}
+.tb-sep{width:1px;height:20px;background:var(--bdr2);margin:0 12px;flex-shrink:0}
+.tab-group{display:flex;gap:2px;flex-shrink:0}
+.tab{padding:5px 12px;border-radius:5px;font-size:.78rem;font-weight:500;cursor:pointer;transition:all .14s;color:var(--tx2);border:none;background:none;font-family:var(--f);white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center}
+.tab:hover{background:var(--s3);color:var(--tx)}
+.tab.active{background:var(--gd);color:var(--g);border:1px solid var(--gg)}
+
+.page{flex:1;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px}
+.card{background:var(--s2);border:1px solid var(--bdr2);border-radius:16px;padding:36px;width:100%;max-width:520px}
+
+.card-title{font-size:1.1rem;font-weight:600;color:var(--tx);margin-bottom:6px}
+.card-sub{font-size:.8rem;color:var(--tx3);margin-bottom:28px}
+
+.status-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 16px;border-radius:30px;
+  font-size:.82rem;font-weight:600;margin-bottom:28px;
+  transition:all .3s;
+}
+.status-badge.running{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,201,124,.25)}
+.status-badge.stopped{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.status-badge.loading{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,158,11,.25)}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.running .status-dot{background:var(--green);animation:pulse 2s ease infinite}
+.stopped .status-dot{background:var(--red)}
+.loading .status-dot{background:var(--yellow);animation:pulse 1s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;
+  background:var(--s1);border:1px solid var(--bdr);border-radius:10px;
+  padding:14px 16px;margin-bottom:20px}
+.toggle-label{font-size:.84rem;font-weight:600;color:var(--tx);margin-bottom:2px}
+.toggle-hint{font-size:.72rem;color:var(--tx3)}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.t-track{position:absolute;inset:0;border-radius:12px;background:var(--s4);cursor:pointer;transition:background .2s}
+.toggle input:checked + .t-track{background:var(--green)}
+.t-thumb{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.toggle input:checked ~ .t-thumb{transform:translateX(20px)}
+.toggle-state{font-size:.72rem;font-weight:600;margin-top:4px;text-align:right;transition:color .2s}
+.toggle-state.on{color:var(--green)}
+.toggle-state.off{color:var(--tx3)}
+
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bdr)}
+.info-row:last-child{border:none}
+.info-label{font-size:.78rem;color:var(--tx3)}
+.info-val{font-size:.82rem;color:var(--tx);font-family:var(--m)}
+
+.setup-card{margin-top:20px;background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:16px}
+.setup-title{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:10px}
+.setup-step{display:flex;gap:10px;align-items:flex-start;font-size:.8rem;color:var(--tx2);margin-bottom:8px;line-height:1.45}
+.step-n{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--s3);border:1px solid var(--bdr2);font-size:.65rem;font-weight:600;color:var(--tx3);display:grid;place-items:center}
+
+.btn-row{margin-top:24px;display:flex;gap:8px}
+.btn{padding:9px 18px;border-radius:7px;font-size:.8rem;font-weight:500;cursor:pointer;border:none;font-family:var(--f);transition:all .13s}
+.btn-prim{background:var(--g);color:var(--bg)}
+.btn-prim:hover{background:var(--g2)}
+.btn-ghost{background:var(--s3);color:var(--tx2);border:1px solid var(--bdr2)}
+.btn-ghost:hover{color:var(--tx)}
+.btn-danger{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.btn-danger:hover{background:rgba(239,68,68,.2)}
+
+.tg-icon{font-size:2rem;margin-bottom:16px;display:block}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="logo">
+    <div class="logo-gem">I</div>
+    <span class="logo-name">Ilija<em>PE</em></span>
+  </a>
+  <div class="tb-sep"></div>
+  <nav class="tab-group">
+    <a href="/" class="tab">⚡ Workflow</a>
+    <a href="/chat" class="tab">💬 Chat</a>
+    <a href="/dms" class="tab">🗂 DMS</a>
+    <a href="/local_calendar" class="tab">📅 Kalender</a>
+    <a href="/cloud" class="tab">☁ Cloud</a>
+    <a href="/whatsapp" class="tab">📱 WhatsApp</a>
+    <a href="/telegram" class="tab active">✈ Telegram</a>
+    <a href="/einstellungen" class="tab">⚙ Einstellungen</a>
+  </nav>
+</div>
+
+<div class="page">
+  <div class="card">
+    <span class="tg-icon">✈</span>
+    <div class="card-title">Telegram-Verbindung</div>
+    <div class="card-sub">Ilija antwortet auf Nachrichten im Bot @Ilija777_bot</div>
+
+    <div id="status-badge" class="status-badge loading">
+      <div class="status-dot"></div>
+      <span id="status-text">Wird geladen…</span>
+    </div>
+
+    <!-- Aktiv -->
+    <div id="running-section" style="display:none">
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Autonomer Dialog</div>
+          <div class="toggle-hint">Ilija antwortet selbstständig auf Telegram-Nachrichten</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <label class="toggle">
+            <input type="checkbox" id="dialog-toggle" checked onchange="setDialog(this.checked)">
+            <div class="t-track"></div>
+            <div class="t-thumb"></div>
+          </label>
+          <div class="toggle-state on" id="dialog-state-label">Aktiv</div>
+        </div>
+      </div>
+
+      <div class="info-row">
+        <span class="info-label">Verbunden seit</span>
+        <span class="info-val" id="info-since">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Nachrichten verarbeitet</span>
+        <span class="info-val" id="info-msgs">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Bot</span>
+        <span class="info-val">@Ilija777_bot</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="location.reload()">↻ Aktualisieren</button>
+        <button class="btn btn-danger" onclick="stopBot()">■ Bot stoppen</button>
+      </div>
+    </div>
+
+    <!-- Gestoppt -->
+    <div id="stopped-section" style="display:none">
+      <div style="font-size:.82rem;color:var(--tx2);line-height:1.6;margin-bottom:20px" id="stopped-hint">
+        Der Telegram-Bot ist nicht aktiv.<br>
+        Klicke auf <strong>Bot starten</strong> um Ilija über Telegram erreichbar zu machen.
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-prim" id="btnStart" onclick="startBot()">▶ Bot starten</button>
+        <button class="btn btn-ghost" onclick="location.reload()">↻ Aktualisieren</button>
+      </div>
+
+      <div class="setup-card">
+        <div class="setup-title">Einrichtung</div>
+        <div class="setup-step"><span class="step-n">1</span><span>Telegram öffnen → <strong>@Ilija777_bot</strong> suchen</span></div>
+        <div class="setup-step"><span class="step-n">2</span><span><strong>/start</strong> eingeben</span></div>
+        <div class="setup-step"><span class="step-n">3</span><span>Bot hier starten — Ilija antwortet ab sofort</span></div>
+        <div class="setup-step"><span class="step-n">4</span><span>Token &amp; Chat-ID unter <a href="/einstellungen" style="color:var(--g)">Einstellungen → Telegram</a> ändern</span></div>
+      </div>
+    </div>
+
+    <!-- Nicht konfiguriert -->
+    <div id="unconfigured-section" style="display:none">
+      <div style="font-size:.82rem;color:var(--tx2);line-height:1.6;margin-bottom:20px">
+        Telegram ist noch nicht eingerichtet.<br>
+        Bitte zuerst Token und Chat-ID unter <a href="/einstellungen" style="color:var(--g)">Einstellungen → Telegram</a> eintragen.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let _dialogEnabled = true
+
+async function poll() {
+  try {
+    const r   = await fetch('/api/telegram/status')
+    if (!r.ok) return
+    const d   = await r.json()
+
+    const badge   = document.getElementById('status-badge')
+    const txt     = document.getElementById('status-text')
+    const runSec  = document.getElementById('running-section')
+    const stopSec = document.getElementById('stopped-section')
+    const uncSec  = document.getElementById('unconfigured-section')
+
+    runSec.style.display = stopSec.style.display = uncSec.style.display = 'none'
+
+    if (!d.configured) {
+      badge.className = 'status-badge stopped'
+      txt.textContent = 'Nicht konfiguriert'
+      uncSec.style.display = 'block'
+    } else if (d.running) {
+      badge.className = 'status-badge running'
+      txt.textContent = 'Bot aktiv'
+      runSec.style.display = 'block'
+      if (d.connected_since) {
+        const dt = new Date(d.connected_since * 1000)
+        document.getElementById('info-since').textContent =
+          dt.toLocaleDateString('de-DE') + ' ' + dt.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})
+      }
+      document.getElementById('info-msgs').textContent = (d.msg_count || 0) + ' seit Start'
+    } else {
+      badge.className = 'status-badge stopped'
+      txt.textContent = 'Bot gestoppt'
+      stopSec.style.display = 'block'
+    }
+  } catch(_) {}
+  setTimeout(poll, 3000)
+}
+
+async function startBot() {
+  const btn = document.getElementById('btnStart')
+  btn.disabled = true; btn.textContent = '⏳ Wird gestartet…'
+  try {
+    const r = await fetch('/api/telegram/control', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({action:'start'})
+    })
+    const d = await r.json()
+    if (d.ok) {
+      btn.textContent = '✓ Bot gestartet'
+      setTimeout(() => location.reload(), 1200)
+    } else {
+      btn.textContent = '▶ Bot starten'; btn.disabled = false
+      alert('Fehler: ' + (d.error || 'Unbekannt'))
+    }
+  } catch(e) {
+    btn.textContent = '▶ Bot starten'; btn.disabled = false
+    alert('Netzwerkfehler: ' + e.message)
+  }
+}
+
+async function stopBot() {
+  if (!confirm('Telegram-Bot wirklich stoppen? Ilija antwortet dann nicht mehr auf Telegram-Nachrichten.')) return
+  try {
+    await fetch('/api/telegram/control', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({action:'stop'})
+    })
+    location.reload()
+  } catch(e) { alert('Fehler: ' + e.message) }
+}
+
+function setDialog(enabled) {
+  _dialogEnabled = enabled
+  const el = document.getElementById('dialog-state-label')
+  el.textContent = enabled ? 'Aktiv' : 'Pausiert'
+  el.className = 'toggle-state ' + (enabled ? 'on' : 'off')
+  // Persistenz lokal (einfach)
+  try { localStorage.setItem('ilija_tg_dialog', enabled ? '1' : '0') } catch(e) {}
+}
+
+// Dialog-Status aus localStorage wiederherstellen
+try {
+  const saved = localStorage.getItem('ilija_tg_dialog')
+  if (saved === '0') {
+    _dialogEnabled = false
+    const cb = document.getElementById('dialog-toggle')
+    if (cb) { cb.checked = false }
+    setDialog(false)
+  }
+} catch(e) {}
+
+poll()
+</script>
+</body>
+</html>
