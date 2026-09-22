@@ -667,7 +667,22 @@ function buildWizardContents() {
   document.getElementById('wiz-ki-content').innerHTML    = buildKiCard();
   document.getElementById('wiz-email-content').innerHTML = buildEmailCard();
   document.getElementById('wiz-kal-content').innerHTML   = buildKalCard();
-  document.getElementById('wiz-kanale-content').innerHTML = buildTgCard() + buildPhoneCard() + buildWaCard();
+  function wrapSection(icon, title, sub, card) {
+    return `<div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="font-size:1.1rem">${icon}</div>
+        <div>
+          <div style="font-size:.95rem;font-weight:600;color:var(--tx)">${title}</div>
+          ${sub ? `<div style="font-size:.75rem;color:var(--tx3);margin-top:2px">${sub}</div>` : ''}
+        </div>
+      </div>
+      ${card}
+    </div>`;
+  }
+  document.getElementById('wiz-kanale-content').innerHTML =
+    wrapSection('✈', 'Telegram', 'Bot-Token für Nachrichten &amp; Benachrichtigungen', buildTgCard()) +
+    wrapSection('📞', 'Telefon', 'Firmenname und Begrüßung für Telefonanrufe', buildPhoneCard()) +
+    wrapSection('💬', 'WhatsApp', 'Automatische Antworten auf WhatsApp-Nachrichten', buildWaCard());
 }
 
 async function saveKiAndNext() { await saveKi(); wizStep(1); }
