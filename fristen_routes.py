@@ -26,8 +26,39 @@ _TG_CONFIG         = os.path.join(_BASE, "data", "telegram", "telegram_config.js
 _PENDING_STICHTAG  = os.path.join(_DATA, "pending_stichtag.json")
 _UNTERSCHRIFT_BASE = os.path.join(_DATA, "unterschrift")
 _UNTERSCHRIFT_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".webp"]
+_NOTIF_QUEUE       = os.path.join(_BASE, "data", "notifications.json")
 
 os.makedirs(_FILES, exist_ok=True)
+
+
+# ── Notification-Queue (dateibasiert, überlebt Neustarts) ────────────────────
+
+_notif_lock = threading.Lock()
+
+def _notif_push(typ: str, titel: str, text: str, meta: dict | None = None):
+    """Fügt eine Benachrichtigung in die Queue ein."""
+    entry = {
+        "id":    str(uuid.uuid4()),
+        "ts":    datetime.now().isoformat(),
+        "typ":   typ,    # "fax_ok" | "fax_fehler" | "info"
+        "titel": titel,
+        "text":  text,
+        "meta":  meta or {},
+        "gelesen": False,
+    }
+    with _notif_lock:
+        try:
+            os.makedirs(os.path.dirname(_NOTIF_QUEUE), exist_ok=True)
+            if os.path.exists(_NOTIF_QUEUE):
+                with open(_NOTIF_QUEUE, encoding="utf-8") as f:
+                    queue = json.load(f)
+            else:
+                queue = []
+            queue.append(entry)
+            with open(_NOTIF_QUEUE, "w", encoding="utf-8") as f:
+                json.dump(queue, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -1372,6 +1403,7 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
                             with _fax_poll_lock:
                                 _fax_poll[job_id]["status"]  = status
                                 _fax_poll[job_id]["details"] = details
+                            _fax_bestaetigung_melden(fax_nr, status, details)
                             return
             except Exception:
                 pass  # Netzwerkfehler → nächste Runde
@@ -1382,6 +1414,36 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
                 _fax_poll[job_id]["status"]  = "timeout"
                 _fax_poll[job_id]["details"] = "Keine Bestätigung nach 60 Minuten"
 
+    def _fax_bestaetigung_melden(fax_nr: str, status: str, details: str):
+        """Meldet das Fax-Ergebnis via Queue (Chat), Telegram und E-Mail."""
+        ok = (status == "ok")
+        emoji  = "✅" if ok else "❌"
+        kurztext = "erfolgreich zugestellt" if ok else "FEHLER beim Versand"
+        titel    = f"Fax {emoji} {kurztext}"
+        text     = f"Fax an {fax_nr}: {kurztext}\n{details}"
+
+        # Ilija-Chat-Queue (A + B)
+        _notif_push(
+            typ   = "fax_ok" if ok else "fax_fehler",
+            titel = titel,
+            text  = text,
+            meta  = {"fax_nr": fax_nr},
+        )
+
+        # Telegram (falls konfiguriert)
+        tg_text = (
+            f"<b>Ilija · Fax-Bestätigung {emoji}</b>\n\n"
+            f"Fax an <b>{fax_nr}</b> wurde <b>{kurztext}</b>.\n"
+            f"{details}"
+        )
+        _telegram_senden(tg_text)
+
+        # E-Mail (falls konfiguriert)
+        _email_notif_senden(
+            subject = f"Ilija: {titel}",
+            body    = f"Hallo,\n\n{text}\n\nViele Grüße,\nIlija",
+        )
+
     @app.route("/api/fristen/fax-status/<job_id>")
     def fristen_fax_status(job_id):
         with _fax_poll_lock:
@@ -1389,6 +1451,13 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
         if not entry:
             return jsonify({"ok": False, "error": "Unbekannte Job-ID"}), 404
         return jsonify({"ok": True, **entry})
+
+    @app.route("/api/fristen/fax-jobs")
+    def fristen_fax_jobs():
+        """Gibt alle bekannten Fax-Jobs zurück (für Fristen-Banner)."""
+        with _fax_poll_lock:
+            jobs = [{"job_id": jid, **v} for jid, v in _fax_poll.items()]
+        return jsonify(jobs)
 
     # ── Fax senden (Mail2Fax via simple-fax.de) ──────────────────────────────
 

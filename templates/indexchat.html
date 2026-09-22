@@ -467,6 +467,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   loadWorkspace();
   loadShell();
   checkFristenNotification();
+  startNotificationPolling();
   document.getElementById('ta').focus();
   document.addEventListener('click',e=>{
     if(!document.getElementById('mwrap').contains(e.target))
@@ -795,6 +796,43 @@ async function checkFristenNotification(){
     scrollDown();
   }catch(e){}
 }
+// ── System-Notifications (Fax-Bestätigung etc.) ───────────────────────────
+function startNotificationPolling(){
+  const check = async () => {
+    try{
+      const r = await fetch('/api/notifications');
+      if(!r.ok) return;
+      const items = await r.json();
+      if(!items || !items.length) return;
+      items.forEach(n => _showSystemNotification(n));
+    }catch(e){}
+  };
+  check();  // sofort beim Start
+  setInterval(check, 30000);  // danach alle 30 s
+}
+
+function _showSystemNotification(n){
+  const ok    = n.typ === 'fax_ok';
+  const icon  = ok ? '✅' : '❌';
+  const color = ok ? 'var(--g)' : '#dc2626';
+  const now   = new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+
+  hideWelcome();
+  const area = document.getElementById('msgs');
+  const div  = document.createElement('div');
+  div.className = 'msg assistant';
+  div.innerHTML = `
+    <div class="msg-av">I</div>
+    <div class="msg-body">
+      <div class="msg-bubble" style="border-left:3px solid ${color};padding-left:14px">
+        ${icon} <strong>${esc(n.titel)}</strong><br><br>${esc(n.text).replace(/\n/g,'<br>')}
+      </div>
+      <div class="msg-time">${now} · Ilija-Benachrichtigung</div>
+    </div>`;
+  area.appendChild(div);
+  scrollDown();
+}
+
 function setLoading(v){loading=v;document.getElementById('sendBtn').disabled=v}
 
 // ── Session-Persistenz ────────────────────────────────────────

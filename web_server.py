@@ -578,6 +578,41 @@ _EMAIL_PROVIDERS = {
     "eigener": {"imap_host": "",                           "imap_port": 993, "smtp_host": "",                       "smtp_port": 587},
 }
 
+@app.route("/api/notifications", methods=["GET"])
+def get_notifications():
+    """Gibt ungelesene Notifications zurück und markiert sie als gelesen."""
+    import threading as _thr
+    _nq = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "notifications.json")
+    _nl = _thr.Lock()
+    try:
+        if not os.path.exists(_nq):
+            return jsonify([])
+        with open(_nq, encoding="utf-8") as f:
+            queue = json.load(f)
+        ungelesen = [n for n in queue if not n.get("gelesen")]
+        for n in queue:
+            n["gelesen"] = True
+        with open(_nq, "w", encoding="utf-8") as f:
+            json.dump(queue, f, ensure_ascii=False, indent=2)
+        return jsonify(ungelesen)
+    except Exception as e:
+        return jsonify([])
+
+@app.route("/api/notifications/<nid>", methods=["DELETE"])
+def delete_notification(nid):
+    _nq = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "notifications.json")
+    try:
+        if not os.path.exists(_nq):
+            return jsonify({"ok": True})
+        with open(_nq, encoding="utf-8") as f:
+            queue = json.load(f)
+        queue = [n for n in queue if n.get("id") != nid]
+        with open(_nq, "w", encoding="utf-8") as f:
+            json.dump(queue, f, ensure_ascii=False, indent=2)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 @app.route("/api/email-settings", methods=["GET"])
 def get_email_settings():
     cfg = {}

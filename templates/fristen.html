@@ -224,6 +224,8 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
 </header>
 
 <main class="main">
+  <div id="faxBanner" style="display:none;margin:0 0 16px;padding:14px 18px;border-radius:8px;font-size:14px;line-height:1.5"></div>
+
   <div class="page-header">
     <div>
       <div class="page-title">Fristen & Vorlagen</div>
@@ -1531,6 +1533,38 @@ document.addEventListener('keydown', e => {
 
 load();
 loadAbsender();
+checkFaxBanner();
+
+async function checkFaxBanner(){
+  try{
+    const r = await fetch('/api/fristen/fax-jobs');
+    if(!r.ok) return;
+    const jobs = await r.json();
+    const seen = JSON.parse(localStorage.getItem('ilija_fax_seen_jobs')||'[]');
+    const neufertig = jobs.filter(j=>
+      (j.status==='ok'||j.status==='fehler'||j.status==='timeout') && !seen.includes(j.job_id)
+    );
+    if(!neufertig.length) return;
+
+    const banner = document.getElementById('faxBanner');
+    const lines = neufertig.map(j=>{
+      const ok = j.status==='ok';
+      const icon = ok ? '✅' : j.status==='timeout' ? '⏱️' : '❌';
+      const txt  = ok ? 'erfolgreich zugestellt' : j.status==='timeout' ? 'keine Bestätigung (Versandbox prüfen)' : 'FEHLER';
+      return `${icon} Fax an <strong>${j.fax_nr||'?'}</strong>: ${txt}`;
+    }).join('<br>');
+
+    const allIds = neufertig.map(j=>j.job_id);
+    banner.style.display = 'block';
+    banner.style.background = neufertig.some(j=>j.status==='ok') ? '#d1fae5' : '#fee2e2';
+    banner.style.border = `1px solid ${neufertig.every(j=>j.status==='ok') ? '#6ee7b7' : '#fca5a5'}`;
+    banner.style.color = '#111';
+    banner.innerHTML = `${lines}<br><button onclick="this.closest('#faxBanner').style.display='none';
+      try{localStorage.setItem('ilija_fax_seen_jobs',JSON.stringify(${JSON.stringify(allIds)}));}catch(e){}"
+      style="margin-top:10px;padding:4px 12px;border:none;border-radius:5px;cursor:pointer;font-size:13px;background:#0003">
+      Schließen</button>`;
+  }catch(e){}
+}
 </script>
 </body>
 </html>
