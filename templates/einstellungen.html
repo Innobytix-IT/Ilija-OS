@@ -1566,8 +1566,8 @@ async function saveUpdateSettings() {
   const time = document.getElementById('upd-time')?.value || '03:00';
   const msg = document.getElementById('upd-msg');
   try {
-    const r = await api('/api/update-settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({auto_update_enabled: enabled, update_time: time})});
-    if (msg) { msg.textContent = r.message || 'Gespeichert'; msg.style.color = 'var(--green)'; setTimeout(()=>msg.textContent='', 3000); }
+    const r = await post('/api/update-settings', {auto_update_enabled: enabled, update_time: time});
+    if (msg && !r) return;
   } catch(_) {
     if (msg) { msg.textContent = 'Fehler beim Speichern'; msg.style.color = 'var(--red)'; }
   }
@@ -1578,8 +1578,9 @@ async function updateNow() {
   const msg = document.getElementById('upd-msg');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Läuft…'; }
   try {
-    const r = await api('/api/update-now', {method:'POST'});
-    if (msg) { msg.textContent = r.message || 'Update gestartet'; msg.style.color = 'var(--teal)'; setTimeout(()=>msg.textContent='', 5000); }
+    const r = await fetch('/api/update-now', {method:'POST'});
+    const j = await r.json();
+    if (msg) { msg.textContent = j.message || 'Update gestartet'; msg.style.color = 'var(--teal)'; setTimeout(()=>msg.textContent='', 5000); }
   } catch(_) {
     if (msg) { msg.textContent = 'Fehler'; msg.style.color = 'var(--red)'; }
   }
