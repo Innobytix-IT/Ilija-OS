@@ -45,7 +45,12 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
 .fields-pane{width:380px;flex-shrink:0;overflow-y:auto;background:var(--s1);border-left:1px solid var(--bdr);display:flex;flex-direction:column}
 .fp-head{padding:14px 16px 10px;border-bottom:1px solid var(--bdr);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .fp-head h2{font-size:.8rem;font-weight:700;color:var(--tx)}
-.fp-body{padding:14px 14px 24px;flex:1;overflow-y:auto}
+.fp-body{padding:14px 14px 24px;flex:1;overflow-y:auto;transition:none}
+.fp-body.collapsed{display:none}
+.fields-toggle{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 14px;cursor:pointer;font-size:.72rem;color:var(--tx3);border-top:1px solid var(--bdr2);border-bottom:1px solid var(--bdr2);background:var(--s1);user-select:none;transition:background .15s}
+.fields-toggle:hover{background:var(--s2);color:var(--tx2)}
+.fields-toggle .ft-arrow{font-size:.7rem;transition:transform .2s}
+.fields-toggle.open .ft-arrow{transform:rotate(180deg)}
 
 /* Page group */
 .pg-group{margin-bottom:20px}
@@ -81,6 +86,16 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
 /* Toast */
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--s3);border:1px solid var(--bdr2);border-radius:8px;padding:10px 22px;font-size:.8rem;color:var(--tx);z-index:300;transition:transform .25s ease;pointer-events:none;white-space:nowrap}
 .toast.show{transform:translateX(-50%) translateY(0)}
+/* Overlay Notification */
+.ovl-notif{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .2s ease}
+.ovl-notif.show{opacity:1;pointer-events:auto}
+.ovl-box{background:var(--bg2,var(--s2));border:1px solid var(--bdr2);border-radius:14px;padding:32px 36px;min-width:300px;max-width:400px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.35);transform:scale(.93);transition:transform .2s ease}
+.ovl-notif.show .ovl-box{transform:scale(1)}
+.ovl-icon{font-size:2.6rem;line-height:1;margin-bottom:12px}
+.ovl-title{font-size:1.05rem;font-weight:700;margin-bottom:6px;color:var(--tx)}
+.ovl-msg{font-size:.8rem;color:var(--tx2);margin-bottom:20px;line-height:1.5}
+.ovl-notif.success .ovl-box{border-color:rgba(0,160,60,.4);background:color-mix(in srgb,var(--bg2,var(--s2)) 94%,#00a03c)}
+.ovl-notif.error   .ovl-box{border-color:rgba(220,100,0,.4);background:color-mix(in srgb,var(--bg2,var(--s2)) 94%,#dc6400)}
 
 /* PDF Live-Overlay */
 .pdf-wrapper{position:relative;display:inline-block;line-height:0}
@@ -100,8 +115,9 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
 /* ── Variante 2 / 3 ── */
 .btn-ki-alle{background:rgba(26,100,220,.1);color:var(--a);border:1px solid rgba(26,100,220,.25)}
 .btn-ki-alle:hover:not(:disabled){background:rgba(26,100,220,.2)}
-.review-banner{display:none;align-items:center;gap:10px;padding:7px 14px;background:rgba(0,160,60,.1);border-bottom:1px solid rgba(0,160,60,.28);font-size:.74rem;color:var(--tx)}
+.review-banner{display:none;align-items:center;gap:10px;padding:10px 18px;background:rgba(0,160,60,.12);border-bottom:2px solid rgba(0,160,60,.35);font-size:.78rem;color:var(--tx);position:sticky;top:0;z-index:90}
 .review-banner.show{display:flex}
+.review-banner .rb-msg{flex:1;line-height:1.4}
 .review-banner button{flex-shrink:0}
 .zeitplan-panel{display:none;padding:10px 12px 12px;border-bottom:1px solid var(--bdr2);background:var(--s2)}
 .zeitplan-panel.open{display:block}
@@ -123,6 +139,14 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
   <button class="btn btn-ghost btn-sm btn-ki-alle" id="btnKIAlle" onclick="kiAlleSeitenBefuellen()" disabled>✨ Alle Seiten (KI)</button>
   <button class="btn btn-prim" id="btnSave" onclick="speichern()" disabled>✓ Speichern</button>
 </header>
+
+<div class="review-banner" id="reviewBanner">
+  <span style="font-size:1.1rem">📋</span>
+  <span class="rb-msg" id="reviewMsg">✨ KI hat alle Felder vorbereitet — bitte prüfen.</span>
+  <button class="btn btn-prim btn-sm" onclick="speichernUndSenden()">✓ Speichern & Senden</button>
+  <button class="btn btn-ghost btn-sm" onclick="nurSpeichern()">Nur speichern</button>
+  <button class="btn btn-ghost btn-sm" onclick="document.getElementById('reviewBanner').classList.remove('show')" style="font-size:.8rem;padding:4px 8px">✕</button>
+</div>
 
 <div class="infobar">
   <span>Felder im rechten Panel ausfüllen. <strong>Klick auf einen Feldnamen</strong> springt im Dokument zur richtigen Seite.</span>
@@ -177,14 +201,6 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
         </label>
       </div>
     </div>
-    <!-- Variante 2: Review-Banner nach "Alle Seiten (KI)" -->
-    <div class="review-banner" id="reviewBanner">
-      <span id="reviewMsg" style="flex:1">✨ KI hat alle Felder vorbereitet — bitte prüfen.</span>
-      <button class="btn btn-prim btn-sm" onclick="speichernUndSenden()">✓ Speichern & Senden</button>
-      <button class="btn btn-ghost btn-sm" onclick="nurSpeichern()">Nur speichern</button>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('reviewBanner').classList.remove('show')" style="font-size:.8rem">✕</button>
-    </div>
-
     <!-- Variante 3: Zeitplan-Panel -->
     <div class="zeitplan-panel" id="zeitplanPanel">
       <div style="font-size:.74rem;font-weight:700;color:var(--tx);margin-bottom:10px;display:flex;align-items:center;gap:6px">⏰ Zeitplan <span style="font-size:.65rem;font-weight:400;color:var(--tx3)">(vollautonomer Ablauf)</span></div>
@@ -239,7 +255,11 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
       </div>
     </div>
 
-    <div class="fp-body" id="fieldsBody">
+    <div class="fields-toggle" id="fieldsToggle" onclick="toggleFields()">
+      <span class="ft-arrow">▲</span>
+      <span id="fieldsToggleLabel">Felder einblenden</span>
+    </div>
+    <div class="fp-body collapsed" id="fieldsBody">
       <div class="state-msg" style="padding:32px 16px">
         <span class="icon">⏳</span>
         <p>Felder werden geladen…</p>
@@ -249,6 +269,14 @@ canvas#pdfCanvas{display:block;box-shadow:0 4px 28px rgba(0,0,0,.55)}
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="ovl-notif" id="ovlNotif">
+  <div class="ovl-box">
+    <div class="ovl-icon" id="ovlIcon"></div>
+    <div class="ovl-title" id="ovlTitle"></div>
+    <div class="ovl-msg"  id="ovlMsg"></div>
+    <div id="ovlActions"></div>
+  </div>
+</div>
 
 <script>
 const VID = "{{ vid | e }}";
@@ -784,11 +812,33 @@ async function nurSpeichern() {
   await speichern();
 }
 
+let _istStichtagPruefung = false;
+
+function showOverlayNotif(type, title, msg, actions) {
+  const ovl = document.getElementById('ovlNotif');
+  document.getElementById('ovlIcon').textContent  = type === 'success' ? '✅' : '⚠️';
+  document.getElementById('ovlTitle').textContent = title;
+  document.getElementById('ovlMsg').innerHTML     = msg;
+  const act = document.getElementById('ovlActions');
+  act.innerHTML = '';
+  (actions || []).forEach(a => {
+    const btn = document.createElement('button');
+    btn.className   = a.primary ? 'btn btn-prim btn-sm' : 'btn btn-ghost btn-sm';
+    btn.textContent = a.label;
+    btn.style.margin = '0 4px';
+    btn.onclick = a.onclick;
+    act.appendChild(btn);
+  });
+  ovl.className = 'ovl-notif ' + type;
+  requestAnimationFrame(() => ovl.classList.add('show'));
+}
+
+function closeOverlayNotif() {
+  const ovl = document.getElementById('ovlNotif');
+  ovl.classList.remove('show');
+}
+
 async function speichernUndSenden() {
-  document.getElementById('reviewBanner').classList.remove('show');
-  // Erst speichern, dann zurück zu /fristen wo Versand verfügbar ist
-  const btn = document.getElementById('btnSave');
-  btn.disabled = true; btn.textContent = '⏳ Wird gespeichert…';
   const werte = {};
   document.querySelectorAll('[data-fname]').forEach(el => {
     const name = el.getAttribute('data-fname');
@@ -796,23 +846,71 @@ async function speichernUndSenden() {
     else if (el.type === 'radio')   { if (el.checked) werte[name] = el.value; }
     else                            werte[name] = el.value || '';
   });
+  // Visuelles Feedback während Speichern
+  const btnSenden = document.querySelector('#reviewBanner .btn-prim');
+  if (btnSenden) { btnSenden.disabled = true; btnSenden.textContent = '⏳ Speichert…'; }
   try {
     const r = await fetch(`/api/fristen/${VID}/formular-ausfuellen`, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({werte})
     });
     const d = await r.json();
-    if (d.ok) {
-      toast('Gespeichert ✓ — weiter zum Versand…');
-      setTimeout(() => { window.location.href = `/fristen#vid-${VID}`; }, 900);
+    if (!d.ok) {
+      if (btnSenden) { btnSenden.disabled = false; btnSenden.textContent = '✓ Speichern & Senden'; }
+      _bannerFehler('Speichern fehlgeschlagen: ' + (d.error||'Unbekannt'));
+      return;
+    }
+    if (_istStichtagPruefung) {
+      if (btnSenden) btnSenden.textContent = '⏳ Versendet…';
+      const r2 = await fetch(`/api/fristen/${VID}/stichtag-senden`, {method:'POST'});
+      const d2 = await r2.json();
+      if (d2.ok) {
+        document.getElementById('reviewBanner').classList.remove('show');
+        showOverlayNotif('success', 'Versendet ✓',
+          `Das Dokument wurde gespeichert und erfolgreich versendet.`,
+          [{ label: 'Zur Übersicht', primary: true, onclick: () => { window.location.href = '/fristen'; } }]
+        );
+      } else {
+        if (btnSenden) { btnSenden.disabled = false; btnSenden.textContent = '✓ Speichern & Senden'; }
+        const istSmtp = (d2.error || '').toLowerCase().includes('smtp') || (d2.error || '').toLowerCase().includes('konfiguriert');
+        showOverlayNotif('error',
+          istSmtp ? 'Kein Versandweg konfiguriert' : 'Versand fehlgeschlagen',
+          istSmtp
+            ? 'Es ist noch kein E-Mail-Konto eingerichtet.<br>Das Dokument wurde gespeichert — du kannst es manuell versenden.'
+            : (d2.error || 'Unbekannter Fehler'),
+          [
+            ...(istSmtp ? [{ label: '⚙ E-Mail einrichten', primary: true, onclick: () => { window.location.href = '/einstellungen'; } }] : []),
+            { label: 'Schließen', primary: false, onclick: closeOverlayNotif }
+          ]
+        );
+      }
     } else {
-      alert('Fehler: ' + (d.error||'Unbekannt'));
-      btn.disabled = false; btn.textContent = '✓ Speichern';
+      document.getElementById('reviewBanner').classList.remove('show');
+      toast('Gespeichert ✓');
+      setTimeout(() => { window.location.href = `/fristen#vid-${VID}`; }, 900);
     }
   } catch(e) {
-    alert('Netzwerkfehler: ' + e.message);
-    btn.disabled = false; btn.textContent = '✓ Speichern';
+    if (btnSenden) { btnSenden.disabled = false; btnSenden.textContent = '✓ Speichern & Senden'; }
+    showOverlayNotif('error', 'Netzwerkfehler', e.message,
+      [{ label: 'Schließen', primary: false, onclick: closeOverlayNotif }]
+    );
   }
+}
+
+async function pruefePendingStichtag() {
+  try {
+    const r = await fetch('/api/fristen/pending-stichtag');
+    const d = await r.json();
+    const eintrag = (d.pending || []).find(p => p.vid === VID && p.typ === 'review');
+    if (!eintrag) return;
+    _istStichtagPruefung = true;
+    // Topbar-Speichern-Button ausblenden — Banner hat Speichern & Senden / Nur speichern
+    const btnSave = document.getElementById('btnSave');
+    if (btnSave) btnSave.style.display = 'none';
+    document.getElementById('reviewMsg').innerHTML =
+      '📋 Ilija hat dieses Dokument für dich vorbereitet. Prüfe die Felder und sende es ab.';
+    document.getElementById('reviewBanner').classList.add('show');
+  } catch(e) {}
 }
 
 // ── Variante 3: Zeitplan ──────────────────────────────────────
@@ -892,9 +990,29 @@ async function zeitplanSpeichern() {
   } catch(e) { toast('Fehler: ' + e.message); }
 }
 
+// ── Felder-Panel Toggle ───────────────────────────────────────
+function toggleFields(forceOpen) {
+  const body    = document.getElementById('fieldsBody');
+  const toggle  = document.getElementById('fieldsToggle');
+  const label   = document.getElementById('fieldsToggleLabel');
+  const isOpen  = forceOpen !== undefined ? forceOpen : body.classList.contains('collapsed');
+  if (isOpen) {
+    body.classList.remove('collapsed');
+    toggle.classList.add('open');
+    label.textContent = 'Felder ausblenden';
+  } else {
+    body.classList.add('collapsed');
+    toggle.classList.remove('open');
+    label.textContent = 'Felder einblenden';
+  }
+  try { localStorage.setItem('ilija_fields_open', isOpen ? '1' : '0'); } catch(e) {}
+}
+
 // ── Init ─────────────────────────────────────────────────────
 (async () => {
-  await Promise.all([ladePDF(), ladeFelder(), ladeVorlageKontext(), zeitplanLaden()]);
+  await Promise.all([ladePDF(), ladeFelder(), ladeVorlageKontext(), zeitplanLaden(), pruefePendingStichtag()]);
+  // Felder-Panel: gespeicherte Präferenz laden (default: zugeklappt)
+  try { if (localStorage.getItem('ilija_fields_open') === '1') toggleFields(true); } catch(e) {}
   const ta = document.getElementById('kiKontext');
   if (ta) ta.addEventListener('input', kiKontextChanged);
 })();

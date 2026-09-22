@@ -47,6 +47,13 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);min-height:100vh;
 /* ── Absender-Banner ─────────────────────────────────────── */
 .absender-hint{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--ydim);border:1px solid rgba(245,158,11,.2);border-radius:8px;margin-bottom:20px;font-size:.78rem;color:var(--yellow)}
 .absender-hint a{color:var(--yellow);font-weight:600;cursor:pointer;text-decoration:underline}
+/* ── Stichtag-Banner ─────────────────────────────────────── */
+.stichtag-item{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(26,100,220,.1);border:1px solid rgba(26,100,220,.25);border-radius:10px;margin-bottom:10px;font-size:.8rem;flex-wrap:wrap}
+.stichtag-item .stichtag-msg{flex:1;color:var(--tx);line-height:1.5}
+.stichtag-item strong{color:var(--a)}
+.stichtag-item .stichtag-actions{display:flex;gap:8px;flex-wrap:wrap}
+.stichtag-item .btn-senden{background:var(--g);color:var(--bg);border:none;padding:6px 14px;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer}
+.stichtag-item .btn-pruefen{background:transparent;color:var(--a);border:1px solid var(--a);padding:6px 14px;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer}
 
 /* ── Buttons ─────────────────────────────────────────────── */
 .btn{padding:8px 18px;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;border:none;font-family:var(--f);transition:all .13s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
@@ -233,6 +240,8 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
     <a onclick="openAbsenderModal()">Jetzt hinterlegen →</a>
   </div>
 
+  <div id="stichtagBanner" style="display:none"></div>
+
   <div class="cards" id="cardList"></div>
   <div id="emptyState" style="display:none">
     <div class="empty">
@@ -387,6 +396,25 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
 
 
 <!-- ════ Brief-Modal ════ -->
+<div class="modal-bg" id="briefConfirmModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title">
+      <span>✍️ Brief aufsetzen</span>
+      <button class="modal-close" onclick="document.getElementById('briefConfirmModal').classList.remove('open')">✕</button>
+    </div>
+    <p style="font-size:.88rem;color:var(--tx2);line-height:1.6;margin:0 0 6px">
+      Soll Ilija jetzt einen Brief für diesen Antrag aufsetzen?
+    </p>
+    <p style="font-size:.78rem;color:var(--tx3);line-height:1.5;margin:0">
+      Falls bereits ein Formular hinterlegt ist, wird es durch den KI-Brief ersetzt.
+    </p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('briefConfirmModal').classList.remove('open')">Abbrechen</button>
+      <button class="btn btn-prim btn-sm" onclick="_briefConfirmiert()">OK, Brief aufsetzen</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="briefModal">
   <div class="modal" style="max-width:420px;text-align:center">
     <div id="briefLoading" class="brief-loading">
@@ -807,6 +835,49 @@ async function load() {
     const d = await r.json();
     render(d);
   } catch(e) { console.error(e); }
+  loadPendingStichtag();
+}
+
+async function loadPendingStichtag() {
+  try {
+    const r = await fetch('/api/fristen/pending-stichtag');
+    const d = await r.json();
+    const banner = document.getElementById('stichtagBanner');
+    const items  = (d.pending || []).filter(p => p.typ === 'review');
+    if (!items.length) { banner.style.display = 'none'; banner.innerHTML = ''; return; }
+    banner.style.display = 'block';
+    banner.innerHTML = items.map(p => `
+      <div class="stichtag-item" id="stichtag-${p.vid}">
+        <span style="font-size:1.3rem">📋</span>
+        <div class="stichtag-msg">
+          <strong>${p.name}</strong> — Ilija hat das Dokument für dich vorbereitet.<br>
+          Prüfe es und versende es direkt, oder nimm zuerst noch Änderungen vor.
+        </div>
+        <div class="stichtag-actions">
+          <button class="btn-pruefen" onclick="window.location.href='${p.link}'">🔍 Prüfen</button>
+          <button class="btn-senden" onclick="stichtagSenden('${p.vid}','${p.name}',this)">✓ Jetzt versenden</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function stichtagSenden(vid, name, btn) {
+  btn.disabled = true; btn.textContent = '⏳ Wird gesendet…';
+  try {
+    const r = await fetch(`/api/fristen/${vid}/stichtag-senden`, {method:'POST'});
+    const d = await r.json();
+    if (d.ok) {
+      const el = document.getElementById(`stichtag-${vid}`);
+      if (el) el.innerHTML = `<span style="color:var(--g)">✅ <strong>${name}</strong> wurde erfolgreich versendet.</span>`;
+      setTimeout(() => loadPendingStichtag(), 3000);
+    } else {
+      alert('Fehler: ' + (d.error || 'Unbekannt'));
+      btn.disabled = false; btn.textContent = '✓ Jetzt versenden';
+    }
+  } catch(e) {
+    alert('Netzwerkfehler: ' + e.message);
+    btn.disabled = false; btn.textContent = '✓ Jetzt versenden';
+  }
 }
 
 async function loadAbsender() {
@@ -1009,8 +1080,13 @@ function _briefZustand(zustand) {
   document.getElementById('briefError').style.display   = zustand === 'fehler'? 'block' : 'none';
 }
 
-async function openBrief(id) {
+function openBrief(id) {
   briefVid = id;
+  document.getElementById('briefConfirmModal').classList.add('open');
+}
+
+async function _briefConfirmiert() {
+  document.getElementById('briefConfirmModal').classList.remove('open');
   _briefZustand('laden');
   document.getElementById('briefModal').classList.add('open');
   await ladeBrief();

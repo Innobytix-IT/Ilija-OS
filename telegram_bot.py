@@ -469,11 +469,52 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user_input = update.message.text or ""
     if not user_input.strip():
         return
+
+    # Kurzbefehl: "Dokument versenden" → vorbereitete ki_pruefen-Dokumente absenden
+    if "dokument versenden" in user_input.strip().lower():
+        await _handle_dokument_versenden(update, ctx)
+        return
+
     await ctx.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
     with kernel_lock:
         k = get_kernel()
     response = k.chat(user_input)
     await send_response(update, response)
+
+
+async def _handle_dokument_versenden(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Sendet alle offenen ki_pruefen-Stichtag-Dokumente auf Telegram-Befehl."""
+    import json as _json, requests as _req
+    base_url = os.getenv("ILIJA_BASE_URL", "http://localhost:5001")
+    try:
+        r = _req.get(f"{base_url}/api/fristen/pending-stichtag", timeout=10)
+        pending = r.json().get("pending", [])
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ Fehler beim Abrufen der Dokumente: {e}")
+        return
+    review_items = [p for p in pending if p.get("typ") == "review"]
+    if not review_items:
+        await update.message.reply_text("ℹ️ Keine Dokumente zur Bestätigung vorhanden.")
+        return
+    for item in review_items:
+        vid  = item.get("vid", "")
+        name = item.get("name", "Dokument")
+        try:
+            r2 = _req.post(f"{base_url}/api/fristen/{vid}/stichtag-senden", timeout=30)
+            d2 = r2.json()
+            if d2.get("ok"):
+                empf = d2.get("empfaenger", "")
+                await update.message.reply_text(
+                    f"✅ <b>{name}</b> wurde erfolgreich an {empf} versendet!",
+                    parse_mode="HTML"
+                )
+            else:
+                await update.message.reply_text(
+                    f"⚠️ Fehler beim Versenden von <b>{name}</b>: {d2.get('error', 'Unbekannt')}",
+                    parse_mode="HTML"
+                )
+        except Exception as e:
+            await update.message.reply_text(f"⚠️ Netzwerkfehler beim Versenden von {name}: {e}")
 
 
 async def handle_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE):

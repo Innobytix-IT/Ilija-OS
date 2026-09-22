@@ -23,6 +23,7 @@ _ABSENDER          = os.path.join(_DATA, "absender.json")
 _EMAIL_CONFIG      = os.path.join(_DATA, "email_config.json")
 _NOTIF_LOG         = os.path.join(_DATA, "notif_log.json")
 _TG_CONFIG         = os.path.join(_BASE, "data", "telegram", "telegram_config.json")
+_PENDING_STICHTAG  = os.path.join(_DATA, "pending_stichtag.json")
 _UNTERSCHRIFT_BASE = os.path.join(_DATA, "unterschrift")
 _UNTERSCHRIFT_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".webp"]
 
@@ -162,6 +163,148 @@ def _telegram_senden(text: str) -> bool:
     except Exception as e:
         print(f"[FristenNotif] Telegram-Fehler: {e}")
         return False
+
+
+def _telegram_datei_senden(pfad: str, caption: str = "") -> bool:
+    """Sendet eine Datei (PDF) via Telegram sendDocument."""
+    try:
+        import requests as _req
+        if not os.path.exists(_TG_CONFIG):
+            return False
+        with open(_TG_CONFIG, encoding="utf-8") as f:
+            cfg = json.load(f)
+        token   = cfg.get("token", "").strip()
+        chat_id = cfg.get("chat_id", "").strip()
+        if not token or not chat_id:
+            return False
+        with open(pfad, "rb") as df:
+            r = _req.post(
+                f"https://api.telegram.org/bot{token}/sendDocument",
+                data={"chat_id": chat_id, "caption": caption, "parse_mode": "HTML"},
+                files={"document": (os.path.basename(pfad), df, "application/pdf")},
+                timeout=30,
+            )
+        return r.ok
+    except Exception as e:
+        print(f"[FristenNotif] Telegram-Datei-Fehler: {e}")
+        return False
+
+
+def _ilija_basis_url() -> str:
+    return os.getenv("ILIJA_BASE_URL", "http://localhost:5001")
+
+
+def _load_pending_stichtag() -> list:
+    if not os.path.exists(_PENDING_STICHTAG):
+        return []
+    try:
+        with open(_PENDING_STICHTAG, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def _save_pending_stichtag(pending: list):
+    os.makedirs(_DATA, exist_ok=True)
+    with open(_PENDING_STICHTAG, "w", encoding="utf-8") as f:
+        json.dump(pending, f, ensure_ascii=False, indent=2)
+
+
+def _stichtag_notify_review(v: dict, out_path: str):
+    """Benachrichtigt den User: Stichtag erreicht, Dokument bereit zur Prüfung (ki_pruefen-Modus)."""
+    absender = _load_absender()
+    vorname  = (absender.get("name", "") or "").split()[0] or "Hallo"
+    name     = v.get("name", "Formular")
+    vid      = v["id"]
+    base_url = _ilija_basis_url()
+    link     = f"{base_url}/fristen/formular-ausfuellen/{vid}"
+
+    # Pending-Stichtag speichern (für Chat-Anzeige & Telegram-Bestätigung)
+    pending = _load_pending_stichtag()
+    pending = [p for p in pending if p.get("vid") != vid]
+    pending.append({
+        "vid": vid, "name": name, "link": link,
+        "out_datei": os.path.basename(out_path),
+        "vorbereitet": datetime.now().isoformat(),
+        "typ": "review"
+    })
+    _save_pending_stichtag(pending)
+
+    # E-Mail an Absender
+    empf_email = absender.get("email", "").strip()
+    betreff = f"Ilija: Dokument bereit zur Pruefung - {name}"
+    body = (
+        f"Hallo {vorname},\n\n"
+        f"der Stichtag zum Versenden des Dokuments '{name}' wurde erreicht.\n"
+        f"Wie von dir gewuenscht habe ich alles vorbereitet.\n\n"
+        f"Du kannst es jetzt ueber diesen Link pruefen und gegebenenfalls Aenderungen vornehmen:\n"
+        f"{link}\n\n"
+        f"Wenn alles passt, klicke auf 'Speichern & Senden', um das Dokument abzusenden.\n\n"
+        f"Viele Gruesse,\nIlija"
+    )
+    if empf_email:
+        import smtplib, ssl as _ssl2
+        from email.mime.multipart import MIMEMultipart as _MM
+        from email.mime.text      import MIMEText as _MT
+        try:
+            cfg = _load_email_config()
+            if cfg.get("smtp_server") and cfg.get("smtp_user") and cfg.get("smtp_password"):
+                msg = _MM("alternative")
+                msg["From"]    = cfg["smtp_user"]
+                msg["To"]      = empf_email
+                msg["Subject"] = betreff
+                msg.attach(_MT(body, "plain", "utf-8"))
+                ctx = _ssl2.create_default_context()
+                if cfg.get("use_ssl"):
+                    with smtplib.SMTP_SSL(cfg["smtp_server"], int(cfg["smtp_port"]), context=ctx) as srv:
+                        srv.login(cfg["smtp_user"], cfg["smtp_password"])
+                        srv.sendmail(cfg["smtp_user"], [empf_email], msg.as_bytes())
+                else:
+                    with smtplib.SMTP(cfg["smtp_server"], int(cfg["smtp_port"])) as srv:
+                        srv.ehlo(); srv.starttls(context=ctx)
+                        srv.login(cfg["smtp_user"], cfg["smtp_password"])
+                        srv.sendmail(cfg["smtp_user"], [empf_email], msg.as_bytes())
+        except Exception as e:
+            print(f"[AutoLauf] Review-E-Mail-Fehler: {e}")
+    else:
+        _email_notif_senden(betreff, body)
+
+    # Telegram: PDF-Anhang + Text
+    tg_caption = (
+        f"<b>Ilija · Stichtag erreicht 📋</b>\n\n"
+        f"Hallo {vorname},\n\n"
+        f"Das Dokument <b>{name}</b> wurde von mir vorbereitet.\n"
+        f"Bitte prüfe es und gib mir Bescheid:\n\n"
+        f"✅ Schreib <b>Dokument versenden</b> – ich versende es sofort.\n"
+        f"📝 Oder passe es online an: {link}"
+    )
+    if os.path.exists(out_path):
+        _telegram_datei_senden(out_path, caption=tg_caption)
+    else:
+        _telegram_senden(tg_caption)
+
+
+def _stichtag_notify_bestaetigung(v: dict):
+    """Benachrichtigt den User: Dokument wurde autonom ausgefüllt und versendet."""
+    absender   = _load_absender()
+    vorname    = (absender.get("name", "") or "").split()[0] or "Hallo"
+    name       = v.get("name", "Formular")
+    empfaenger = v.get("zeitplan", {}).get("empfaenger", "—")
+
+    body = (
+        f"Hallo {vorname},\n\n"
+        f"Das Dokument '{name}' wurde automatisch ausgefuellt und erfolgreich "
+        f"an {empfaenger} versendet.\n\n"
+        f"Du musst nichts weiter unternehmen.\n\nViele Gruesse,\nIlija"
+    )
+    _email_notif_senden(f"Ilija: Dokument versendet - {name}", body)
+    _telegram_senden(
+        f"<b>Ilija · Dokument versendet ✅</b>\n\n"
+        f"Hallo {vorname},\n\n"
+        f"📄 <b>{name}</b> wurde automatisch ausgefüllt und an "
+        f"<b>{empfaenger}</b> versendet.\n\n"
+        f"Du musst nichts weiter unternehmen."
+    )
 
 
 def _email_notif_senden(subject: str, body: str) -> bool:
@@ -453,7 +596,9 @@ def _update_zeitplan_status(vorlagen: list, v: dict, status: str, fehler):
 
 
 def _autonomer_lauf(vid: str):
-    """Vollautonomer Ablauf für eine Vorlage: KI → PDF speichern → Unterschrift → E-Mail."""
+    """Stichtag-Ablauf für eine Vorlage. Verhält sich je nach ki_modus:
+    ki_pruefen → KI bereitet PDF vor, benachrichtigt User zur Prüfung.
+    autonom    → KI befüllt + signiert + sendet an Empfänger + bestätigt User."""
     import smtplib, ssl as _ssl, mimetypes
     from email.mime.multipart import MIMEMultipart
     from email.mime.text      import MIMEText
@@ -464,6 +609,7 @@ def _autonomer_lauf(vid: str):
     v = _find(vorlagen, vid)
     if not v:
         return
+    ki_modus = v.get("ki_modus", "autonom")
     zeitplan = v.get("zeitplan", {})
     basis    = v.get("basis_datei") or v.get("datei", "")
     src_path = os.path.join(_FILES, basis)
@@ -484,7 +630,23 @@ def _autonomer_lauf(vid: str):
         _update_zeitplan_status(vorlagen, v, "fehler", "PDF-Speichern fehlgeschlagen")
         return
     v["datei"] = out_name
-    # Auto-Unterschrift
+
+    # ── Modus: ki_pruefen → User benachrichtigen, KEIN Versand ────────────────
+    if ki_modus == "ki_pruefen":
+        _save(vorlagen)
+        try:
+            _stichtag_notify_review(v, out_path)
+        except Exception as e:
+            print(f"[AutoLauf] Review-Notify-Fehler: {e}")
+        if zeitplan.get("intervall") == "einmalig":
+            zeitplan["aktiv"] = False
+        else:
+            zeitplan["naechste_ausfuehrung"] = _berechne_naechste_ausfuehrung(zeitplan)
+        _update_zeitplan_status(vorlagen, v, "ok", None)
+        print(f"[AutoLauf] ki_pruefen: Vorlage {vid} vorbereitet, User benachrichtigt")
+        return
+
+    # ── Modus: autonom → Unterschrift + E-Mail an Empfänger ───────────────────
     upos = v.get("unterschrift_position")
     if upos:
         u_pfad = _find_unterschrift()
@@ -511,7 +673,6 @@ def _autonomer_lauf(vid: str):
                 print(f"[AutoLauf] Unterschrift-Fehler (nicht fatal): {e}")
                 if s_tmp and os.path.exists(s_tmp):
                     os.remove(s_tmp)
-    # E-Mail senden
     empfaenger = zeitplan.get("empfaenger", "").strip()
     if empfaenger:
         cfg = _load_email_config()
@@ -561,11 +722,16 @@ def _autonomer_lauf(vid: str):
     else:
         zeitplan["naechste_ausfuehrung"] = _berechne_naechste_ausfuehrung(zeitplan)
     _update_zeitplan_status(vorlagen, v, "ok", None)
-    print(f"[AutoLauf] Vorlage {vid} erfolgreich abgeschlossen")
+    # Bestätigung an User senden
+    try:
+        _stichtag_notify_bestaetigung(v)
+    except Exception as e:
+        print(f"[AutoLauf] Bestätigungs-Notify-Fehler: {e}")
+    print(f"[AutoLauf] autonom: Vorlage {vid} erfolgreich abgeschlossen")
 
 
 def _start_autonom_scheduler():
-    """Hintergrund-Thread: prüft alle 15 Minuten auf fällige autonome Abläufe."""
+    """Hintergrund-Thread: prüft alle 15 Minuten auf fällige Stichtag-Abläufe (autonom + ki_pruefen)."""
     import time as _time
     from datetime import date
     while True:
@@ -574,6 +740,9 @@ def _start_autonom_scheduler():
             today    = date.today().isoformat()
             vorlagen = _load()
             for v in vorlagen:
+                ki_modus = v.get("ki_modus", "manuell")
+                if ki_modus not in ("autonom", "ki_pruefen"):
+                    continue
                 zp = v.get("zeitplan", {})
                 if not zp.get("aktiv"):
                     continue
@@ -1495,6 +1664,81 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
             zp["naechste_ausfuehrung"] = _berechne_naechste_ausfuehrung(zp)
         _save(vorlagen)
         return jsonify({"ok": True, "zeitplan": zp})
+
+    @app.route("/api/fristen/pending-stichtag", methods=["GET"])
+    def fristen_pending_stichtag():
+        """Gibt offene ki_pruefen-Stichtag-Einträge zurück (für Chat-Anzeige)."""
+        return jsonify({"ok": True, "pending": _load_pending_stichtag()})
+
+    @app.route("/api/fristen/<vid>/stichtag-senden", methods=["POST"])
+    def fristen_stichtag_senden(vid):
+        """Sendet das vorbereitete ki_pruefen-Dokument an den Empfänger und räumt den Pending-Eintrag ab."""
+        import smtplib, ssl as _ssl2s, mimetypes as _mt2
+        from email.mime.multipart import MIMEMultipart as _MM2
+        from email.mime.text      import MIMEText as _MT2
+        from email.mime.base      import MIMEBase as _MB2
+        from email                import encoders as _enc2
+        vorlagen = _load()
+        v = _find(vorlagen, vid)
+        if not v:
+            return jsonify({"ok": False, "error": "Nicht gefunden"}), 404
+        zeitplan   = v.get("zeitplan", {})
+        empfaenger = zeitplan.get("empfaenger", "").strip()
+        out_name   = v.get("datei", "")
+        out_path   = os.path.join(_FILES, out_name)
+        if not out_name or not os.path.exists(out_path):
+            return jsonify({"ok": False, "error": "Vorbereitetes Dokument nicht gefunden"}), 404
+        if empfaenger:
+            cfg = _load_email_config()
+            if not cfg.get("smtp_server") or not cfg.get("smtp_user") or not cfg.get("smtp_password"):
+                return jsonify({"ok": False, "error": "SMTP nicht konfiguriert"}), 503
+            try:
+                msg = _MM2("mixed")
+                msg["From"]    = cfg["smtp_user"]
+                msg["To"]      = empfaenger
+                cc = zeitplan.get("empfaenger_cc", "").strip()
+                if cc:
+                    msg["Cc"] = cc
+                msg["Subject"] = zeitplan.get("betreff") or v.get("name", "Formular")
+                body_t = (zeitplan.get("text") or "").strip() or "Anbei das ausgefüllte Formular."
+                msg.attach(_MT2(body_t, "plain", "utf-8"))
+                mime_t, _ = _mt2.guess_type(out_path)
+                main2, sub2 = (mime_t or "application/pdf").split("/", 1)
+                with open(out_path, "rb") as af:
+                    part = _MB2(main2, sub2)
+                    part.set_payload(af.read())
+                _enc2.encode_base64(part)
+                part.add_header("Content-Disposition",
+                                f'attachment; filename="{os.path.basename(out_path)}"')
+                msg.attach(part)
+                rcpts = [empfaenger] + \
+                    ([e.strip() for e in cc.split(",") if e.strip()] if cc else [])
+                ctx2 = _ssl2s.create_default_context()
+                if cfg.get("use_ssl"):
+                    with smtplib.SMTP_SSL(cfg["smtp_server"], int(cfg["smtp_port"]), context=ctx2) as srv:
+                        srv.login(cfg["smtp_user"], cfg["smtp_password"])
+                        srv.sendmail(cfg["smtp_user"], rcpts, msg.as_bytes())
+                else:
+                    with smtplib.SMTP(cfg["smtp_server"], int(cfg["smtp_port"])) as srv:
+                        srv.ehlo(); srv.starttls(context=ctx2)
+                        srv.login(cfg["smtp_user"], cfg["smtp_password"])
+                        srv.sendmail(cfg["smtp_user"], rcpts, msg.as_bytes())
+            except Exception as e:
+                return jsonify({"ok": False, "error": str(e)}), 500
+        # Pending-Eintrag entfernen
+        pending = [p for p in _load_pending_stichtag() if p.get("vid") != vid]
+        _save_pending_stichtag(pending)
+        # nächste Ausführung berechnen
+        if zeitplan.get("intervall") == "einmalig":
+            zeitplan["aktiv"] = False
+        else:
+            zeitplan["naechste_ausfuehrung"] = _berechne_naechste_ausfuehrung(zeitplan)
+        _update_zeitplan_status(vorlagen, v, "ok", None)
+        try:
+            _stichtag_notify_bestaetigung(v)
+        except Exception:
+            pass
+        return jsonify({"ok": True, "empfaenger": empfaenger})
 
     @app.route("/api/fristen/<vid>/formular-ausfuellen", methods=["POST"])
     def fristen_formular_ausfuellen_post(vid):
