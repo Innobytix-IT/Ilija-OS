@@ -208,10 +208,28 @@ class IlijaApp(ctk.CTk):
 
         left = ctk.CTkFrame(hdr_inner, fg_color="transparent")
         left.pack(side="left")
-        ctk.CTkLabel(left, text="⚡  Ilija Public Edition",
+
+        # Logo-Bild
+        try:
+            from PIL import Image
+            _logo_path = os.path.join(get_base_dir(), "branding", "ilija-logo.png")
+            if not os.path.exists(_logo_path):
+                _logo_path = os.path.join(get_base_dir(), "branding", "ilija-icon.png")
+            if os.path.exists(_logo_path):
+                _img = Image.open(_logo_path)
+                _h = 44
+                _w = int(_img.width * _h / _img.height)
+                _ctk_img = ctk.CTkImage(light_image=_img, dark_image=_img, size=(_w, _h))
+                ctk.CTkLabel(left, image=_ctk_img, text="").pack(side="left", padx=(0, 14))
+        except Exception:
+            pass
+
+        text_col = ctk.CTkFrame(left, fg_color="transparent")
+        text_col.pack(side="left")
+        ctk.CTkLabel(text_col, text="Ilija OS",
                      font=ctk.CTkFont(size=22, weight="bold"),
                      text_color=C_GREEN).pack(anchor="w")
-        ctk.CTkLabel(left, text="Dein privater KI-Agent für Automatisierung",
+        ctk.CTkLabel(text_col, text="Dein privater KI-Agent für Automatisierung",
                      font=ctk.CTkFont(size=12), text_color=C_MUTED).pack(anchor="w", pady=(1, 0))
 
         right = ctk.CTkFrame(hdr_inner, fg_color="transparent")
@@ -256,23 +274,18 @@ class IlijaApp(ctk.CTk):
         self.tabview.pack(fill="both", expand=True, padx=20, pady=5)
 
         self._tab_names = [
-            "1. KI Modelle", "2. Telegram", "3. Google", "4. E-Mail",
-            "5. DMS", "6. Server", "7. FritzBox", "8. Eingangskanäle",
-            "9. Start", "10. AHPT", "11. Fristen",
+            "1. KI & Dienste", "2. E-Mail", "3. Kalender & Sync",
+            "4. Eingangskanäle", "5. System", "6. Start",
         ]
         for name in self._tab_names:
             self.tabview.add(name)
 
-        self._tab_ki()
-        self._tab_telegram()
-        self._tab_google()
+        self._tab_ki_dienste()
         self._tab_email()
-        self._tab_dms()
-        self._tab_server()
-        self._tab_fritzbox()
+        self._tab_kalender()
         self._tab_eingangskanale()
+        self._tab_system()
         self._tab_start()
-        self._tab_ahpt()
         self._tab_fristen()
 
     # ── Status-Bar ────────────────────────────────────────────────────────────
@@ -385,11 +398,9 @@ class IlijaApp(ctk.CTk):
         return sf
 
     # ─────────────────────────────────────────────────────────────────────────
-    # TAB 1: KI Modelle
+    # BUILD: KI Modelle content
     # ─────────────────────────────────────────────────────────────────────────
-    def _tab_ki(self):
-        f = self._scrollable("1. KI Modelle")
-
+    def _build_ki(self, f):
         self._section(f, "☁️  Cloud-Modelle (API-Keys)", C_YELLOW)
         self._hint_box(f, "Trage mindestens einen API-Key ein. Empfohlen: Google Gemini (kostenlos). "
                           "Die Keys werden sicher in der .env-Datei gespeichert und niemals übertragen.")
@@ -442,9 +453,7 @@ class IlijaApp(ctk.CTk):
     # ─────────────────────────────────────────────────────────────────────────
     # TAB 2: Telegram
     # ─────────────────────────────────────────────────────────────────────────
-    def _tab_telegram(self):
-        f = self._scrollable("2. Telegram")
-
+    def _build_telegram(self, f):
         self._section(f, "📱  Telegram Bot – Fernsteuerung für Ilija", C_TEAL)
         self._hint_box(f,
             "Schritt 1 – Bot erstellen:\n"
@@ -473,9 +482,7 @@ class IlijaApp(ctk.CTk):
     # ─────────────────────────────────────────────────────────────────────────
     # TAB 3: Google Dienste
     # ─────────────────────────────────────────────────────────────────────────
-    def _tab_google(self):
-        f = self._scrollable("3. Google")
-
+    def _build_google(self, f):
         self._section(f, "🔵  Google Workspace Integration", "#ea4335")
         self._hint_box(f,
             "Ilija Studio bietet Nodes für: Docs, Sheets, Drive, Kalender, Gmail & Forms.\n"
@@ -527,7 +534,7 @@ class IlijaApp(ctk.CTk):
     # TAB 4: E-Mail
     # ─────────────────────────────────────────────────────────────────────────
     def _tab_email(self):
-        f = self._scrollable("4. E-Mail")
+        f = self._scrollable("2. E-Mail")
 
         self._section(f, "📧  Standard E-Mail Setup (IMAP/SMTP)", C_PURPLE)
         self._hint_box(f,
@@ -585,9 +592,7 @@ class IlijaApp(ctk.CTk):
     # ─────────────────────────────────────────────────────────────────────────
     # TAB 5: DMS (Dokumenten-Management)
     # ─────────────────────────────────────────────────────────────────────────
-    def _tab_dms(self):
-        f = self._scrollable("5. DMS")
-
+    def _build_dms(self, f):
         self._section(f, "📁  Dokumenten-Management System (DMS)", C_YELLOW)
         self._hint_box(f,
             "Das DMS speichert und verwaltet deine Dokumente lokal. Du kannst:\n"
@@ -632,9 +637,7 @@ class IlijaApp(ctk.CTk):
     # ─────────────────────────────────────────────────────────────────────────
     # TAB 6: Server-Einstellungen
     # ─────────────────────────────────────────────────────────────────────────
-    def _tab_server(self):
-        f = self._scrollable("6. Server")
-
+    def _build_server(self, f):
         self._section(f, "🖥️  Web-Server Konfiguration", C_BLUE)
         self._hint_box(f,
             "Standardmäßig läuft Ilija auf localhost:5000 (nur dein PC).\n"
@@ -668,9 +671,7 @@ class IlijaApp(ctk.CTk):
     # ─────────────────────────────────────────────────────────────────────────
     # TAB 7: FritzBox (SIP-Verbindung & Audio)
     # ─────────────────────────────────────────────────────────────────────────
-    def _tab_fritzbox(self):
-        f = self._scrollable("7. FritzBox")
-
+    def _build_fritzbox(self, f):
         self._section(f, "☎️  FritzBox SIP-Verbindung", C_GREEN)
         self._hint_box(f,
             "Ilija nimmt Anrufe automatisch über deine FritzBox entgegen.\n\n"
@@ -782,8 +783,12 @@ class IlijaApp(ctk.CTk):
     # TAB 8: Eingangskanäle (Telefon + WhatsApp)
     # ─────────────────────────────────────────────────────────────────────────
     def _tab_eingangskanale(self):
-        f = self._scrollable("8. Eingangskanäle")
+        f = self._scrollable("4. Eingangskanäle")
 
+        # ── Telegram ──────────────────────────────────────────────────────────
+        self._build_telegram(f)
+
+        self._divider(f)
         # ── Allgemeine Angaben ────────────────────────────────────────────────
         self._section(f, "🏢  Allgemeine Angaben", C_GREEN)
         self._hint_box(f,
@@ -893,58 +898,6 @@ class IlijaApp(ctk.CTk):
                       fg_color=C_TEAL, hover_color="#1a9fd4",
                       command=self._save_whatsapp_config).pack(anchor="w", padx=4, pady=10)
 
-        # ══════════════════════════════════════════════════════════════════════
-        # KALENDER-SYNCHRONISATION
-        # ══════════════════════════════════════════════════════════════════════
-        self._divider(f)
-        self._section(f, "📅  Kalender-Synchronisation", C_GREEN)
-        self._hint_box(f,
-            "Ilija nutzt intern immer den lokalen Kalender.\n"
-            "Push (Lokal → Provider): Nach jedem Anruf wird die neue Buchung automatisch übertragen.\n"
-            "Pull (Provider → Lokal): Externe Termine werden im eingestellten Intervall importiert.\n"
-            "\n"
-            "Google Kalender: Push + Pull vollautomatisch über die Google Calendar API.\n"
-            "Outlook: Push funktioniert automatisch — ein Chrome-Fenster öffnet sich kurz nach dem\n"
-            "  Anruf und trägt den Termin ein (Workaround, da Microsoft keine kostenfreie API bietet).\n"
-            "  Pull ist für Outlook nicht verfügbar (Selenium liefert nur Tagestext, keine Rohdaten).\n"
-            "  Einrichtung: Outlook einmalig über den Skill 'outlook_login_einrichten' anmelden."
-        )
-
-        self._label(f, "Externer Kalender-Provider:")
-        self.cbo_sync_provider = ctk.CTkOptionMenu(
-            f, values=["keiner", "google", "outlook"],
-            fg_color=C_BG3, button_color=C_MUTED, button_hover_color=C_GREEN,
-            text_color=C_TEXT, font=ctk.CTkFont(size=13))
-        self.cbo_sync_provider.pack(anchor="w", padx=4, pady=4)
-
-        self._label(f, "Pull-Intervall (Extern → Lokal):")
-        self.cbo_sync_intervall = ctk.CTkOptionMenu(
-            f, values=["manuell", "3x_taeglich", "stuendlich"],
-            fg_color=C_BG3, button_color=C_MUTED, button_hover_color=C_GREEN,
-            text_color=C_TEXT, font=ctk.CTkFont(size=13))
-        self.cbo_sync_intervall.pack(anchor="w", padx=4, pady=4)
-
-        self.var_auto_push = ctk.BooleanVar(value=True)
-        ctk.CTkCheckBox(f, text="Auto-Push: Neue Buchungen sofort nach Anruf übertragen",
-                        variable=self.var_auto_push,
-                        text_color=C_TEXT, font=ctk.CTkFont(size=13),
-                        fg_color=C_GREEN, hover_color="#00b86e"
-                        ).pack(anchor="w", padx=4, pady=4)
-
-        row_sync = ctk.CTkFrame(f, fg_color="transparent")
-        row_sync.pack(fill="x", padx=4, pady=4)
-        ctk.CTkButton(row_sync, text="💾  Sync-Einstellungen speichern",
-                      fg_color=C_GREEN, hover_color="#00b86e",
-                      command=self._save_sync_config).pack(side="left")
-        ctk.CTkButton(row_sync, text="▶  Jetzt Pull starten",
-                      fg_color=C_BG3, hover_color=C_MUTED,
-                      command=self._manual_pull).pack(side="left", padx=(8, 0))
-
-        self._label(f, "Letzter Sync-Status:")
-        self.lbl_sync_status = ctk.CTkLabel(f, text="—", text_color=C_MUTED,
-                                             font=ctk.CTkFont(size=12), anchor="w")
-        self.lbl_sync_status.pack(anchor="w", padx=4, pady=(0, 8))
-
     def _save_phone_config(self):
         """Speichert phone_config.json."""
         import json as _json
@@ -1049,7 +1002,7 @@ class IlijaApp(ctk.CTk):
     # TAB 8: Start
     # ─────────────────────────────────────────────────────────────────────────
     def _tab_start(self):
-        f = self.tabview.tab("9. Start")
+        f = self.tabview.tab("6. Start")
 
         # Module starten
         ctk.CTkLabel(f, text="🚀  Ilija Module starten",
@@ -1118,9 +1071,7 @@ class IlijaApp(ctk.CTk):
     # ─────────────────────────────────────────────────────────────────────────
     # TAB 10: AHPT – Asymmetric HTTP Polling Tunnel
     # ─────────────────────────────────────────────────────────────────────────
-    def _tab_ahpt(self):
-        f = self._scrollable("10. AHPT")
-
+    def _build_ahpt(self, f):
         self._section(f, "🔗  AHPT – Asymmetric HTTP Polling Tunnel", C_TEAL)
         self._hint_box(f,
             "AHPT erlaubt sicheren Fernzugriff über einen Web-Relay ohne offene Ports.\n"
@@ -1531,7 +1482,9 @@ new QRCode(document.getElementById("qr-download"),{{text:"{dl_url}",width:200,he
     # TAB 11: Fristen & Vorlagen
     # ─────────────────────────────────────────────────────────────────────────
     def _tab_fristen(self):
-        f = self._scrollable("11. Fristen")
+        # Fristen is a separate module (/fristen). Widgets created hidden so load/save works.
+        f = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        # intentionally NOT packed — widgets exist for load/save but tab is not shown
 
         self._section(f, "📋  Fristen & Vorlagen", "#22c97c")
         self._hint_box(f,
@@ -1607,6 +1560,83 @@ new QRCode(document.getElementById("qr-download"),{{text:"{dl_url}",width:200,he
             "Ilija sendet das PDF als E-Mail an {Faxnummer}@simple-fax.de —\n"
             "simple-fax.de liefert es als echtes Fax aus."
         )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # TAB 1: KI & Dienste (KI Modelle + Google Workspace)
+    # ─────────────────────────────────────────────────────────────────────────
+    def _tab_ki_dienste(self):
+        f = self._scrollable("1. KI & Dienste")
+        self._build_ki(f)
+        self._divider(f)
+        self._section(f, "🔵  Google Workspace", "#4285f4")
+        self._build_google(f)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # TAB 3: Kalender & Sync
+    # ─────────────────────────────────────────────────────────────────────────
+    def _tab_kalender(self):
+        f = self._scrollable("3. Kalender & Sync")
+
+        self._section(f, "📅  Kalender-Synchronisation", C_GREEN)
+        self._hint_box(f,
+            "Ilija nutzt intern immer den lokalen Kalender.\n"
+            "Push (Lokal → Provider): Nach jedem Anruf wird die neue Buchung automatisch übertragen.\n"
+            "Pull (Provider → Lokal): Externe Termine werden im eingestellten Intervall importiert.\n"
+            "\n"
+            "Google Kalender: Push + Pull vollautomatisch über die Google Calendar API.\n"
+            "Outlook: Push funktioniert automatisch — ein Chrome-Fenster öffnet sich kurz nach dem\n"
+            "  Anruf und trägt den Termin ein (Workaround, da Microsoft keine kostenfreie API bietet).\n"
+            "  Pull ist für Outlook nicht verfügbar.\n"
+            "  Einrichtung: Outlook einmalig über den Skill 'outlook_login_einrichten' anmelden."
+        )
+
+        self._label(f, "Externer Kalender-Provider:")
+        self.cbo_sync_provider = ctk.CTkOptionMenu(
+            f, values=["keiner", "google", "outlook"],
+            fg_color=C_BG3, button_color=C_MUTED, button_hover_color=C_GREEN,
+            text_color=C_TEXT, font=ctk.CTkFont(size=13))
+        self.cbo_sync_provider.pack(anchor="w", padx=4, pady=4)
+
+        self._label(f, "Pull-Intervall (Extern → Lokal):")
+        self.cbo_sync_intervall = ctk.CTkOptionMenu(
+            f, values=["manuell", "3x_taeglich", "stuendlich"],
+            fg_color=C_BG3, button_color=C_MUTED, button_hover_color=C_GREEN,
+            text_color=C_TEXT, font=ctk.CTkFont(size=13))
+        self.cbo_sync_intervall.pack(anchor="w", padx=4, pady=4)
+
+        self.var_auto_push = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(f, text="Auto-Push: Neue Buchungen sofort nach Anruf übertragen",
+                        variable=self.var_auto_push,
+                        text_color=C_TEXT, font=ctk.CTkFont(size=13),
+                        fg_color=C_GREEN, hover_color="#00b86e"
+                        ).pack(anchor="w", padx=4, pady=4)
+
+        row_sync = ctk.CTkFrame(f, fg_color="transparent")
+        row_sync.pack(fill="x", padx=4, pady=4)
+        ctk.CTkButton(row_sync, text="💾  Sync-Einstellungen speichern",
+                      fg_color=C_GREEN, hover_color="#00b86e",
+                      command=self._save_sync_config).pack(side="left")
+        ctk.CTkButton(row_sync, text="▶  Jetzt Pull starten",
+                      fg_color=C_BG3, hover_color=C_MUTED,
+                      command=self._manual_pull).pack(side="left", padx=(8, 0))
+
+        self._label(f, "Letzter Sync-Status:")
+        self.lbl_sync_status = ctk.CTkLabel(f, text="—", text_color=C_MUTED,
+                                             font=ctk.CTkFont(size=12), anchor="w")
+        self.lbl_sync_status.pack(anchor="w", padx=4, pady=(0, 8))
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # TAB 5: System (FritzBox + DMS + Server + AHPT)
+    # ─────────────────────────────────────────────────────────────────────────
+    def _tab_system(self):
+        f = self._scrollable("5. System")
+        self._build_fritzbox(f)
+        self._divider(f)
+        self._build_dms(f)
+        self._divider(f)
+        self._build_server(f)
+        self._divider(f)
+        self._build_ahpt(f)
 
     # ── Einstellungen laden ──────────────────────────────────────────────────
     def load_all_settings(self):

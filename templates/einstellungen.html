@@ -92,9 +92,13 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
 .settings-mode-btn{display:inline-flex;align-items:center;gap:6px;font-size:.75rem;color:var(--tx3);border:1px solid var(--bdr2);background:var(--s2);border-radius:6px;padding:5px 10px;cursor:pointer;font-family:var(--f);transition:all .13s;margin-bottom:28px}
 .settings-mode-btn:hover{color:var(--tx);border-color:var(--bdr3)}
 
+/* ── Section Groups ──────────────────────────────────────── */
+.sec-group{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--tx3);padding:28px 0 12px;border-top:1px solid var(--bdr);margin-bottom:4px}
+.sec-group.first{padding-top:0;border-top:none}
+
 /* ── Section ─────────────────────────────────────────────── */
 .section{margin-bottom:36px;scroll-margin-top:20px}
-.sec-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.sec-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--bdr)}
 .sec-icon{font-size:1.1rem}
 .sec-title{font-size:1rem;font-weight:600;color:var(--tx)}
 .sec-sub{font-size:.75rem;color:var(--tx3);margin-top:1px}
@@ -336,6 +340,9 @@ input[type=number]{max-width:90px}
     <div id="settings">
       <button class="settings-mode-btn" onclick="startWizard()">✨ Einrichtungsassistent starten</button>
 
+      <!-- ════════════════ KI & DIENSTE ════════════════ -->
+      <div class="sec-group first">KI &amp; Dienste</div>
+
       <!-- ─── KI-Anbieter ─────────────────────────────────── -->
       <div class="section" id="sec-ki">
         <div class="sec-head">
@@ -364,20 +371,6 @@ input[type=number]{max-width:90px}
         </div>
       </div>
 
-      <!-- ─── Telegram ──────────────────────────────────────── -->
-      <div class="section" id="sec-telegram">
-        <div class="sec-head">
-          <div class="sec-icon">✈</div>
-          <div><div class="sec-title">Telegram</div><div class="sec-sub">Fernsteuerung und Benachrichtigungen per Telegram-Bot</div></div>
-        </div>
-        <div class="hint">Bot erstellen: <strong>@BotFather</strong> in Telegram → /newbot. Deine User-ID: <strong>@userinfobot</strong> → /start.</div>
-        <div class="card" id="tg-card"></div>
-        <div class="save-bar">
-          <button class="btn btn-prim btn-sm" onclick="saveTelegram()">Speichern</button>
-          <span class="save-msg" id="tg-msg"></span>
-        </div>
-      </div>
-
       <!-- ─── Google ────────────────────────────────────────── -->
       <div class="section" id="sec-google">
         <div class="sec-head">
@@ -387,6 +380,9 @@ input[type=number]{max-width:90px}
         <div class="hint">1. <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> → Neues Projekt → APIs aktivieren<br>2. OAuth-Anmeldedaten → Desktop-App → JSON laden → hier hochladen</div>
         <div class="card" id="google-card"></div>
       </div>
+
+      <!-- ════════════════ KALENDER ════════════════ -->
+      <div class="sec-group">Kalender</div>
 
       <!-- ─── Kalender ──────────────────────────────────────── -->
       <div class="section" id="sec-kalender">
@@ -398,6 +394,23 @@ input[type=number]{max-width:90px}
         <div class="save-bar">
           <button class="btn btn-prim btn-sm" onclick="saveKal()">Speichern</button>
           <span class="save-msg" id="kal-msg"></span>
+        </div>
+      </div>
+
+      <!-- ════════════════ EINGANGSKANÄLE ════════════════ -->
+      <div class="sec-group">Eingangskanäle</div>
+
+      <!-- ─── Telegram ──────────────────────────────────────── -->
+      <div class="section" id="sec-telegram">
+        <div class="sec-head">
+          <div class="sec-icon">✈</div>
+          <div><div class="sec-title">Telegram</div><div class="sec-sub">Fernsteuerung und Benachrichtigungen per Telegram-Bot</div></div>
+        </div>
+        <div class="hint">Bot erstellen: <strong>@BotFather</strong> in Telegram → /newbot. Deine User-ID: <strong>@userinfobot</strong> → /start.</div>
+        <div class="card" id="tg-card"></div>
+        <div class="save-bar">
+          <button class="btn btn-prim btn-sm" onclick="saveTelegram()">Speichern</button>
+          <span class="save-msg" id="tg-msg"></span>
         </div>
       </div>
 
@@ -427,6 +440,9 @@ input[type=number]{max-width:90px}
         </div>
       </div>
 
+      <!-- ════════════════ SYSTEM ════════════════ -->
+      <div class="sec-group">System</div>
+
       <!-- ─── FritzBox ──────────────────────────────────────── -->
       <div class="section" id="sec-fritzbox">
         <div class="sec-head">
@@ -452,6 +468,19 @@ input[type=number]{max-width:90px}
         <div class="save-bar">
           <button class="btn btn-prim btn-sm" onclick="saveDms()">Speichern</button>
           <span class="save-msg" id="dms-msg"></span>
+        </div>
+      </div>
+
+      <!-- ─── Server ────────────────────────────────────────── -->
+      <div class="section" id="sec-server">
+        <div class="sec-head">
+          <div class="sec-icon">🖥</div>
+          <div><div class="sec-title">Server</div><div class="sec-sub">Port, Debug-Modus, Web-UI-Schutz</div></div>
+        </div>
+        <div class="card" id="server-card"></div>
+        <div class="save-bar">
+          <button class="btn btn-prim btn-sm" onclick="saveServer()">Speichern</button>
+          <span class="save-msg" id="server-msg"></span>
         </div>
       </div>
 
@@ -503,19 +532,6 @@ input[type=number]{max-width:90px}
               <button class="btn btn-ghost btn-sm" onclick="ahptControl('restart')">🔄 Restart</button>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- ─── Server ────────────────────────────────────────── -->
-      <div class="section" id="sec-server">
-        <div class="sec-head">
-          <div class="sec-icon">🖥</div>
-          <div><div class="sec-title">Server</div><div class="sec-sub">Port, Debug-Modus, Web-UI-Schutz</div></div>
-        </div>
-        <div class="card" id="server-card"></div>
-        <div class="save-bar">
-          <button class="btn btn-prim btn-sm" onclick="saveServer()">Speichern</button>
-          <span class="save-msg" id="server-msg"></span>
         </div>
       </div>
     </div>
