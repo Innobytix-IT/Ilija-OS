@@ -1573,17 +1573,65 @@ async function saveUpdateSettings() {
   }
 }
 
+let _updPollTimer = null;
+
 async function updateNow() {
   const btn = document.getElementById('upd-now-btn');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Läuft…'; }
   try {
     const r = await fetch('/api/update-now', {method:'POST'});
     const j = await r.json();
-    toast(j.message || 'Update gestartet', j.ok !== false ? 'ok' : 'err');
+    if (j.ok === false) { toast(j.message || 'Fehler', 'err'); if (btn) { btn.disabled=false; btn.textContent='⬇ Jetzt Update starten'; } return; }
+    _openUpdateModal();
+    _pollUpdateLog();
   } catch(_) {
     toast('Verbindungsfehler', 'err');
+    if (btn) { btn.disabled=false; btn.textContent='⬇ Jetzt Update starten'; }
   }
-  if (btn) { btn.disabled = false; btn.textContent = '⬇ Jetzt Update starten'; }
+}
+
+function _openUpdateModal() {
+  let m = document.getElementById('upd-modal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'upd-modal';
+    m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+    m.innerHTML = `
+      <div style="background:var(--s1);border:1px solid var(--bdr2);border-radius:10px;width:min(720px,94vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--bdr)">
+          <span style="font-size:.9rem;font-weight:600;color:var(--tx)">🔄 Update-Verlauf</span>
+          <button onclick="document.getElementById('upd-modal').style.display='none'" style="background:none;border:none;color:var(--tx2);font-size:1.1rem;cursor:pointer">✕</button>
+        </div>
+        <div style="padding:6px 20px 6px;border-bottom:1px solid var(--bdr)">
+          <span id="upd-status-line" style="font-size:.75rem;color:var(--teal)">⏳ Update läuft…</span>
+        </div>
+        <pre id="upd-log-box" style="flex:1;overflow-y:auto;padding:16px 20px;margin:0;font-family:var(--m);font-size:.76rem;color:var(--tx2);background:var(--bg);white-space:pre-wrap;word-break:break-all;min-height:200px;max-height:50vh"></pre>
+      </div>`;
+    document.body.appendChild(m);
+  }
+  m.style.display = 'flex';
+  document.getElementById('upd-log-box').textContent = '';
+  document.getElementById('upd-status-line').textContent = '⏳ Update läuft…';
+  document.getElementById('upd-status-line').style.color = 'var(--teal)';
+}
+
+async function _pollUpdateLog() {
+  if (_updPollTimer) clearInterval(_updPollTimer);
+  _updPollTimer = setInterval(async () => {
+    try {
+      const r = await fetch('/api/update-log');
+      const j = await r.json();
+      const box = document.getElementById('upd-log-box');
+      const sl  = document.getElementById('upd-status-line');
+      if (box) { box.textContent = j.log || ''; box.scrollTop = box.scrollHeight; }
+      if (!j.running) {
+        clearInterval(_updPollTimer); _updPollTimer = null;
+        if (sl) { sl.textContent = '✅ Update abgeschlossen'; sl.style.color = 'var(--green)'; }
+        const btn = document.getElementById('upd-now-btn');
+        if (btn) { btn.disabled=false; btn.textContent='⬇ Jetzt Update starten'; }
+      }
+    } catch(_) {}
+  }, 1500);
 }
 
 // ── Start ─────────────────────────────────────────────────────

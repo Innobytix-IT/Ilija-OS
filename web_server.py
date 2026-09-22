@@ -679,15 +679,47 @@ def save_update_settings_route():
     _rewrite_crontab(cfg["auto_update_enabled"], cfg["update_time"])
     return jsonify({"ok": True, "message": "Update-Einstellungen gespeichert."})
 
+_UPDATE_LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "update_run.log")
+_update_running = False
+_update_lock = __import__("threading").Lock()
+
 @app.route("/api/update-now", methods=["POST"])
 def update_now():
     import subprocess as _sp, threading as _th
+    global _update_running
+    with _update_lock:
+        if _update_running:
+            return jsonify({"ok": False, "message": "Update läuft bereits."})
+        if not os.path.isfile(_UPDATE_SCRIPT):
+            return jsonify({"ok": False, "message": "Update-Skript nicht gefunden."})
+        _update_running = True
     def _run():
-        _sp.run(["/bin/bash", _UPDATE_SCRIPT], capture_output=True)
-    if not os.path.isfile(_UPDATE_SCRIPT):
-        return jsonify({"ok": False, "message": "Update-Skript nicht gefunden."})
+        global _update_running
+        try:
+            os.makedirs(os.path.dirname(_UPDATE_LOG_PATH), exist_ok=True)
+            with open(_UPDATE_LOG_PATH, "w", buffering=1) as log:
+                log.write("=== Ilija OS Update gestartet ===\n\n")
+                proc = _sp.Popen(["/bin/bash", _UPDATE_SCRIPT],
+                                 stdout=log, stderr=log, text=True)
+                proc.wait()
+                log.write(f"\n=== Fertig (Exit-Code: {proc.returncode}) ===\n")
+        except Exception as e:
+            with open(_UPDATE_LOG_PATH, "a") as log:
+                log.write(f"\nFehler: {e}\n")
+        finally:
+            _update_running = False
     _th.Thread(target=_run, daemon=True).start()
-    return jsonify({"ok": True, "message": "Update gestartet. Ilija startet ggf. neu."})
+    return jsonify({"ok": True})
+
+@app.route("/api/update-log", methods=["GET"])
+def update_log():
+    global _update_running
+    try:
+        with open(_UPDATE_LOG_PATH, "r") as f:
+            content = f.read()
+    except FileNotFoundError:
+        content = ""
+    return jsonify({"running": _update_running, "log": content})
 
 
 # ── Setup-Status (Wizard / Settings Erkennung) ───────────────
