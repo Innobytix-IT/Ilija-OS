@@ -27,6 +27,7 @@ _PENDING_STICHTAG  = os.path.join(_DATA, "pending_stichtag.json")
 _UNTERSCHRIFT_BASE = os.path.join(_DATA, "unterschrift")
 _UNTERSCHRIFT_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".webp"]
 _NOTIF_QUEUE       = os.path.join(_BASE, "data", "notifications.json")
+_FAX_JOBS_FILE     = os.path.join(_DATA, "fax_jobs.json")
 
 os.makedirs(_FILES, exist_ok=True)
 
@@ -128,9 +129,33 @@ _EMAIL_DEFAULTS = {"smtp_server": "", "smtp_port": 587, "smtp_user": "",
                    "smtp_password": "", "use_ssl": False, "notif_email": "",
                    "imap_server": "", "imap_port": 993}
 
-# job_id → {"status": "pending"|"ok"|"fehler"|"timeout", "details": str, "fax_nr": str}
+# job_id → {"status": "pending"|"ok"|"fehler"|"timeout", "details": str, "fax_nr": str, "ts": str}
 _fax_poll: dict = {}
 _fax_poll_lock = threading.Lock()
+
+def _fax_jobs_save():
+    """Persistiert alle Fax-Jobs auf Disk."""
+    with _fax_poll_lock:
+        data = dict(_fax_poll)
+    try:
+        os.makedirs(os.path.dirname(_FAX_JOBS_FILE), exist_ok=True)
+        with open(_FAX_JOBS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+def _fax_jobs_load() -> dict:
+    """Lädt Fax-Jobs von Disk (Neustart-Wiederherstellung)."""
+    if not os.path.exists(_FAX_JOBS_FILE):
+        return {}
+    try:
+        with open(_FAX_JOBS_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+# Beim Start persistierte Jobs wiederherstellen
+_fax_poll.update(_fax_jobs_load())
 
 def _load_email_config() -> dict:
     if not os.path.exists(_EMAIL_CONFIG):
@@ -1344,75 +1369,93 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
-    # ── Fax-Bestätigung: IMAP-Polling ────────────────────────────────────────
+    # ── Fax-Bestätigung: persistenter IMAP-Watcher ───────────────────────────
 
-    def _poll_fax_bestaetigung(job_id: str, fax_nr: str, cfg: dict):
+    def _imap_watcher_loop():
         """
-        Pollt das IMAP-Postfach auf eine Bestätigungs-Mail von simple-fax.de.
-        simple-fax.de schickt Betreff "Ihr Fax an <nr> (OK)" oder "(...) (FEHLER)".
-        Wartezeit: 30 s Startdelay, dann alle 60 s, max. 15 Minuten.
+        Läuft dauerhaft als Daemon-Thread. Pollt alle 5 Minuten das IMAP-Postfach
+        auf Bestätigungsmails von simple-fax.de und matcht sie gegen ALLE pending
+        Jobs in _fax_poll (neustart-sicher, weil Jobs auf Disk persistiert sind).
         """
         import imaplib, email as _email_mod, time, ssl as _ssl2
 
-        imap_host = cfg.get("imap_server", "")
-        imap_port = int(cfg.get("imap_port", 993))
-        user      = cfg.get("smtp_user", "")
-        password  = cfg.get("smtp_password", "")
+        time.sleep(30)  # kurze Startpause
 
-        if not imap_host or not user or not password:
-            with _fax_poll_lock:
-                _fax_poll[job_id]["status"] = "timeout"
-                _fax_poll[job_id]["details"] = "IMAP nicht konfiguriert"
-            return
-
-        # simple-fax.de verwendet die internationale Schreibweise ohne "+"
-        fax_search = fax_nr.lstrip("+")
-        # Gib simple-fax.de Zeit zum ersten Verarbeitungsversuch
-        time.sleep(60)
-
-        deadline = time.time() + 60 * 60  # 60 Minuten
-        while time.time() < deadline:
+        while True:
             try:
-                ctx2 = _ssl2.create_default_context()
-                with imaplib.IMAP4_SSL(imap_host, imap_port, ssl_context=ctx2) as imap:
-                    imap.login(user, password)
-                    imap.select("INBOX")
-                    # Suche nach Mails von simple-fax.de
-                    _, data = imap.search(None, 'FROM "simple-fax.de"')
-                    ids = data[0].split()
-                    for mid in reversed(ids):
-                        _, raw = imap.fetch(mid, "(RFC822)")
-                        parsed = _email_mod.message_from_bytes(raw[0][1])
-                        subj = parsed.get("Subject", "")
-                        # subject kann encoded sein
-                        try:
-                            decoded_parts = _email_mod.header.decode_header(subj)
-                            subj = "".join(
-                                p.decode(enc or "utf-8") if isinstance(p, bytes) else p
-                                for p, enc in decoded_parts
-                            )
-                        except Exception:
-                            pass
-                        if fax_search in subj.replace("+", "").replace(" ", ""):
-                            if "(OK)" in subj or "erfolgreich" in subj.lower():
-                                status, details = "ok", subj
-                            elif "(FEHLER)" in subj or "fehlgeschlagen" in subj.lower() or "nicht" in subj.lower():
-                                status, details = "fehler", subj
-                            else:
-                                continue
-                            with _fax_poll_lock:
-                                _fax_poll[job_id]["status"]  = status
-                                _fax_poll[job_id]["details"] = details
-                            _fax_bestaetigung_melden(fax_nr, status, details)
-                            return
+                cfg = _load_email_config()
+                imap_host = cfg.get("imap_server", "")
+                imap_port = int(cfg.get("imap_port", 993))
+                user      = cfg.get("smtp_user", "")
+                password  = cfg.get("smtp_password", "")
+
+                if imap_host and user and password:
+                    # Alle pending Jobs einsammeln
+                    with _fax_poll_lock:
+                        pending = {
+                            jid: entry for jid, entry in _fax_poll.items()
+                            if entry.get("status") == "pending"
+                        }
+
+                    if pending:
+                        ctx2 = _ssl2.create_default_context()
+                        with imaplib.IMAP4_SSL(imap_host, imap_port, ssl_context=ctx2) as imap:
+                            imap.login(user, password)
+                            imap.select("INBOX")
+                            _, data = imap.search(None, 'FROM "simple-fax.de"')
+                            ids = data[0].split()
+                            # Neueste zuerst
+                            for mid in reversed(ids[-50:]):
+                                _, raw = imap.fetch(mid, "(RFC822)")
+                                parsed = _email_mod.message_from_bytes(raw[0][1])
+                                subj_raw = parsed.get("Subject", "")
+                                try:
+                                    decoded_parts = _email_mod.header.decode_header(subj_raw)
+                                    subj = "".join(
+                                        p.decode(enc or "utf-8") if isinstance(p, bytes) else p
+                                        for p, enc in decoded_parts
+                                    )
+                                except Exception:
+                                    subj = subj_raw
+
+                                subj_clean = subj.replace("+", "").replace(" ", "")
+
+                                for jid, entry in list(pending.items()):
+                                    fax_search = entry["fax_nr"].lstrip("+")
+                                    if fax_search not in subj_clean:
+                                        continue
+                                    if "(OK)" in subj or "erfolgreich" in subj.lower():
+                                        new_status, details = "ok", subj
+                                    elif "(FEHLER)" in subj or "fehlgeschlagen" in subj.lower():
+                                        new_status, details = "fehler", subj
+                                    else:
+                                        continue
+
+                                    with _fax_poll_lock:
+                                        _fax_poll[jid]["status"]  = new_status
+                                        _fax_poll[jid]["details"] = details
+                                    _fax_jobs_save()
+                                    _fax_bestaetigung_melden(entry["fax_nr"], new_status, details)
+                                    pending.pop(jid, None)  # nicht nochmal melden
+
+                    # Jobs älter als 90 Minuten auf timeout setzen
+                    now = time.time()
+                    changed = False
+                    with _fax_poll_lock:
+                        for jid, entry in _fax_poll.items():
+                            if entry.get("status") == "pending":
+                                ts = entry.get("ts_created", now)
+                                if now - ts > 90 * 60:
+                                    entry["status"]  = "timeout"
+                                    entry["details"] = "Keine Bestätigung nach 90 Minuten"
+                                    changed = True
+                    if changed:
+                        _fax_jobs_save()
+
             except Exception:
                 pass  # Netzwerkfehler → nächste Runde
-            time.sleep(5 * 60)  # 5 Minuten zwischen Checks
 
-        with _fax_poll_lock:
-            if _fax_poll.get(job_id, {}).get("status") == "pending":
-                _fax_poll[job_id]["status"]  = "timeout"
-                _fax_poll[job_id]["details"] = "Keine Bestätigung nach 60 Minuten"
+            time.sleep(5 * 60)  # 5 Minuten zwischen Checks
 
     def _fax_bestaetigung_melden(fax_nr: str, status: str, details: str):
         """Meldet das Fax-Ergebnis via Queue (Chat), Telegram und E-Mail."""
@@ -1531,16 +1574,16 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
                     srv.login(cfg["smtp_user"], cfg["smtp_password"])
                     srv.sendmail(cfg["smtp_user"], [fax_to], msg.as_bytes())
 
+            import time as _time
             job_id = str(uuid.uuid4())
             with _fax_poll_lock:
-                _fax_poll[job_id] = {"status": "pending", "fax_nr": fax_clean, "details": ""}
-
-            t = threading.Thread(
-                target=_poll_fax_bestaetigung,
-                args=(job_id, fax_clean, cfg),
-                daemon=True,
-            )
-            t.start()
+                _fax_poll[job_id] = {
+                    "status": "pending",
+                    "fax_nr": fax_clean,
+                    "details": "",
+                    "ts_created": _time.time(),
+                }
+            _fax_jobs_save()  # persistieren → überlebt Neustart
             return jsonify({"ok": True, "job_id": job_id})
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
@@ -1987,6 +2030,10 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
             if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)
             return jsonify({"ok": False, "error": str(e)}), 500
+
+    # persistenter IMAP-Watcher (einmalig beim Start)
+    threading.Thread(target=_imap_watcher_loop,
+                     daemon=True, name="fax-imap-watcher").start()
 
 
 def _fmt_datum(datum_str: str) -> str:
