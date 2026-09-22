@@ -372,6 +372,21 @@ def _save_auto_reply(enabled: bool):
 _wa_state = {"status": "disconnected", "qr": "", "connected_since": None, "msg_count": 0, "auto_reply": _load_auto_reply()}
 _wa_lock  = threading.Lock()
 
+def _wa_bridge_kick():
+    """Nach Ilija-Neustart die Bridge kurz neustarten damit sie ihren Status neu meldet."""
+    import subprocess as _sp, time as _t
+    _t.sleep(3)
+    try:
+        r = _sp.run(["systemctl", "is-active", "whatsapp-bridge.service"],
+                    capture_output=True, text=True, timeout=5)
+        if r.stdout.strip() == "active":
+            _sp.run(["sudo", "systemctl", "restart", "whatsapp-bridge.service"],
+                    capture_output=True, timeout=10)
+    except Exception:
+        pass
+
+threading.Thread(target=_wa_bridge_kick, daemon=True).start()
+
 
 @app.route("/api/whatsapp/status")
 def whatsapp_status():
@@ -406,6 +421,39 @@ def whatsapp_connection_status():
             _wa_state["qr"] = ""
             _wa_state["connected_since"] = None
     return jsonify({"ok": True})
+
+
+@app.route("/api/whatsapp/bridge", methods=["POST"])
+def whatsapp_bridge_control():
+    """Startet oder stoppt den whatsapp-bridge.service via systemctl."""
+    import subprocess as _sp
+    data   = request.get_json(silent=True) or {}
+    action = data.get("action", "start")
+    if action not in ("start", "stop", "restart"):
+        return jsonify({"ok": False, "error": "Ungültige Aktion"}), 400
+    try:
+        result = _sp.run(
+            ["sudo", "systemctl", action, "whatsapp-bridge.service"],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0:
+            return jsonify({"ok": True, "action": action})
+        return jsonify({"ok": False, "error": result.stderr.strip() or "Unbekannter Fehler"}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/whatsapp/bridge-status")
+def whatsapp_bridge_service_status():
+    """Prüft ob whatsapp-bridge.service läuft."""
+    import subprocess as _sp
+    try:
+        r = _sp.run(["systemctl", "is-active", "whatsapp-bridge.service"],
+                    capture_output=True, text=True, timeout=5)
+        running = r.stdout.strip() == "active"
+        return jsonify({"ok": True, "running": running})
+    except Exception as e:
+        return jsonify({"ok": False, "running": False, "error": str(e)})
 
 
 @app.route("/einstellungen")

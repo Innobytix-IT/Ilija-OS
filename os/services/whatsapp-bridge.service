@@ -1,8 +1,7 @@
 [Unit]
 Description=Ilija WhatsApp Bridge (Baileys)
 After=network-online.target ilija.service
-Wants=network-online.target
-Requires=ilija.service
+Wants=network-online.target ilija.service
 
 [Service]
 Type=simple

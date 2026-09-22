@@ -197,14 +197,13 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
 
     <!-- Getrennt -->
     <div id="disconnected-section">
-      <div class="disc-hint">
+      <div class="disc-hint" id="disc-hint-text">
         Die Verbindung zu WhatsApp ist unterbrochen.<br>
-        Ilija versucht automatisch neu zu verbinden.<br><br>
-        Erscheint innerhalb von 30 Sekunden kein QR-Code,<br>
-        bitte einen Administrator informieren.
+        Ilija versucht automatisch neu zu verbinden.
       </div>
-      <div class="btn-row">
+      <div class="btn-row" style="margin-top:20px">
         <button class="btn btn-ghost" onclick="location.reload()">↻ Aktualisieren</button>
+        <button class="btn btn-prim" id="btnStartBridge" onclick="startBridge()" style="display:none">▶ WhatsApp starten</button>
       </div>
     </div>
   </div>
@@ -264,13 +263,56 @@ function setStatus(state, data) {
 
 async function poll() {
   try {
-    const r = await fetch('/api/whatsapp/status')
-    if (r.ok) {
-      const d = await r.json()
+    const [rStatus, rBridge] = await Promise.all([
+      fetch('/api/whatsapp/status'),
+      fetch('/api/whatsapp/bridge-status')
+    ])
+    if (rStatus.ok) {
+      const d = await rStatus.json()
       setStatus(d.status || 'disconnected', d)
+    }
+    if (rBridge.ok) {
+      const b = await rBridge.json()
+      const btn = document.getElementById('btnStartBridge')
+      const hint = document.getElementById('disc-hint-text')
+      if (btn) {
+        const isDisconnected = document.getElementById('disconnected-section').style.display !== 'none'
+        btn.style.display = (!b.running && isDisconnected) ? 'inline-flex' : 'none'
+        if (hint && !b.running) {
+          hint.innerHTML = 'WhatsApp ist nicht aktiv.<br>Klicke auf <strong>WhatsApp starten</strong> um die Verbindung herzustellen.'
+        } else if (hint && b.running) {
+          hint.innerHTML = 'Die Verbindung zu WhatsApp ist unterbrochen.<br>Ilija versucht automatisch neu zu verbinden.'
+        }
+      }
     }
   } catch(_) {}
   _pollTimer = setTimeout(poll, 2000)
+}
+
+async function startBridge() {
+  const btn = document.getElementById('btnStartBridge')
+  btn.disabled = true
+  btn.textContent = '⏳ Wird gestartet…'
+  try {
+    const r = await fetch('/api/whatsapp/bridge', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'start'})
+    })
+    const d = await r.json()
+    if (d.ok) {
+      btn.textContent = '✓ WhatsApp wird verbunden…'
+      setTimeout(() => { btn.disabled = false; btn.style.display = 'none'; }, 2000)
+    } else {
+      btn.textContent = '▶ WhatsApp starten'
+      btn.disabled = false
+      alert('Fehler: ' + (d.error || 'Unbekannt'))
+    }
+  } catch(e) {
+    btn.textContent = '▶ WhatsApp starten'
+    btn.disabled = false
+    alert('Netzwerkfehler: ' + e.message)
+  }
 }
 
 function updateToggleLabel(enabled) {
