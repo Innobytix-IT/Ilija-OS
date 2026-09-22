@@ -1152,6 +1152,7 @@ button{font-family:var(--f)}
           <option value="openai">ChatGPT (OpenAI)</option>
           <option value="gemini">Gemini (Google)</option>
           <option value="ollama">Ollama (lokal)</option>
+          <option value="custom">Eigener Endpunkt</option>
         </select>
       </div>
     </div>
@@ -1261,6 +1262,33 @@ button{font-family:var(--f)}
             <code style="font-family:var(--m);background:rgba(255,255,255,.08);padding:1px 4px;border-radius:3px">ollama pull modellname</code>
             installieren.
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Eigener Endpunkt -->
+    <div class="sm-card" id="sm-card-custom">
+      <div class="sm-card-head">
+        <span class="sm-card-icon">🔌</span>
+        <span class="sm-card-title">Eigener Endpunkt</span>
+        <span class="sm-card-badge" id="sm-badge-custom">Nicht konfiguriert</span>
+      </div>
+      <div class="sm-card-body">
+        <div class="sm-field">
+          <label class="sm-label">URL</label>
+          <input class="sm-input" type="text" id="custom-url" placeholder="http://192.168.1.50:11434/v1" autocomplete="off">
+          <div class="sm-hint">Ollama, LM Studio, vLLM oder eigene OpenAI-kompatible Server</div>
+        </div>
+        <div class="sm-field">
+          <label class="sm-label">API-Key (leer lassen wenn nicht benötigt)</label>
+          <div class="sm-key-wrap">
+            <input class="sm-input" type="password" id="custom-key" placeholder="Leer lassen wenn nicht benötigt" autocomplete="off">
+            <button class="sm-eye" onclick="toggleKey('custom-key')" title="Anzeigen">👁</button>
+          </div>
+        </div>
+        <div class="sm-field">
+          <label class="sm-label">Modell</label>
+          <input class="sm-input" type="text" id="custom-model" placeholder="llama3.2" autocomplete="off">
         </div>
       </div>
     </div>
@@ -3921,9 +3949,9 @@ async function loadSettingsData() {
   smUpdateBadge('gemini', d.has_keys?.gemini,    d.active_provider === 'Gemini');
 
   // Aktive Karte hervorheben
-  const activeMap = {Claude:'claude', ChatGPT:'openai', Gemini:'gemini', Ollama:'ollama'};
+  const activeMap = {Claude:'claude', ChatGPT:'openai', Gemini:'gemini', Ollama:'ollama', Custom:'custom'};
   const activeCard = activeMap[d.active_provider] || '';
-  ['claude','openai','gemini','ollama'].forEach(p =>
+  ['claude','openai','gemini','ollama','custom'].forEach(p =>
     document.getElementById(`sm-card-${p}`)?.classList.toggle('active', p === activeCard)
   );
 
@@ -3933,6 +3961,24 @@ async function loadSettingsData() {
     ob.textContent = '✓ Aktiv'; ob.className = 'sm-card-badge is-active';
   } else {
     ob.textContent = 'Lokal'; ob.className = 'sm-card-badge has-key';
+  }
+
+  // Eigener Endpunkt laden
+  const ce = await api('/api/custom-endpoint');
+  if (ce) {
+    document.getElementById('custom-url').value   = ce.url   || '';
+    document.getElementById('custom-model').value = ce.model || '';
+    const keyEl = document.getElementById('custom-key');
+    keyEl.value = '';
+    keyEl.placeholder = ce.api_key ? '(gespeichert)' : 'Leer lassen wenn nicht benötigt';
+    const cb = document.getElementById('sm-badge-custom');
+    if (ce.url) {
+      cb.textContent = 'Konfiguriert'; cb.className = 'sm-card-badge has-key';
+    }
+    if (d.active_provider === 'Custom') {
+      cb.textContent = '✓ Aktiv'; cb.className = 'sm-card-badge is-active';
+      document.getElementById('sm-card-custom')?.classList.add('active');
+    }
   }
 }
 
@@ -4021,6 +4067,17 @@ async function saveSettingsModal() {
 
   const btn = document.querySelector('.sm-btn-save');
   if (btn) { btn.textContent = '⏳ Speichern…'; btn.disabled = true; }
+
+  // Eigener Endpunkt parallel speichern
+  const customKey = document.getElementById('custom-key').value.trim();
+  api('/api/custom-endpoint', {
+    method: 'POST',
+    body: JSON.stringify({
+      url:     document.getElementById('custom-url').value.trim(),
+      api_key: customKey || '****',
+      model:   document.getElementById('custom-model').value.trim(),
+    }),
+  });
 
   const res = await api('/api/settings', {
     method: 'POST',
