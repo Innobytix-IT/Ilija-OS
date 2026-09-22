@@ -1485,8 +1485,9 @@ async function sendFax() {
     });
     const d = await r.json();
     if (d.ok) {
-      toast('Fax gesendet ✓');
+      toast('Fax gesendet ✓ — warte auf Bestätigung…');
       closeFaxModal();
+      if (d.job_id) _pollFaxStatus(d.job_id, nr);
     } else {
       toast('Fehler: ' + (d.error || 'Unbekannt'), false);
       btn.disabled = false; btn.textContent = '📠 Fax senden';
@@ -1495,6 +1496,31 @@ async function sendFax() {
     toast('Netzwerkfehler: ' + e.message, false);
     btn.disabled = false; btn.textContent = '📠 Fax senden';
   }
+}
+
+async function _pollFaxStatus(jobId, faxNr) {
+  const maxAttempts = 12;  // 12 × 5 min = 60 min
+  let attempts = 0;
+  const timer = setInterval(async () => {
+    attempts++;
+    try {
+      const r = await fetch(`/api/fristen/fax-status/${jobId}`);
+      const d = await r.json();
+      if (!d.ok) { clearInterval(timer); return; }
+      if (d.status === 'ok') {
+        clearInterval(timer);
+        toast(`📠 Fax ${faxNr} erfolgreich zugestellt ✓`);
+      } else if (d.status === 'fehler') {
+        clearInterval(timer);
+        toast(`📠 Fax ${faxNr} FEHLER: ${d.details || 'Versand fehlgeschlagen'}`, false);
+      } else if (d.status === 'timeout' || attempts >= maxAttempts) {
+        clearInterval(timer);
+        toast(`📠 Fax ${faxNr}: Keine Bestätigung erhalten (Versandbox prüfen)`, false);
+      }
+    } catch (e) {
+      if (attempts >= maxAttempts) clearInterval(timer);
+    }
+  }, 5 * 60 * 1000);  // alle 5 Minuten
 }
 
 // ── Init ──────────────────────────────────────────────────────

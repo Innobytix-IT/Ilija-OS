@@ -94,7 +94,12 @@ def _delete_unterschrift():
 
 
 _EMAIL_DEFAULTS = {"smtp_server": "", "smtp_port": 587, "smtp_user": "",
-                   "smtp_password": "", "use_ssl": False, "notif_email": ""}
+                   "smtp_password": "", "use_ssl": False, "notif_email": "",
+                   "imap_server": "", "imap_port": 993}
+
+# job_id → {"status": "pending"|"ok"|"fehler"|"timeout", "details": str, "fax_nr": str}
+_fax_poll: dict = {}
+_fax_poll_lock = threading.Lock()
 
 def _load_email_config() -> dict:
     if not os.path.exists(_EMAIL_CONFIG):
@@ -111,6 +116,8 @@ def _load_email_config() -> dict:
             "smtp_password": raw.get("passwort")       or raw.get("smtp_password", ""),
             "use_ssl":       raw.get("use_ssl", False),
             "notif_email":   raw.get("notif_email", ""),
+            "imap_server":   raw.get("imap_host")      or raw.get("imap_server", ""),
+            "imap_port":     raw.get("imap_port", 993),
         }
         return {**_EMAIL_DEFAULTS, **normalized}
     except Exception:
@@ -1306,6 +1313,83 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
+    # ── Fax-Bestätigung: IMAP-Polling ────────────────────────────────────────
+
+    def _poll_fax_bestaetigung(job_id: str, fax_nr: str, cfg: dict):
+        """
+        Pollt das IMAP-Postfach auf eine Bestätigungs-Mail von simple-fax.de.
+        simple-fax.de schickt Betreff "Ihr Fax an <nr> (OK)" oder "(...) (FEHLER)".
+        Wartezeit: 30 s Startdelay, dann alle 60 s, max. 15 Minuten.
+        """
+        import imaplib, email as _email_mod, time, ssl as _ssl2
+
+        imap_host = cfg.get("imap_server", "")
+        imap_port = int(cfg.get("imap_port", 993))
+        user      = cfg.get("smtp_user", "")
+        password  = cfg.get("smtp_password", "")
+
+        if not imap_host or not user or not password:
+            with _fax_poll_lock:
+                _fax_poll[job_id]["status"] = "timeout"
+                _fax_poll[job_id]["details"] = "IMAP nicht konfiguriert"
+            return
+
+        # simple-fax.de verwendet die internationale Schreibweise ohne "+"
+        fax_search = fax_nr.lstrip("+")
+        # Gib simple-fax.de Zeit zum ersten Verarbeitungsversuch
+        time.sleep(60)
+
+        deadline = time.time() + 60 * 60  # 60 Minuten
+        while time.time() < deadline:
+            try:
+                ctx2 = _ssl2.create_default_context()
+                with imaplib.IMAP4_SSL(imap_host, imap_port, ssl_context=ctx2) as imap:
+                    imap.login(user, password)
+                    imap.select("INBOX")
+                    # Suche nach Mails von simple-fax.de
+                    _, data = imap.search(None, 'FROM "simple-fax.de"')
+                    ids = data[0].split()
+                    for mid in reversed(ids):
+                        _, raw = imap.fetch(mid, "(RFC822)")
+                        parsed = _email_mod.message_from_bytes(raw[0][1])
+                        subj = parsed.get("Subject", "")
+                        # subject kann encoded sein
+                        try:
+                            decoded_parts = _email_mod.header.decode_header(subj)
+                            subj = "".join(
+                                p.decode(enc or "utf-8") if isinstance(p, bytes) else p
+                                for p, enc in decoded_parts
+                            )
+                        except Exception:
+                            pass
+                        if fax_search in subj.replace("+", "").replace(" ", ""):
+                            if "(OK)" in subj or "erfolgreich" in subj.lower():
+                                status, details = "ok", subj
+                            elif "(FEHLER)" in subj or "fehlgeschlagen" in subj.lower() or "nicht" in subj.lower():
+                                status, details = "fehler", subj
+                            else:
+                                continue
+                            with _fax_poll_lock:
+                                _fax_poll[job_id]["status"]  = status
+                                _fax_poll[job_id]["details"] = details
+                            return
+            except Exception:
+                pass  # Netzwerkfehler → nächste Runde
+            time.sleep(5 * 60)  # 5 Minuten zwischen Checks
+
+        with _fax_poll_lock:
+            if _fax_poll.get(job_id, {}).get("status") == "pending":
+                _fax_poll[job_id]["status"]  = "timeout"
+                _fax_poll[job_id]["details"] = "Keine Bestätigung nach 60 Minuten"
+
+    @app.route("/api/fristen/fax-status/<job_id>")
+    def fristen_fax_status(job_id):
+        with _fax_poll_lock:
+            entry = _fax_poll.get(job_id)
+        if not entry:
+            return jsonify({"ok": False, "error": "Unbekannte Job-ID"}), 404
+        return jsonify({"ok": True, **entry})
+
     # ── Fax senden (Mail2Fax via simple-fax.de) ──────────────────────────────
 
     @app.route("/api/fristen/<vid>/fax-senden", methods=["POST"])
@@ -1377,7 +1461,18 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
                     srv.starttls(context=ctx)
                     srv.login(cfg["smtp_user"], cfg["smtp_password"])
                     srv.sendmail(cfg["smtp_user"], [fax_to], msg.as_bytes())
-            return jsonify({"ok": True})
+
+            job_id = str(uuid.uuid4())
+            with _fax_poll_lock:
+                _fax_poll[job_id] = {"status": "pending", "fax_nr": fax_clean, "details": ""}
+
+            t = threading.Thread(
+                target=_poll_fax_bestaetigung,
+                args=(job_id, fax_clean, cfg),
+                daemon=True,
+            )
+            t.start()
+            return jsonify({"ok": True, "job_id": job_id})
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
