@@ -636,6 +636,14 @@ def save_kalender_settings():
 # ── Auto-Update Einstellungen ────────────────────────────────
 _UPDATE_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "update_settings.json")
 _UPDATE_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ilija-update.sh")
+# Script als Repo-Besitzer ausführen, damit git/apt-Rechte stimmen (ilija-Dienst läuft als anderer User)
+try:
+    import stat as _stat
+    _UPDATE_SCRIPT_USER = __import__("pwd").getpwuid(
+        os.stat(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".git")).st_uid
+    ).pw_name
+except Exception:
+    _UPDATE_SCRIPT_USER = None
 
 def _load_update_settings():
     try:
@@ -699,8 +707,10 @@ def update_now():
             os.makedirs(os.path.dirname(_UPDATE_LOG_PATH), exist_ok=True)
             with open(_UPDATE_LOG_PATH, "w", buffering=1) as log:
                 log.write("=== Ilija OS Update gestartet ===\n\n")
-                proc = _sp.Popen(["/bin/bash", _UPDATE_SCRIPT],
-                                 stdout=log, stderr=log, text=True)
+                run_as = _UPDATE_SCRIPT_USER if _UPDATE_SCRIPT_USER else None
+                cmd = (["sudo", "-u", run_as, "/bin/bash", _UPDATE_SCRIPT]
+                       if run_as else ["/bin/bash", _UPDATE_SCRIPT])
+                proc = _sp.Popen(cmd, stdout=log, stderr=log, text=True)
                 proc.wait()
                 log.write(f"\n=== Fertig (Exit-Code: {proc.returncode}) ===\n")
         except Exception as e:
