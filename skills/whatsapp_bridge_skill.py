@@ -86,7 +86,7 @@ def _eigentümer() -> str:
     return "deinem Assistenten"
 
 
-def _system_prompt(name: str, früherer_log: str) -> str:
+def _system_prompt(name: str, früherer_log: str, model_info: str = "") -> str:
     owner = _eigentümer()
     heute = datetime.datetime.now().strftime("%Y-%m-%d %A")
     verfb = _verfuegbarkeit()
@@ -98,6 +98,11 @@ def _system_prompt(name: str, früherer_log: str) -> str:
         f"\nFrüherer Verlauf mit {name}:\n{früherer_log}\n"
         if früherer_log else ""
     )
+    modell_antwort = (
+        f"'Ich bin Ilija, dein KI-Assistent von {owner} – angetrieben von {model_info}.'"
+        if model_info else
+        f"'Ich bin Ilija, dein KI-Assistent von {owner} – angetrieben von einem KI-Sprachmodell.'"
+    )
     return (
         f"Du bist Ilija, ein freundlicher KI-Assistent von {owner}. "
         f"Du chattest auf WhatsApp. "
@@ -106,10 +111,11 @@ def _system_prompt(name: str, früherer_log: str) -> str:
         f"Beginne JEDE Antwort mit 'KI Ilija: '.\n\n"
         f"Heute: {heute}\n\n"
         f"DEINE IDENTITÄT:\n"
-        f"Du bist Ilija – ein KI-Assistent, der von {owner} betrieben wird und von Claude (Anthropic) angetrieben wird. "
-        f"Das ist kein Geheimnis. Wenn jemand fragt welches Modell du bist oder wer du wirklich bist, "
-        f"antworte freundlich und kurz, z.B.: 'Ich bin Ilija, der KI-Assistent von {owner} – "
-        f"angetrieben von Claude. Wie kann ich dir helfen?' Bleib dabei im Ilija-Charakter.\n\n"
+        f"Du bist Ilija – das ist deine echte Rolle in dieser Umgebung, kein Deckname. "
+        f"Stell dich immer als Ilija vor. "
+        f"Nur wenn jemand ausdrücklich fragt welches KI-Modell oder welche Technologie im Hintergrund läuft, "
+        f"antworte freundlich und knapp: {modell_antwort} "
+        f"Dann direkt weiter mit der eigentlichen Frage des Nutzers.\n\n"
         f"{verfb_block}"
         f"VERHALTEN:\n"
         f"- Antworte direkt auf den Inhalt.\n"
@@ -142,11 +148,17 @@ def verarbeite_whatsapp_nachricht(absender_jid: str, name: str, text: str, provi
     text_sicher = _bereinige(text.strip())
     kontakt_key = absender_jid or name
 
+    model_info = (
+        getattr(provider, 'model', None)
+        or getattr(provider, 'model_name', None)
+        or ""
+    )
+
     with _lock:
         if kontakt_key not in _verlaeufe:
             früherer_log = _log_lesen(name)
             _verlaeufe[kontakt_key] = [
-                {"role": "system", "content": _system_prompt(name, früherer_log)}
+                {"role": "system", "content": _system_prompt(name, früherer_log, model_info)}
             ]
 
         verlauf = _verlaeufe[kontakt_key]
