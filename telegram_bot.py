@@ -48,7 +48,9 @@ def get_kernel() -> Kernel:
 
 
 def is_allowed(user_id: int) -> bool:
-    return not ALLOWED_USERS or user_id in ALLOWED_USERS
+    if not ALLOWED_USERS:
+        return False  # Kein Benutzer konfiguriert → alles blockieren (fail-closed)
+    return user_id in ALLOWED_USERS
 
 
 # ── Command Handlers ──────────────────────────────────────────
