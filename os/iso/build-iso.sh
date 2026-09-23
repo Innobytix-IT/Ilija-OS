@@ -86,7 +86,7 @@ EXCLUDES=(
 
 # --------------------------------------------------------------- Preflight ---
 say "Preflight: Werkzeuge & benötigte Pakete"
-BUILD_PKGS=(squashfs-tools xorriso isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin mtools dosfstools rsync)
+BUILD_PKGS=(squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools dosfstools rsync)
 missing=()
 for p in "${BUILD_PKGS[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
 if [ "${#missing[@]}" -gt 0 ]; then
@@ -120,7 +120,7 @@ fi
 # ------------------------------------------------------------- ISO-Baum ------
 say "ISO-Baum vorbereiten: $ISO"
 rm -rf "$ISO"
-mkdir -p "$ISO/casper" "$ISO/isolinux" "$ISO/boot/grub" "$ISO/.disk" "$ISO/EFI/boot"
+mkdir -p "$ISO/casper" "$ISO/boot/grub" "$ISO/.disk" "$ISO/EFI/boot"
 
 cp "/boot/vmlinuz-$KVER"  "$ISO/casper/vmlinuz"
 cp "/boot/initrd.img-$KVER" "$ISO/casper/initrd"
@@ -146,78 +146,81 @@ for p in casper calamares live-boot live-boot-initramfs-tools; do
 done
 
 # ------------------------------------------------------------- Bootloader ----
-say "Bootloader: isolinux (BIOS) + GRUB-EFI (UEFI)"
-# --- BIOS / isolinux ---
-cp /usr/lib/ISOLINUX/isolinux.bin "$ISO/isolinux/"
-cp /usr/lib/syslinux/modules/bios/*.c32 "$ISO/isolinux/" 2>/dev/null || true
-cat > "$ISO/isolinux/isolinux.cfg" <<CFG
-UI vesamenu.c32
-DEFAULT live
-TIMEOUT 50
-PROMPT 0
-MENU TITLE $DISTRO_NAME $DISTRO_VER
-LABEL live
-  MENU LABEL ^$DISTRO_NAME starten / installieren
-  KERNEL /casper/vmlinuz
-  APPEND initrd=/casper/initrd boot=casper quiet splash ---
-LABEL check
-  MENU LABEL Medium ^prüfen
-  KERNEL /casper/vmlinuz
-  APPEND initrd=/casper/initrd boot=casper integrity-check quiet splash ---
-CFG
+# Lubuntu 24.04 (Noble) nutzt GRUB2 fuer BIOS UND UEFI – kein isolinux.
+# BIOS: grub-mkimage erzeugt i386-pc core.img + cdboot.img = eltorito.img
+# UEFI: grub-mkimage erzeugt x86_64-efi image, kein Standalone (kein baked cfg)
+#        -> GRUB sucht boot/grub/grub.cfg auf dem ISO9660-Dateisystem
+say "Bootloader: GRUB2 BIOS (i386-pc) + GRUB2 UEFI (x86_64-efi)"
 
-# --- UEFI / GRUB ---
-# WICHTIG: search-Befehl MUSS vor den menuentry-Blöcken stehen.
-# grub-mkstandalone bettet dieses cfg ein; beim EFI-Boot ist das initiale root-Gerät
-# die FAT-Partition (efiboot.img), nicht das ISO9660. Der search-Befehl sucht
-# anhand der Datei /.disk/info das richtige Gerät und setzt root darauf.
-cat > "$ISO/boot/grub/grub.cfg" <<CFG
-search --no-floppy --file --set=root /.disk/info
-set default=0
-set timeout=5
-menuentry "$DISTRO_NAME starten / installieren" {
-    linux /casper/vmlinuz boot=casper quiet splash ---
-    initrd /casper/initrd
-}
-menuentry "Medium prüfen" {
-    linux /casper/vmlinuz boot=casper integrity-check quiet splash ---
-    initrd /casper/initrd
-}
-CFG
+# --- BIOS / GRUB i386-pc ---
+mkdir -p "$ISO/boot/grub/i386-pc"
+cp /usr/lib/grub/i386-pc/*.mod "$ISO/boot/grub/i386-pc/" 2>/dev/null || true
+cp /usr/lib/grub/i386-pc/*.lst "$ISO/boot/grub/i386-pc/" 2>/dev/null || true
 
-# EFI-Boot-Image (bootx64.efi) standalone bauen und in ein FAT-Image (efiboot.img) legen
-# Das grub.cfg wird in das EFI eingebettet (nicht extern referenziert).
-grub-mkstandalone \
+grub-mkimage \
+  --format=i386-pc \
+  --directory=/usr/lib/grub/i386-pc \
+  --prefix=/boot/grub \
+  --output="$BUILD_DIR/grub-core-bios.img" \
+  biosdisk iso9660 normal search search_fs_file linux echo ls cat part_gpt part_msdos
+
+cat /usr/lib/grub/i386-pc/cdboot.img "$BUILD_DIR/grub-core-bios.img" \
+    > "$ISO/boot/grub/i386-pc/eltorito.img"
+
+# --- UEFI / GRUB x86_64-efi ---
+# grub-mkimage mit prefix=/boot/grub: GRUB laedt boot/grub/grub.cfg vom ISO
+grub-mkimage \
   --format=x86_64-efi \
-  --output="$BUILD_DIR/bootx64.efi" \
-  --locales="" --fonts="" \
-  "boot/grub/grub.cfg=$ISO/boot/grub/grub.cfg"
+  --directory=/usr/lib/grub/x86_64-efi \
+  --prefix=/boot/grub \
+  --output="$ISO/EFI/boot/bootx64.efi" \
+  part_gpt part_msdos fat iso9660 normal search search_fs_file \
+  search_fs_uuid search_label efi_gop linux gzio all_video echo ls cat
 
-( cd "$BUILD_DIR"
-  rm -f efiboot.img
-  dd if=/dev/zero of=efiboot.img bs=1M count=16
-  mkfs.vfat efiboot.img >/dev/null
-  mmd  -i efiboot.img ::/EFI ::/EFI/BOOT
-  mcopy -i efiboot.img bootx64.efi ::/EFI/BOOT/BOOTX64.EFI
+# EFI FAT-Image (fuer El Torito EFI-Eintrag)
+( rm -f "$BUILD_DIR/efiboot.img"
+  dd if=/dev/zero of="$BUILD_DIR/efiboot.img" bs=1M count=16 2>/dev/null
+  mkfs.vfat "$BUILD_DIR/efiboot.img" >/dev/null
+  mmd  -i "$BUILD_DIR/efiboot.img" ::/EFI ::/EFI/BOOT
+  mcopy -i "$BUILD_DIR/efiboot.img" "$ISO/EFI/boot/bootx64.efi" ::/EFI/BOOT/BOOTX64.EFI
 )
 cp "$BUILD_DIR/efiboot.img" "$ISO/EFI/boot/efiboot.img"
-cp "$BUILD_DIR/bootx64.efi" "$ISO/EFI/boot/bootx64.efi"
+
+# --- Einheitliche grub.cfg fuer BIOS und UEFI ---
+cat > "$ISO/boot/grub/grub.cfg" <<CFG
+set default=0
+set timeout=10
+set gfxpayload=keep
+
+menuentry "$DISTRO_NAME starten / installieren" {
+    linux  /casper/vmlinuz boot=casper quiet splash ---
+    initrd /casper/initrd
+}
+menuentry "Medium pruefen" {
+    linux  /casper/vmlinuz boot=casper integrity-check quiet splash ---
+    initrd /casper/initrd
+}
+CFG
 
 # ------------------------------------------------------------- md5 + ISO -----
 say "md5sum.txt"
-( cd "$ISO" && find . -type f -not -path './isolinux/isolinux.bin' -not -name md5sum.txt \
+( cd "$ISO" && find . -type f -not -name md5sum.txt \
     -exec md5sum {} \; > md5sum.txt )
 
 say "ISO schreiben: $OUT"
 rm -f "$OUT"
 xorriso -as mkisofs \
-  -iso-level 3 -full-iso9660-filenames \
-  -volid "$VOLID" \
-  -eltorito-boot isolinux/isolinux.bin \
-    -eltorito-catalog isolinux/boot.cat \
-    -no-emul-boot -boot-load-size 4 -boot-info-table \
-  -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
+  -iso-level 3 \
+  --grub2-mbr /usr/lib/grub/i386-pc/boot_hybrid.img \
+  --mbr-force-bootable \
+  -partition_offset 16 \
+  --grub2-boot-info \
+  -no-emul-boot -boot-info-table --grub2-boot-info \
+  -eltorito-boot boot/grub/i386-pc/eltorito.img \
+    -eltorito-catalog boot.catalog \
   -eltorito-alt-boot -e EFI/boot/efiboot.img -no-emul-boot -isohybrid-gpt-basdat \
+  -joliet \
+  -volid "$VOLID" \
   -output "$OUT" \
   "$ISO"
 
