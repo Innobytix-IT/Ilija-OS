@@ -1559,10 +1559,13 @@ async function checkFaxBanner(){
     banner.style.background = neufertig.some(j=>j.status==='ok') ? '#d1fae5' : '#fee2e2';
     banner.style.border = `1px solid ${neufertig.every(j=>j.status==='ok') ? '#6ee7b7' : '#fca5a5'}`;
     banner.style.color = '#111';
-    banner.innerHTML = `${lines}<br><button onclick="this.closest('#faxBanner').style.display='none';
-      try{localStorage.setItem('ilija_fax_seen_jobs',JSON.stringify(${JSON.stringify(allIds)}));}catch(e){}"
+    banner.innerHTML = `${lines}<br><button id="faxBannerClose"
       style="margin-top:10px;padding:4px 12px;border:none;border-radius:5px;cursor:pointer;font-size:13px;background:#0003">
       Schließen</button>`;
+    document.getElementById('faxBannerClose').addEventListener('click', function(){
+      banner.style.display = 'none';
+      try{localStorage.setItem('ilija_fax_seen_jobs', JSON.stringify(allIds));}catch(e){}
+    });
   }catch(e){}
 }
 </script>
