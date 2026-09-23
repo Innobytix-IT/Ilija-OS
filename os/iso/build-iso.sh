@@ -140,6 +140,15 @@ exit 0
 FIXSCRIPT
 chmod +x /usr/libexec/fixconkeys-part2
 
+# removeusers sicherstellen (entfernt Build-User aus dem Chroot vor Calamares-Useranlagen)
+[ -f /usr/libexec/removeusers ] || cat > /usr/libexec/removeusers << 'RMSCRIPT'
+#!/bin/bash
+awk -F: '$3>=1000 && $1!="nobody" {print $1}' /etc/passwd \
+  | while read u; do userdel -f "$u" 2>/dev/null || true; done
+exit 0
+RMSCRIPT
+chmod +x /usr/libexec/removeusers
+
 # ------------------------------------------------------------- squashfs ------
 say "squashfs erzeugen ($COMP) – das dauert (CPU/RAM-intensiv)"
 EXARGS=()
