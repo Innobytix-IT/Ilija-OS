@@ -15,6 +15,7 @@ Features:
 """
 
 import os
+import re
 import time
 import threading
 import logging
@@ -45,6 +46,37 @@ _INTERNE_BEFEHLE = (
     "TERMIN_SUCHEN:", "TERMIN_EINTRAGEN:", "TERMIN_LOESCHEN:",
     "TERMIN_LESEN:", "NACHRICHT_SPEICHERN:", "[SYSTEM –", "[SYSTEM-",
 )
+
+# Prompt-Injection-Muster (aus phone_kernel.py übernommen)
+_INJECTION_MUSTER = [
+    # Verhaltensänderung
+    r"vergiss\s+(alle|deine|dein)",
+    r"ignoriere\s+(alle|deine|dein)",
+    r"du\s+bist\s+jetzt\s+(ein|eine|kein)",
+    r"neuer\s+(modus|assistent|charakter)",
+    r"system.?prompt",
+    r"deine\s+anweisungen",
+    r"als\s+ki\s+ohne\s+beschränk",
+    r"ändere\s+dein(e|en)?\s+verhalten",
+    r"jailbreak",
+    r"dan\s+modus",
+    r"act\s+as",
+    r"pretend\s+(you|to)",
+    # Zugang zu internen Daten
+    r"gib\s+mir\s+(alle|deine|den|die)\s+(daten|datei|passwort|schlüssel|zugang|dokument)",
+    r"zeig\s+(mir|alle)\s+(datei|dokument|ordner|archiv|e.?mail)",
+    r"list(e|en)?\s+(alle|die)\s+(datei|dokument|ordner|archiv)",
+    r"welche\s+(datei|dokument|ordner|e.?mail|akte)",
+    r"was\s+(liegt|befindet|ist)\s+(im|in|unter)\s+(ordner|archiv|dms|verzeichnis)",
+    r"öffn(e|en)\s+(die|den|das)\s+(datei|dokument|ordner)",
+    r"les(e|en)?\s+(die|den|das)\s+(datei|dokument|e.?mail)",
+    r"(dms|archiv|ablage|laufwerk|netzwerk)",
+    # Persönliche / vertrauliche Daten
+    r"(passwort|password|kennwort|pin|zugangsdaten|api.?key)",
+    r"kunden(daten|liste|kartei|stamm)",
+    r"(intern|vertraulich|geheim|privat)\s+(dokument|datei|information|ordner)",
+    r"e.?mail\s+(von|an|aus|liste|postfach|inbox)",
+]
 
 
 def _lese_verfuegbarkeit_wa() -> str:
@@ -104,13 +136,22 @@ def _lese_slot_dauer_wa() -> int:
     return 60
 
 
-def _bereinige_nachricht(text: str) -> str:
-    """Entfernt interne Befehlspräfixe aus eingehenden WhatsApp-Nachrichten."""
+def _bereinige_nachricht(text: str) -> str | None:
+    """Bereinigt eingehende WhatsApp-Nachrichten.
+
+    Gibt None zurück wenn Prompt-Injection erkannt wurde (Nachricht verwerfen).
+    Entfernt andernfalls interne Befehlspräfixe und gibt den gesäuberten Text zurück.
+    """
+    text_lower = text.lower()
+    for muster in _INJECTION_MUSTER:
+        if re.search(muster, text_lower):
+            logger.warning(f"[WhatsApp] Prompt-Injection erkannt: '{text[:60]}'")
+            return None
+
     for befehl in _INTERNE_BEFEHLE:
-        if befehl.lower() in text.lower():
-            import re as _re
-            text = _re.sub(_re.escape(befehl), f"[gefiltert:{befehl.strip(':')}]",
-                           text, flags=_re.IGNORECASE)
+        if befehl.lower() in text_lower:
+            text = re.sub(re.escape(befehl), f"[gefiltert:{befehl.strip(':')}]",
+                          text, flags=re.IGNORECASE)
     return text
 
 
@@ -679,8 +720,10 @@ def _dialog_loop(driver, provider, modus, kontakt_name, eigentümer,
         print(f"💬 [{kontakt}]: {text}")
         _log_schreiben(kontakt, kontakt, text)
 
-        # Injection-Schutz: interne Befehle aus Nutzernachrichten entfernen
+        # Injection-Schutz: interne Befehle entfernen, Injection-Muster blockieren
         text_sicher = _bereinige_nachricht(text)
+        if text_sicher is None:
+            return  # Injection erkannt → stillschweigend verwerfen, keine Antwort
 
         verlauf = get_verlauf(kontakt)
 
