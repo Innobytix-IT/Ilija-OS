@@ -167,7 +167,12 @@ LABEL check
 CFG
 
 # --- UEFI / GRUB ---
+# WICHTIG: search-Befehl MUSS vor den menuentry-Blöcken stehen.
+# grub-mkstandalone bettet dieses cfg ein; beim EFI-Boot ist das initiale root-Gerät
+# die FAT-Partition (efiboot.img), nicht das ISO9660. Der search-Befehl sucht
+# anhand der Datei /.disk/info das richtige Gerät und setzt root darauf.
 cat > "$ISO/boot/grub/grub.cfg" <<CFG
+search --no-floppy --file --set=root /.disk/info
 set default=0
 set timeout=5
 menuentry "$DISTRO_NAME starten / installieren" {
@@ -181,6 +186,7 @@ menuentry "Medium prüfen" {
 CFG
 
 # EFI-Boot-Image (bootx64.efi) standalone bauen und in ein FAT-Image (efiboot.img) legen
+# Das grub.cfg wird in das EFI eingebettet (nicht extern referenziert).
 grub-mkstandalone \
   --format=x86_64-efi \
   --output="$BUILD_DIR/bootx64.efi" \
