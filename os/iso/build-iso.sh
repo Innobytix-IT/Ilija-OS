@@ -129,6 +129,17 @@ echo "$DISTRO_NAME $DISTRO_VER \"noble\" - Release amd64" > "$ISO/.disk/info"
 : > "$ISO/.disk/base_installable"
 echo "full_cd/single" > "$ISO/.disk/cd_type"
 
+# fixconkeys-part2 sicherstellen (wird von Calamares in den Chroot kopiert)
+[ -f /usr/libexec/fixconkeys-part2 ] || cat > /usr/libexec/fixconkeys-part2 << 'FIXSCRIPT'
+#!/bin/bash
+LAYOUT=$(cat /dev/shm/fixconkeys-layout 2>/dev/null || echo "")
+if [ -n "$LAYOUT" ] && [ -f /etc/default/keyboard ]; then
+    sed -i "s/XKBLAYOUT=.*/XKBLAYOUT=\"$LAYOUT\"/" /etc/default/keyboard 2>/dev/null || true
+fi
+exit 0
+FIXSCRIPT
+chmod +x /usr/libexec/fixconkeys-part2
+
 # ------------------------------------------------------------- squashfs ------
 say "squashfs erzeugen ($COMP) – das dauert (CPU/RAM-intensiv)"
 EXARGS=()
