@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="de" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ilija · AHPT Relay Token Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B1520; --s1:#10202D; --s2:#16293A; --s3:#1E3547; --s4:#274257;
+  --bdr:rgba(255,255,255,.055); --bdr2:rgba(255,255,255,.10); --bdr3:rgba(255,255,255,.18);
+  --g:#E0A82E; --g2:#C8871B; --gd:rgba(224,168,46,.08); --gg:rgba(224,168,46,.18);
+  --tx:#E6EEF5; --tx2:#8FA6B8; --tx3:#4A6072;
+  --green:#22c97c; --gdim:rgba(34,201,124,.12);
+  --red:#ef4444; --rdim:rgba(239,68,68,.10);
+  --teal:#2dd4bf; --tdim:rgba(45,212,191,.10);
+  --f:'Inter',system-ui,sans-serif; --m:'JetBrains Mono','Consolas','Menlo',monospace; --r:7px; --r2:12px;
+  color-scheme:dark;
+}
+html,body{height:100%;font-size:16px}
+body{font-family:var(--f);background:var(--bg);color:var(--tx);line-height:1.6}
+
+/* ── Topbar ── */
+.topbar{display:flex;align-items:center;height:52px;padding:0 20px;background:var(--s1);border-bottom:1px solid var(--bdr);overflow-x:auto}
+.topbar::-webkit-scrollbar{height:0}
+.logo{display:flex;align-items:center;gap:9px;text-decoration:none;flex-shrink:0}
+.logo-gem{width:30px;height:30px;background:var(--g);border-radius:7px;display:grid;place-items:center;font-family:var(--m);font-weight:500;font-size:14px;color:var(--bg)}
+.logo-name{font-size:.9rem;font-weight:500;color:var(--tx)}
+.logo-name em{font-style:italic;color:var(--g)}
+.tb-sep{width:1px;height:20px;background:var(--bdr2);margin:0 12px;flex-shrink:0}
+.tb-module{font-size:.78rem;font-weight:500;color:var(--tx2)}
+.tb-back{margin-left:auto;font-size:.75rem;color:var(--tx3);text-decoration:none;flex-shrink:0;padding:4px 10px;border-radius:5px;border:1px solid var(--bdr2)}
+.tb-back:hover{color:var(--tx);background:var(--s2)}
+
+/* ── Page content ── */
+.page{padding:32px 20px 64px;max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+
+h1{font-size:1.3rem;font-weight:700;color:var(--tx);letter-spacing:-.025em;text-wrap:balance}
+.sub{font-size:.8rem;color:var(--tx3);margin-top:3px}
+
+/* ── Card ── */
+.card{background:var(--s2);border:1px solid var(--bdr2);border-radius:var(--r2);overflow:hidden}
+.card-head{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--bdr)}
+.card-icon{width:28px;height:28px;border-radius:var(--r);display:grid;place-items:center;flex-shrink:0;font-size:13px}
+.icon-gold{background:var(--gd);color:var(--g);border:1px solid var(--gg)}
+.icon-green{background:var(--gdim);color:var(--green);border:1px solid rgba(34,201,124,.25)}
+.card-title{font-size:.84rem;font-weight:600;color:var(--tx)}
+.card-sub{font-size:.72rem;color:var(--tx3);margin-top:1px}
+.card-body{padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+
+/* ── Token box ── */
+.token-box{background:var(--s3);border:1px solid var(--bdr2);border-radius:var(--r);padding:13px 15px;font-family:var(--m);font-size:12.5px;font-weight:600;color:var(--g);word-break:break-all;line-height:1.75;letter-spacing:.03em;cursor:text;user-select:all;min-height:60px}
+
+/* ── File box ── */
+.file-box{background:var(--s3);border:1px solid var(--bdr2);border-radius:var(--r);overflow:hidden}
+.file-box-bar{display:flex;align-items:center;justify-content:space-between;padding:7px 13px;background:var(--s2);border-bottom:1px solid var(--bdr);font-family:var(--m);font-size:11px;color:var(--tx3)}
+.file-box-bar span{font-weight:600;color:var(--tx2)}
+.file-content{padding:13px 15px;font-family:var(--m);font-size:12px;line-height:1.9;white-space:pre;overflow-x:auto}
+.line-guard{color:var(--tx3)}
+.line-secret{color:var(--green)}
+
+/* ── Buttons ── */
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{cursor:pointer;font-family:var(--f);font-size:.8rem;font-weight:600;border-radius:var(--r);padding:8px 16px;border:none;transition:background .13s,opacity .13s;white-space:nowrap;line-height:1}
+button:focus-visible{outline:2px solid var(--g);outline-offset:2px}
+.btn-prim{background:var(--g);color:var(--bg)}
+.btn-prim:hover{background:var(--g2)}
+.btn-ghost{background:var(--s3);color:var(--tx2);border:1px solid var(--bdr2)}
+.btn-ghost:hover{color:var(--tx);background:var(--s4)}
+.status-line{font-size:.75rem;min-height:16px;transition:opacity .22s;opacity:0}
+.status-line.visible{opacity:1}
+.status-ok{color:var(--green)}
+.status-err{color:var(--red)}
+
+/* ── Hint ── */
+.hint{background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);padding:10px 13px;font-size:.75rem;color:var(--tx2);line-height:1.55}
+.hint strong{color:var(--tx)}
+code{font-family:var(--m);font-size:11px;background:var(--s4);padding:1px 5px;border-radius:4px;color:var(--tx)}
+
+/* ── Instructions ── */
+.instr-card{background:var(--s2);border:1px solid var(--bdr2);border-radius:var(--r2);overflow:hidden}
+.instr-toggle{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;cursor:pointer;font-size:.84rem;font-weight:600;color:var(--tx);border:none;background:transparent;width:100%;text-align:left;border-radius:0;transition:background .13s;font-family:var(--f)}
+.instr-toggle:hover{background:var(--s3)}
+.chevron{color:var(--tx3);font-size:11px;transition:transform .2s}
+.instr-body{padding:4px 18px 18px;display:flex;flex-direction:column;gap:13px;border-top:1px solid var(--bdr)}
+.step{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;font-size:.8rem;color:var(--tx2);line-height:1.6}
+.step-n{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--gd);border:1px solid var(--gg);font-family:var(--m);font-size:10px;font-weight:700;color:var(--g);margin-top:3px;flex-shrink:0}
+
+/* ── Footer ── */
+.footer{font-size:.72rem;color:var(--tx3);text-align:center;line-height:1.6;padding-top:8px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="logo"><div class="logo-gem">I</div><span class="logo-name">Ilija<em>OS</em></span></a>
+  <div class="tb-sep"></div>
+  <span class="tb-module">AHPT Cloud · Relay Token Builder</span>
+  <a href="/einstellungen" class="tb-back">← Einstellungen</a>
+</div>
+
+<div class="page">
+
+  <header>
+    <h1>Relay Token Builder</h1>
+    <p class="sub">Erzeugt eine individuelle <code>relay_token.php</code> für deinen Webspace-Einsatz</p>
+  </header>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon icon-gold">🔑</div>
+      <div>
+        <div class="card-title">Shared Secret</div>
+        <div class="card-sub">64 Hex-Zeichen · 256 Bit · kryptografisch zufällig</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="token-box" id="tokenBox" title="Klicken zum Markieren"></div>
+      <div class="btn-row">
+        <button class="btn-prim"  id="btnRegen">Neues Geheimnis</button>
+        <button class="btn-ghost" id="btnCopySecret">Kopieren</button>
+        <span class="status-line" id="statusSecret"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon icon-green">📄</div>
+      <div>
+        <div class="card-title">relay_token.php</div>
+        <div class="card-sub">Datei zum Hochladen auf deinen Webspace</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="file-box">
+        <div class="file-box-bar"><span>relay_token.php</span> <span id="byteCount">–</span></div>
+        <div class="file-content"><span class="line-guard"  id="lineGuard"></span>
+<span class="line-secret" id="lineSecret"></span></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-prim"  id="btnDownload">Herunterladen</button>
+        <button class="btn-ghost" id="btnCopyFile">Inhalt kopieren</button>
+        <span class="status-line" id="statusFile"></span>
+      </div>
+      <div class="hint">
+        Falls der Download nicht startet: <strong>Inhalt kopieren</strong> → Texteditor öffnen → einfügen → als <code>relay_token.php</code> speichern (Dateityp „Alle Dateien").
+      </div>
+    </div>
+  </div>
+
+  <div class="instr-card">
+    <button class="instr-toggle" id="instrToggle" aria-expanded="true" aria-controls="instrBody">
+      <span>Einrichtungsanleitung</span>
+      <span class="chevron" id="chevron">▾</span>
+    </button>
+    <div class="instr-body" id="instrBody">
+      <div class="step">
+        <div class="step-n">1</div>
+        <div>Lade <code>relay_token.php</code> per FTP/SFTP in denselben Ordner wie <code>relay.php</code> auf deinen Webspace. Beide Dateien müssen im gleichen Verzeichnis liegen.</div>
+      </div>
+      <div class="step">
+        <div class="step-n">2</div>
+        <div>Notiere das <strong style="color:var(--tx)">Shared Secret</strong> — du brauchst es für die AHPT-Agenten-Konfiguration. Trage es als <code>shared_secret</code> in den Einstellungen des Agenten ein.</div>
+      </div>
+      <div class="step">
+        <div class="step-n">3</div>
+        <div>Teste die Verbindung: Starte den Agenten und prüfe über den <code>selbsttest</code>-Endpunkt, ob der Relay erreichbar ist und die Authentifizierung klappt.</div>
+      </div>
+      <div class="step">
+        <div class="step-n">4</div>
+        <div>Jeder Nutzer / jede Installation benötigt eine <strong style="color:var(--tx)">eigene</strong> <code>relay_token.php</code> mit einem einzigartigen Geheimnis. Klicke für jeden weiteren Nutzer auf <strong style="color:var(--tx)">Neues Geheimnis</strong>.</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="footer">
+    Das Geheimnis wird ausschließlich lokal in deinem Browser erzeugt — es wird nichts übermittelt oder gespeichert.<br>
+    Ilija OS · AHPT Cloud · Asymmetric HTTP Polling Tunnel
+  </p>
+
+</div>
+
+<script>
+const PHP_GUARD = '<?php exit; ?>';
+let secret = '';
+
+function generate() {
+  const b = new Uint8Array(32);
+  crypto.getRandomValues(b);
+  return Array.from(b).map(x => x.toString(16).padStart(2,'0')).join('');
+}
+
+function fileContent(s) { return PHP_GUARD + '\n' + s; }
+
+function refresh(s) {
+  secret = s;
+  document.getElementById('tokenBox').textContent = s;
+  document.getElementById('lineGuard').textContent = PHP_GUARD;
+  document.getElementById('lineSecret').textContent = s;
+  const bytes = new TextEncoder().encode(fileContent(s)).length;
+  document.getElementById('byteCount').textContent = bytes + ' B';
+}
+
+function status(id, msg, err) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'status-line visible ' + (err ? 'status-err' : 'status-ok');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.classList.remove('visible'); setTimeout(()=>{ el.textContent=''; el.className='status-line'; },250); }, 2800);
+}
+
+async function copy(text, sid) {
+  try {
+    await navigator.clipboard.writeText(text);
+    status(sid, '✓ Kopiert!');
+  } catch {
+    try {
+      const el = sid === 'statusSecret'
+        ? document.getElementById('tokenBox')
+        : document.querySelector('.file-content');
+      const r = document.createRange();
+      r.selectNodeContents(el);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(r);
+      status(sid, 'Markiert — Strg+C drücken');
+    } catch { status(sid, 'Manuell kopieren', true); }
+  }
+}
+
+function download() {
+  const content = fileContent(secret);
+  try {
+    const url = URL.createObjectURL(new Blob([content], {type:'text/plain;charset=utf-8'}));
+    const a = Object.assign(document.createElement('a'), {href: url, download: 'relay_token.php'});
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 300);
+    status('statusFile', '✓ Download gestartet');
+  } catch { status('statusFile', 'Download fehlgeschlagen — Inhalt kopieren', true); }
+}
+
+document.getElementById('btnRegen')      .addEventListener('click', () => refresh(generate()));
+document.getElementById('btnCopySecret') .addEventListener('click', () => copy(secret, 'statusSecret'));
+document.getElementById('btnCopyFile')   .addEventListener('click', () => copy(fileContent(secret), 'statusFile'));
+document.getElementById('btnDownload')   .addEventListener('click', download);
+
+let open = true;
+const toggle = document.getElementById('instrToggle');
+const body   = document.getElementById('instrBody');
+const chev   = document.getElementById('chevron');
+toggle.addEventListener('click', () => {
+  open = !open;
+  body.hidden = !open;
+  chev.style.transform = open ? '' : 'rotate(-90deg)';
+  toggle.setAttribute('aria-expanded', open);
+});
+
+refresh(generate());
+</script>
+</body>
+</html>

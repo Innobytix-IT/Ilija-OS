@@ -10,3 +10,5 @@ venv/
 *.bak
 *.pre-*.bak
 memory/
+/ISO/
+*Testreport*.md

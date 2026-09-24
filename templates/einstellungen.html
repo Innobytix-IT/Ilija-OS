@@ -1441,6 +1441,18 @@ function buildAhptCard() {
       <div class="row-label" style="color:var(--tx2)">📂 Dienst: dateien (Hauptfreigabe)</div>
       <input type="text" id="ahpt-dat-pfad" placeholder="/home/manuel" value="${esc(datD.wurzel||'')}" style="color:var(--tx3)" readonly>
     </div>
+    <div class="row" style="background:var(--s1)">
+      <div class="row-left">
+        <div class="row-label">relay_token.php erstellen</div>
+        <div class="row-hint">Für jeden Nutzer ein individuelles Geheimnis generieren und als PHP-Datei herunterladen</div>
+      </div>
+      <div class="row-control">
+        <a href="/tools/relay-builder" target="_blank"
+           style="background:var(--tdim);color:var(--teal);border:1px solid rgba(45,212,191,.2);border-radius:7px;padding:6px 14px;font-size:.76rem;font-weight:600;text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;gap:5px">
+          🔑 Builder öffnen
+        </a>
+      </div>
+    </div>
   </div>`;
 }
 

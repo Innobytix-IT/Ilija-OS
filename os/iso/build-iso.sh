@@ -69,6 +69,7 @@ EXCLUDES=(
   # --- GEHEIMNISSE / persönliche Daten (Ilija/ERP/AHPT) ---
   "home/*/.ssh/*"
   "home/*/.ahpt/*.key" "home/*/.ahpt/geheimnis" "home/*/.ahpt/client*.key"
+  "home/*/.ahpt/*.toml"                          # Relay-URL + Client-Keys (kein Secret, aber identifizierend)
   "home/*/.config/ilija-os/web-auth"
   # Ilija: .env (API-Keys), Laufzeitdaten, DB, Logs, DMS-/Cloud-Archive
   "home/*/Ilija-AI-Agent-Public-Edition/*/.env"

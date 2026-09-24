@@ -7,7 +7,7 @@ import os
 import re
 import json
 import subprocess
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, render_template
 
 _AHPT_DIR   = os.environ.get("AHPT_DIR", "/home/manuel/.ahpt")
 _TOML_PATH = os.path.join(_AHPT_DIR, "agent_elitebook.toml")
@@ -196,5 +196,9 @@ def register_ahpt_routes(app):
             })
         except Exception as e:
             return jsonify({"ok": False, "message": str(e)}), 500
+
+    @bp.route("/tools/relay-builder")
+    def relay_builder():
+        return render_template("ahpt_relay_builder.html")
 
     app.register_blueprint(bp)

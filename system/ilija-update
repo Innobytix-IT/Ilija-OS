@@ -38,7 +38,35 @@ if [ "${CHANGED:-0}" = "1" ] && sudo -u ilija git diff "$BEFORE" "$AFTER" -- req
     log "Pakete aktualisiert."
 fi
 
-# ── 3. Dienst neu starten ──────────────────────────────────────────────────────
+# ── 3. Plymouth-Theme installieren ────────────────────────────────────────────
+PLYMOUTH_SRC="$ILIJA_DIR/system/plymouth"
+PLYMOUTH_DST="/usr/share/plymouth/themes/ilija"
+
+if [ -d "$PLYMOUTH_SRC" ]; then
+    PLYMOUTH_CHANGED=0
+    for f in "$PLYMOUTH_SRC"/*; do
+        fname=$(basename "$f")
+        dst="$PLYMOUTH_DST/$fname"
+        if [ ! -f "$dst" ] || ! cmp -s "$f" "$dst"; then
+            PLYMOUTH_CHANGED=1
+            break
+        fi
+    done
+
+    if [ "$PLYMOUTH_CHANGED" = "1" ]; then
+        log "Plymouth-Theme aktualisieren..."
+        mkdir -p "$PLYMOUTH_DST"
+        cp "$PLYMOUTH_SRC"/* "$PLYMOUTH_DST/"
+        chmod 644 "$PLYMOUTH_DST"/*
+        if plymouth-set-default-theme --rebuild-initrd ilija 2>&1; then
+            log "Plymouth-Theme 'ilija' aktiviert."
+        else
+            log "WARNUNG: plymouth-set-default-theme fehlgeschlagen – Theme-Dateien wurden kopiert."
+        fi
+    fi
+fi
+
+# ── 4. Dienst neu starten ──────────────────────────────────────────────────────
 if [ "${CHANGED:-0}" = "1" ]; then
     log "Starte ilija.service neu..."
     systemctl restart ilija.service
