@@ -68,19 +68,36 @@ EXCLUDES=(
   "etc/NetworkManager/system-connections/*"   # WLAN-Passwörter etc.
   # --- GEHEIMNISSE / persönliche Daten (Ilija/ERP/AHPT) ---
   "home/*/.ssh/*"
-  "home/*/.ahpt/*.key" "home/*/.ahpt/geheimnis" "home/*/.ahpt/client*.key"
-  "home/*/.ahpt/*.toml"                          # Relay-URL + Client-Keys (kein Secret, aber identifizierend)
+  # AHPT: Home-Pfad und /opt-Pfad (geheimnis* deckt geheimnis_elitebook etc.)
+  "home/*/.ahpt/*.key" "home/*/.ahpt/geheimnis*" "home/*/.ahpt/client*.key"
+  "home/*/.ahpt/*.toml"
+  "opt/ilija-os/.ahpt/*"
   "home/*/.config/ilija-os/web-auth"
-  # Ilija: .env (API-Keys), Laufzeitdaten, DB, Logs, DMS-/Cloud-Archive
+  # Ilija: .env (API-Keys) – Home-Pfad UND /opt-Pfad
   "home/*/Ilija-AI-Agent-Public-Edition/*/.env"
+  "opt/ilija-os/ilija/.env"
+  # Ilija: Laufzeitdaten, Logs, Caches
   "home/*/Ilija-AI-Agent-Public-Edition/*/data/*"
   "home/*/Ilija-AI-Agent-Public-Edition/*/*.log"
   "home/*/Ilija-AI-Agent-Public-Edition/*/__pycache__/*"
-  # OpenPhönix: Datenbank, config.toml (Firmendaten), erzeugte Dokumente
+  "opt/ilija-os/ilija/data/*"
+  "opt/ilija-os/ilija/*.log"
+  # OpenPhönix: Datenbank, config.toml – Home-Pfad UND /opt-Pfad
   "home/*/OpenPhoenix-ERP/*/*.db" "home/*/OpenPhoenix-ERP/*/*.db-*"
   "home/*/OpenPhoenix-ERP/*/config.toml"
+  "opt/ilija-os/openphoenix/*.db" "opt/ilija-os/openphoenix/*.db-*"
+  "opt/ilija-os/openphoenix/config.toml"
   # Gemeinsame Ablage (persönliche Dokumente/Belege) – NIE verteilen
   "home/*/Ilija-Ablage/*"
+  "srv/ilija-ablage/*"
+  # Browser-Profile (Cookies, Passwörter, Login-Daten)
+  "home/*/.mozilla/*" "home/*/snap/firefox/*"
+  "home/*/.config/google-chrome/*" "home/*/snap/chromium/*"
+  "opt/ilija-os/.local/share/pki/*"
+  "home/*/.local/share/pki/*"
+  # Outlook/Browser-Profil in Ilija-Daten
+  "home/*/data/outlook_profil/*"
+  "opt/ilija-os/ilija/data/outlook_profil/*"
   # Chromium-App-Profile (Cookies/Sessions der Apps)
   "home/*/snap/chromium/common/ilija-os-apps/*"
 )
