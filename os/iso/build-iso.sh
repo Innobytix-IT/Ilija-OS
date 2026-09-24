@@ -140,14 +140,66 @@ exit 0
 FIXSCRIPT
 chmod +x /usr/libexec/fixconkeys-part2
 
-# removeusers sicherstellen (entfernt Build-User aus dem Chroot vor Calamares-Useranlagen)
-[ -f /usr/libexec/removeusers ] || cat > /usr/libexec/removeusers << 'RMSCRIPT'
+# removeusers: läuft als Calamares shellprocess (dontChroot:true) NACH unpackfs und VOR users.
+# Findet die Zielpartition via /tmp/calamares-root-* Glob, entfernt UID>=1000 aus passwd+group.
+cat > /usr/libexec/removeusers << 'RMSCRIPT'
 #!/bin/bash
-awk -F: '$3>=1000 && $1!="nobody" {print $1}' /etc/passwd \
-  | while read u; do userdel -f "$u" 2>/dev/null || true; done
+LOG=/run/removeusers.log
+echo "=== removeusers ===" >> "$LOG"; date >> "$LOG"
+TARGET="${CALAMARES_TARGET_MOUNT:-}"
+for d in /tmp/calamares-root-* /tmp/calamares-root /target /mnt/target; do
+    for exp in $d; do
+        [ -f "$exp/etc/passwd" ] && TARGET="$exp" && break 2
+    done
+done
+echo "TARGET=${TARGET:-LEER}" >> "$LOG"
+if [ -n "$TARGET" ] && [ -f "$TARGET/etc/passwd" ]; then
+    awk -F: '$3 < 1000 || $1 == "nobody"' "$TARGET/etc/passwd" > "$TARGET/etc/passwd.new"
+    mv "$TARGET/etc/passwd.new" "$TARGET/etc/passwd"
+    awk -F: '$3 < 1000 || $1 == "nobody"' "$TARGET/etc/group" > "$TARGET/etc/group.new" 2>/dev/null \
+        && mv "$TARGET/etc/group.new" "$TARGET/etc/group" || true
+    echo "ERLEDIGT" >> "$LOG"
+else
+    echo "KEIN TARGET" >> "$LOG"
+fi
 exit 0
 RMSCRIPT
 chmod +x /usr/libexec/removeusers
+
+# Calamares settings.conf: removeusers-Instanz und exec-Reihenfolge sicherstellen
+python3 - << 'PYFIX'
+import re, sys
+path = "/etc/calamares/settings.conf"
+try:
+    txt = open(path).read()
+except FileNotFoundError:
+    sys.exit(0)
+changed = False
+# 1. instances-Eintrag hinzufügen falls fehlend
+if "id: removeusers" not in txt:
+    txt = txt.replace(
+        "\nsequence:",
+        "\n- id: removeusers\n  module: shellprocess\n  config: shellprocess_removeusers.conf\n\nsequence:",
+        1
+    )
+    changed = True
+# 2. shellprocess@removeusers vor users einfügen falls fehlend
+if "shellprocess@removeusers" not in txt:
+    txt = re.sub(r'(\n  - users\b)', r'\n  - shellprocess@removeusers\1', txt, count=1)
+    changed = True
+if changed:
+    open(path, "w").write(txt)
+    print("settings.conf angepasst")
+PYFIX
+
+# shellprocess_removeusers.conf schreiben
+cat > /etc/calamares/modules/shellprocess_removeusers.conf << 'MODCONF'
+---
+dontChroot: true
+timeout: 60
+script:
+    - /usr/libexec/removeusers
+MODCONF
 
 # ------------------------------------------------------------- squashfs ------
 say "squashfs erzeugen ($COMP) – das dauert (CPU/RAM-intensiv)"
