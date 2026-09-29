@@ -15,8 +15,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          path: /opt/ilija-os/ilija
           clean: false
+
+      - name: Repo nach /opt/ilija-os/ilija synchronisieren
+        run: |
+          sudo mkdir -p /opt/ilija-os/ilija
+          sudo rsync -a --delete "$GITHUB_WORKSPACE/" /opt/ilija-os/ilija/
+          sudo chown -R root:root /opt/ilija-os/ilija
 
       - name: ISO bauen
         run: sudo bash /opt/ilija-os/ilija/os/iso/build-iso.sh
