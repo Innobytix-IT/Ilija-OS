@@ -14,17 +14,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          clean: false
-
-      - name: Repo nach /opt/ilija-os/ilija synchronisieren
-        run: |
-          sudo mkdir -p /opt/ilija-os/ilija
-          sudo rsync -a --delete "$GITHUB_WORKSPACE/" /opt/ilija-os/ilija/
-          sudo chown -R root:root /opt/ilija-os/ilija
 
       - name: ISO bauen
-        run: sudo bash /opt/ilija-os/ilija/os/iso/build-iso.sh
+        run: sudo bash "$GITHUB_WORKSPACE/os/iso/build-iso.sh"
         env:
           DEBIAN_FRONTEND: noninteractive
 
@@ -33,7 +25,7 @@ jobs:
           unsquashfs -l /var/tmp/ilija-iso/iso/casper/filesystem.squashfs \
             | grep -Ei '\.env$|geheimnis|web-auth|outlook_profil|Ilija-Ablage' \
             | grep -v '\.env\.example' | grep -v 'snap/' | grep -v 'usr/' | grep -v 'var/' \
-            && echo "FEHLER: Kritische Dateien gefunden!" && exit 1 \
+            && { echo "FEHLER: Kritische Dateien gefunden!"; exit 1; } \
             || echo "Sanitize OK"
 
       - name: ISO splitten & hochladen
