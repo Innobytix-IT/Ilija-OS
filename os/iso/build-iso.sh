@@ -95,11 +95,18 @@ EXCLUDES=(
   "home/*/.config/google-chrome/*" "home/*/snap/chromium/*"
   "opt/ilija-os/.local/share/pki/*"
   "home/*/.local/share/pki/*"
+  # GNOME Keyring (gespeicherte Passwörter, Zertifikate)
+  "home/*/.local/share/keyrings/*"
+  "root/.local/share/keyrings/*"
   # Outlook/Browser-Profil in Ilija-Daten
+  "home/*/data/outlook_profil"
   "home/*/data/outlook_profil/*"
   "opt/ilija-os/ilija/data/outlook_profil/*"
   # Chromium-App-Profile (Cookies/Sessions der Apps)
   "home/*/snap/chromium/common/ilija-os-apps/*"
+  # Persönliche Ablage-Verzeichnisse (auch leere Ordner)
+  "home/*/Ilija-Ablage"
+  "srv/ilija-ablage"
 )
 
 # --------------------------------------------------------------- Preflight ---
@@ -211,6 +218,7 @@ if changed:
 PYFIX
 
 # shellprocess_removeusers.conf schreiben
+mkdir -p /etc/calamares/modules
 cat > /etc/calamares/modules/shellprocess_removeusers.conf << 'MODCONF'
 ---
 dontChroot: true

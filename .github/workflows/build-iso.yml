@@ -1,0 +1,50 @@
+name: ISO Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: [self-hosted, ilija-builder]
+    timeout-minutes: 480
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: /opt/ilija-os/ilija
+          clean: false
+
+      - name: ISO bauen
+        run: sudo bash /opt/ilija-os/ilija/os/iso/build-iso.sh
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
+      - name: Sanitize prüfen
+        run: |
+          unsquashfs -l /var/tmp/ilija-iso/iso/casper/filesystem.squashfs \
+            | grep -Ei '\.env$|geheimnis|web-auth|outlook_profil|Ilija-Ablage' \
+            | grep -v '\.env\.example' | grep -v 'snap/' | grep -v 'usr/' | grep -v 'var/' \
+            && echo "FEHLER: Kritische Dateien gefunden!" && exit 1 \
+            || echo "Sanitize OK"
+
+      - name: ISO splitten & hochladen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd /var/tmp/ilija-iso
+          split -b 2000m ilija-os-24.04-amd64.iso ilija-os-24.04-amd64.iso.part
+          sha256sum ilija-os-24.04-amd64.iso > SHA256SUMS
+          TAG=${GITHUB_REF_NAME:-$(date +v%Y.%m.%d)}
+          gh release delete "$TAG" --repo ${{ github.repository }} --yes 2>/dev/null || true
+          gh release create "$TAG" --repo ${{ github.repository }} \
+            --title "Ilija OS $TAG" \
+            --notes "Automatisch gebaut via GitHub Actions (Self-Hosted Runner)" \
+            ilija-os-24.04-amd64.iso.part* SHA256SUMS
+
+      - name: Aufräumen
+        if: always()
+        run: rm -rf /var/tmp/ilija-iso
