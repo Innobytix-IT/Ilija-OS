@@ -134,6 +134,9 @@ KVER="$(uname -r)"
 [ -e "/boot/vmlinuz-$KVER" ] || die "Kernel /boot/vmlinuz-$KVER nicht gefunden"
 # Casper-fähiges initrd sicherstellen
 say "initramfs mit Casper aktualisieren"
+# FRAMEBUFFER=y noetig damit der Plymouth-Hook greift (Boot-Splash im initramfs)
+grep -q '^FRAMEBUFFER=y' /etc/initramfs-tools/initramfs.conf \
+  || echo 'FRAMEBUFFER=y' >> /etc/initramfs-tools/initramfs.conf
 update-initramfs -u || die "update-initramfs fehlgeschlagen"
 
 # Platz grob prüfen
