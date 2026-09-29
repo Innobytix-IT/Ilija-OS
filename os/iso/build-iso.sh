@@ -107,6 +107,9 @@ EXCLUDES=(
   # Persönliche Ablage-Verzeichnisse (auch leere Ordner)
   "home/*/Ilija-Ablage"
   "srv/ilija-ablage"
+  # GitHub Actions Runner (CI-Infrastruktur, nicht Teil des OS)
+  "opt/actions-runner"
+  "opt/actions-runner/*"
 )
 
 # --------------------------------------------------------------- Preflight ---

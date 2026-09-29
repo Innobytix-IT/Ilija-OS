@@ -24,7 +24,7 @@ jobs:
         run: |
           unsquashfs -l /var/tmp/ilija-iso/iso/casper/filesystem.squashfs \
             | grep -Ei '\.env$|geheimnis|web-auth|outlook_profil|Ilija-Ablage' \
-            | grep -v '\.env\.example' | grep -v 'snap/' | grep -v 'usr/' | grep -v 'var/' \
+            | grep -v '\.env\.example' | grep -v 'snap/' | grep -v 'usr/' | grep -v 'var/' | grep -v 'actions-runner' \
             && { echo "FEHLER: Kritische Dateien gefunden!"; exit 1; } \
             || echo "Sanitize OK"
 
