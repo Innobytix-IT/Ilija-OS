@@ -22,11 +22,25 @@ jobs:
 
       - name: Sanitize prüfen
         run: |
-          unsquashfs -l /var/tmp/ilija-iso/iso/casper/filesystem.squashfs \
-            | grep -Ei '\.env$|geheimnis|web-auth|outlook_profil|Ilija-Ablage' \
-            | grep -v '\.env\.example' | grep -v 'snap/' | grep -v 'usr/' | grep -v 'var/' | grep -v 'actions-runner' \
-            && { echo "FEHLER: Kritische Dateien gefunden!"; exit 1; } \
-            || echo "Sanitize OK"
+          set -e
+          LISTING=$(unsquashfs -l /var/tmp/ilija-iso/iso/casper/filesystem.squashfs)
+
+          # Muster fuer alles was NIE ins ISO gehoert
+          BAD_PATTERNS='\.env$|geheimnis|web-auth|outlook_profil|Ilija-Ablage|\.pem$|\.pfx$|\.p12$|id_rsa$|id_ed25519$|id_ecdsa$|id_dsa$|\.gnupg/|\.ssh/|\.aws/|\.azure/|gcloud/|\.docker/config\.json|\.kube/config|\.git-credentials|\.netrc|\.pgpass|\.npmrc|\.pypirc|\.password-store/|\.thunderbird/|/etc/openvpn/|/etc/wireguard/|/etc/wpa_supplicant/|/var/backups/'
+
+          # False-positives ausschliessen: System-Bibliotheken/Beispiele
+          IGNORE='\.env\.example|snap/|usr/lib|usr/share|/venv/|node_modules|actions-runner|/etc/ssl/certs|python3/dist-packages'
+
+          HITS=$(echo "$LISTING" | grep -Ei "$BAD_PATTERNS" | grep -vE "$IGNORE" || true)
+
+          if [ -n "$HITS" ]; then
+            echo "!!! FEHLER: KRITISCHE DATEIEN IM ISO GEFUNDEN !!!"
+            echo "$HITS" | head -50
+            echo "---"
+            echo "(insgesamt $(echo "$HITS" | wc -l) Treffer)"
+            exit 1
+          fi
+          echo "Sanitize OK - keine Credentials im ISO"
 
       - name: ISO splitten & hochladen
         env:

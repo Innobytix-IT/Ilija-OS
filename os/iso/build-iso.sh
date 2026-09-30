@@ -75,8 +75,41 @@ EXCLUDES=(
   "etc/sudoers.d/ilija-apt" "etc/sudoers.d/ilija-restart"
   "etc/sudoers.d/ilija-plymouth" "etc/sudoers.d/ilija-update"
   "etc/sudoers.d/ilija-whatsapp" "etc/sudoers.d/ilija-update-rules"
-  # --- GEHEIMNISSE / persönliche Daten (Ilija/ERP/AHPT) ---
-  "home/*/.ssh/*"
+  # --- STANDARD-CREDENTIAL-STANDORTE (Linux) ---
+  # SSH-Schluessel (User + root)
+  "home/*/.ssh/*" "root/.ssh/*"
+  # GnuPG (private Schluessel!)
+  "home/*/.gnupg/*" "root/.gnupg/*"
+  # Cloud-Provider-Credentials
+  "home/*/.aws/*" "root/.aws/*"
+  "home/*/.config/gcloud/*" "root/.config/gcloud/*"
+  "home/*/.azure/*" "root/.azure/*"
+  # Container/Orchestrierung (Registry-Tokens, Cluster-Zugaenge)
+  "home/*/.docker/config.json" "root/.docker/config.json"
+  "home/*/.kube/*" "root/.kube/*"
+  # Developer-Tokens (Publish/Push-Credentials)
+  "home/*/.git-credentials" "root/.git-credentials"
+  "home/*/.netrc" "root/.netrc"
+  "home/*/.npmrc" "root/.npmrc"
+  "home/*/.pypirc" "root/.pypirc"
+  "home/*/.cargo/credentials*" "root/.cargo/credentials*"
+  # Datenbank-Passwoerter
+  "home/*/.pgpass" "root/.pgpass" "home/*/.mysql_history" "root/.mysql_history"
+  # Password-Manager Stores
+  "home/*/.password-store/*" "root/.password-store/*"
+  # Netzwerk-Credentials
+  "etc/wpa_supplicant/*"                # WiFi (Zusatz zum NetworkManager)
+  "etc/openvpn/*"                       # VPN-Configs + Keys
+  "etc/wireguard/*"                     # WireGuard privater Schluessel
+  # E-Mail-Profile (Konten + gespeicherte Passwoerter)
+  "home/*/.thunderbird/*" "root/.thunderbird/*"
+  # System-Datenbanken (koennen Daten enthalten)
+  "var/lib/mysql/*" "var/lib/postgresql/*" "var/lib/mongodb/*"
+  # Alte Passwort-Datei-Backups
+  "var/backups/*"
+  # Fehlende Root-Aequivalente zu Home-Ausschluessen
+  "root/.python_history" "root/.mozilla/*" "root/.local/share/Trash/*"
+  # --- ILIJA/ERP/AHPT-spezifisch ---
   # AHPT: Home-Pfad und /opt-Pfad (geheimnis* deckt geheimnis_elitebook etc.)
   "home/*/.ahpt/*.key" "home/*/.ahpt/geheimnis*" "home/*/.ahpt/client*.key"
   "home/*/.ahpt/*.toml"
