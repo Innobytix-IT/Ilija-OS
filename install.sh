@@ -421,35 +421,21 @@ if [[ ! "$UPDATE_CHOICE" =~ ^[nN]$ ]]; then
     ILIJA_ABS="$(cd "$INSTALL_DIR" && pwd)"
     UPDATE_SCRIPT="$(dirname "$ILIJA_ABS")/ilija-update.sh"
 
-    # Update-Skript erstellen
-    cat > "$UPDATE_SCRIPT" << UPDATEEOF
+    # Update-Skript aus Repo kopieren (kanonische Version in system/ilija-update.sh).
+    # Diese Version enthält auch Plymouth-Auto-Install und Self-Update.
+    CANONICAL_UPDATE="$INSTALL_DIR/system/ilija-update.sh"
+    if [ -f "$CANONICAL_UPDATE" ]; then
+        cp "$CANONICAL_UPDATE" "$UPDATE_SCRIPT"
+    else
+        print_warn "system/ilija-update.sh nicht gefunden – Fallback auf einfaches Update"
+        cat > "$UPDATE_SCRIPT" << UPDATEEOF
 #!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
-echo "=== Ilija OS Update gestartet ==="
-
-echo "--- System-Update (apt) ---"
-sudo apt-get update -qq
-sudo apt-get upgrade -y -qq
-sudo apt-get autoremove -y -qq
-echo "--- System-Update abgeschlossen ---"
-
-echo "--- Ilija OS Update (GitHub) ---"
-git config --global --add safe.directory "${INSTALL_DIR}" 2>/dev/null || true
-cd "${INSTALL_DIR}"
-git fetch origin main --quiet
-LOCAL=\$(git rev-parse HEAD)
-REMOTE=\$(git rev-parse origin/main)
-if [ "\$LOCAL" != "\$REMOTE" ]; then
-    git pull origin main --quiet
-    source "${INSTALL_DIR}/venv/bin/activate"
-    pip install -r "${INSTALL_DIR}/requirements.txt" --quiet
+cd "${INSTALL_DIR}" && git pull origin main --quiet && \
+    source venv/bin/activate && pip install -r requirements.txt --quiet && \
     sudo systemctl restart ilija 2>/dev/null || true
-    echo "--- Ilija OS aktualisiert ---"
-else
-    echo "--- Ilija OS ist aktuell (kein Update noetig) ---"
-fi
-echo "=== Fertig ==="
 UPDATEEOF
+    fi
     chmod +x "$UPDATE_SCRIPT"
     print_ok "Update-Skript erstellt: $UPDATE_SCRIPT"
 

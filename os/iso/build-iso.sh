@@ -318,41 +318,19 @@ SUDOEOF
     chmod 440 /etc/sudoers.d/ilija-update-rules
     echo "Sudoers eingerichtet für $NEW_USER" >> "$LOG"
 
-    # ilija-update.sh an dem Pfad erstellen, den web_server.py erwartet
+    # ilija-update.sh aus dem Repo an den Pfad kopieren, den web_server.py erwartet.
+    # Die kanonische Version liegt in system/ilija-update.sh (mit Plymouth-Auto-
+    # Install und Self-Update).
     ILIJA_DIR=/opt/ilija-os/ilija
     UPDATE_SCRIPT=/opt/ilija-os/ilija-update.sh
-    if [ -d "$ILIJA_DIR" ]; then
-        cat > "$UPDATE_SCRIPT" << UPDATEEOF
-#!/bin/bash
-export DEBIAN_FRONTEND=noninteractive
-echo "=== Ilija OS Update gestartet ==="
-
-echo "--- System-Update (apt) ---"
-sudo apt-get update -qq
-sudo apt-get upgrade -y -qq
-sudo apt-get autoremove -y -qq
-echo "--- System-Update abgeschlossen ---"
-
-echo "--- Ilija OS Update (GitHub) ---"
-git config --global --add safe.directory "$ILIJA_DIR" 2>/dev/null || true
-cd "$ILIJA_DIR"
-git fetch origin main --quiet
-LOCAL=\$(git rev-parse HEAD)
-REMOTE=\$(git rev-parse origin/main)
-if [ "\$LOCAL" != "\$REMOTE" ]; then
-    git pull origin main --quiet
-    source "$ILIJA_DIR/venv/bin/activate"
-    pip install -r "$ILIJA_DIR/requirements.txt" --quiet
-    sudo systemctl restart ilija 2>/dev/null || true
-    echo "--- Ilija OS aktualisiert ---"
-else
-    echo "--- Ilija OS ist aktuell (kein Update noetig) ---"
-fi
-echo "=== Fertig ==="
-UPDATEEOF
+    CANONICAL_UPDATE="$ILIJA_DIR/system/ilija-update.sh"
+    if [ -f "$CANONICAL_UPDATE" ]; then
+        cp "$CANONICAL_UPDATE" "$UPDATE_SCRIPT"
         chmod +x "$UPDATE_SCRIPT"
         chown "$NEW_USER:$NEW_USER" "$UPDATE_SCRIPT"
-        echo "ilija-update.sh erstellt: $UPDATE_SCRIPT" >> "$LOG"
+        echo "ilija-update.sh aus Repo kopiert: $UPDATE_SCRIPT" >> "$LOG"
+    else
+        echo "WARNUNG: $CANONICAL_UPDATE nicht gefunden" >> "$LOG"
     fi
 
     # Symlink im Home des Nutzers (für manuellen Aufruf)
