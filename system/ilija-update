@@ -44,25 +44,25 @@ PLYMOUTH_DST="/usr/share/plymouth/themes/ilija"
 
 if [ -d "$PLYMOUTH_SRC" ]; then
     PLYMOUTH_CHANGED=0
-    for f in "$PLYMOUTH_SRC"/*; do
-        fname=$(basename "$f")
-        dst="$PLYMOUTH_DST/$fname"
+    while IFS= read -r -d '' f; do
+        rel="${f#$PLYMOUTH_SRC/}"
+        dst="$PLYMOUTH_DST/$rel"
         if [ ! -f "$dst" ] || ! cmp -s "$f" "$dst"; then
             PLYMOUTH_CHANGED=1
             break
         fi
-    done
+    done < <(find "$PLYMOUTH_SRC" -type f -print0)
 
     if [ "$PLYMOUTH_CHANGED" = "1" ]; then
         log "Plymouth-Theme aktualisieren..."
-        mkdir -p "$PLYMOUTH_DST"
-        cp "$PLYMOUTH_SRC"/* "$PLYMOUTH_DST/"
-        chmod 644 "$PLYMOUTH_DST"/*
-        if plymouth-set-default-theme --rebuild-initrd ilija 2>&1; then
-            log "Plymouth-Theme 'ilija' aktiviert."
-        else
-            log "WARNUNG: plymouth-set-default-theme fehlgeschlagen – Theme-Dateien wurden kopiert."
-        fi
+        mkdir -p "$PLYMOUTH_DST/spinner"
+        cp -r "$PLYMOUTH_SRC"/. "$PLYMOUTH_DST/"
+        find "$PLYMOUTH_DST" -type f -exec chmod 644 {} \;
+        sudo update-alternatives --install /usr/share/plymouth/themes/default.plymouth \
+            default.plymouth /usr/share/plymouth/themes/ilija/ilija.plymouth 200
+        sudo update-alternatives --set default.plymouth /usr/share/plymouth/themes/ilija/ilija.plymouth
+        sudo update-initramfs -u
+        log "Plymouth-Theme 'ilija' aktiviert."
     fi
 fi
 

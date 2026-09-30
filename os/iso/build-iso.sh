@@ -48,6 +48,9 @@ die(){ echo -e "\033[1;31mFEHLER: $*\033[0m" >&2; exit 1; }
 
 [ "$(id -u)" = 0 ] || die "Bitte als root ausführen (sudo)."
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"   # os/iso/build-iso.sh → Repo-Root
+
 # ------------------------------------------------------------- Sanitize ------
 # Pfade, die NICHT ins ISO dürfen (Geheimnisse, Nutzerdaten, Maschinenidentität,
 # Caches/Logs, Laufzeit). Relativ zu / (mksquashfs -wildcards -e).
@@ -135,6 +138,23 @@ fi
 
 KVER="$(uname -r)"
 [ -e "/boot/vmlinuz-$KVER" ] || die "Kernel /boot/vmlinuz-$KVER nicht gefunden"
+
+# ------------------------------------------------------------- Plymouth ------
+say "Plymouth-Theme 'ilija' installieren"
+PLYMOUTH_SRC="$REPO_ROOT/system/plymouth"
+PLYMOUTH_DST="/usr/share/plymouth/themes/ilija"
+if [ -d "$PLYMOUTH_SRC" ] && ls "$PLYMOUTH_SRC"/*.plymouth >/dev/null 2>&1; then
+    mkdir -p "$PLYMOUTH_DST/spinner"
+    cp -r "$PLYMOUTH_SRC"/. "$PLYMOUTH_DST/"
+    find "$PLYMOUTH_DST" -type f -exec chmod 644 {} \;
+    update-alternatives --install /usr/share/plymouth/themes/default.plymouth \
+        default.plymouth "$PLYMOUTH_DST/ilija.plymouth" 200 || true
+    update-alternatives --set default.plymouth "$PLYMOUTH_DST/ilija.plymouth" || true
+    echo "  Plymouth-Theme 'ilija' installiert ($PLYMOUTH_DST)"
+else
+    echo "  WARNUNG: $PLYMOUTH_SRC nicht gefunden – überspringe Plymouth-Theme"
+fi
+
 # Casper-fähiges initrd sicherstellen
 say "initramfs mit Casper aktualisieren"
 # FRAMEBUFFER=y noetig damit der Plymouth-Hook greift (Boot-Splash im initramfs)
@@ -257,11 +277,13 @@ if [ -n "$NEW_USER" ]; then
         echo "chown /opt/ilija-os → $NEW_USER" >> "$LOG"
     fi
 
-    # NOPASSWD sudoers für apt-get und systemctl restart ilija
+    # NOPASSWD sudoers für apt-get, systemctl restart ilija und Plymouth-Updates
     cat > /etc/sudoers.d/ilija-update-rules << SUDOEOF
 $NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get
 $NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ilija
 $NEW_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija
+$NEW_USER ALL=(ALL) NOPASSWD: /usr/sbin/update-initramfs
+$NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/update-alternatives
 SUDOEOF
     chmod 440 /etc/sudoers.d/ilija-update-rules
     echo "Sudoers eingerichtet für $NEW_USER" >> "$LOG"

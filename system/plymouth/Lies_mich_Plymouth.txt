@@ -1,0 +1,77 @@
+ILIJA OS – PLYMOUTH BOOT-SCREEN
+================================
+
+DESIGN-ANSATZ (WICHTIG – nicht ändern ohne zu lesen!)
+------------------------------------------------------
+Das Ilija OS Boot-Design verwendet NICHT das Plymouth "script"-Modul
+(kein Image.Text() / kein ilija.script), sondern das "two-step"-Modul
+mit ECHTEN PNG-Bilddateien.
+
+MODUL: two-step  (ModuleName=two-step in ilija.plymouth)
+KEINE ilija.script – die wird ignoriert!
+
+DATEI-STRUKTUR
+--------------
+system/plymouth/
+├── ilija.plymouth          ← Theme-Konfiguration (ModuleName=two-step)
+├── lubuntu_logo.png        ← Ilija-Logo (Kopf mit Kreisring, ~49 KB)
+├── watermark.png           ← "ILIJA OS" Schriftzug unten (~23 KB)
+├── password_field.png      ← Eingabefeld-Hintergrund für Passwort-Abfragen
+├── progress_dot_off.png    ← Punkt für Fortschrittsanzeige (aus)
+├── progress_dot_on.png     ← Punkt für Fortschrittsanzeige (an)
+└── spinner/
+    ├── animation-0001.png  ← 201 Frames: rotierender Leuchtring um das Logo
+    │   ...
+    ├── animation-0201.png
+    ├── throbber-0001.png   ← 200 Frames: Warte-Animation (z.B. bei Passwort-Abfrage)
+    │   ...
+    ├── throbber-0200.png
+    └── watermark.png       ← Watermark-Kopie im Spinner-Verzeichnis
+
+HERKUNFT DER DATEIEN
+--------------------
+Original auf dem HP EliteBook (192.168.152.46):
+  /usr/share/plymouth/themes/lubuntu-logo/
+
+Das EliteBook-Team hat das Lubuntu-Logo-Theme MODIFIZIERT – alle PNG-Dateien
+wurden durch eigene Ilija-Designs ersetzt. Die Backups der originalen Lubuntu-
+Dateien liegen dort als *.vogel.bak.
+
+Die ilija.plymouth nutzt das lubuntu-logo-Theme als Basis (gleiche Konfiguration,
+eigene ImageDir: /usr/share/plymouth/themes/ilija/spinner).
+
+INSTALLATION (automatisch via ilija-update.sh)
+----------------------------------------------
+Das Update-Script kopiert bei Änderungen:
+  /opt/ilija-os/ilija/system/plymouth/ → /usr/share/plymouth/themes/ilija/
+Danach:
+  sudo update-alternatives --install ... ilija.plymouth 200
+  sudo update-alternatives --set default.plymouth .../ilija.plymouth
+  sudo update-initramfs -u
+
+Dafür braucht der Service-User sudo-Rechte für:
+  /usr/sbin/update-initramfs
+  /usr/bin/update-alternatives
+(eingerichtet in /etc/sudoers.d/ilija-update-rules bzw. ilija-plymouth)
+
+ISO-BUILD (automatisch via build-iso.sh)
+-----------------------------------------
+build-iso.sh installiert das Theme AUTOMATISCH vor update-initramfs:
+  - Kopiert system/plymouth/ → /usr/share/plymouth/themes/ilija/
+  - Setzt update-alternatives
+  - update-initramfs -u bakt das Theme ins initramfs
+
+SEHEN WIE ES AUSSEHEN SOLL
+----------------------------
+REFERENZ: HP EliteBook (192.168.152.46) beim Booten fotografiert.
+Logo: Menschlicher Kopf mit Schaltkreis-Muster in einem Leuchtring
+Farben: Dunkles Blau-Grau (#0B1520 ähnlich), Gold/Cyan Leuchten
+Text: "ILIJA OS" in stilisierter Schrift mit Dreieck-Symbol und Spiegelung
+
+FEHLER-VERMEIDUNG
+-----------------
+FALSCH: system/plymouth/ilija.script mit Image.Text("Ilija OS", ...)
+        → zeigt nur grauen Text, kein echtes Logo, keine Animation
+
+RICHTIG: PNG-Dateien + ModuleName=two-step in ilija.plymouth
+         → zeigt das echte animierte Ilija OS Logo mit Leuchtringen

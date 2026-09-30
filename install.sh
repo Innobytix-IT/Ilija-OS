@@ -461,6 +461,10 @@ UPDATEEOF
         echo "$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ilija, /bin/systemctl restart ilija" \
             | sudo tee /etc/sudoers.d/ilija-restart > /dev/null
         sudo chmod 440 /etc/sudoers.d/ilija-restart
+        printf '%s ALL=(ALL) NOPASSWD: /usr/sbin/update-initramfs\n%s ALL=(ALL) NOPASSWD: /usr/bin/update-alternatives\n' \
+            "$CURRENT_USER" "$CURRENT_USER" \
+            | sudo tee /etc/sudoers.d/ilija-plymouth > /dev/null
+        sudo chmod 440 /etc/sudoers.d/ilija-plymouth
 
         # Falls ein dedizierter Dienst-User existiert (z.B. 'ilija' im ISO-Betrieb),
         # darf dieser das Update-Script als aktueller Nutzer ausführen (für Web-UI-Button).
