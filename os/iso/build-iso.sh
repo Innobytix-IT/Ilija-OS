@@ -233,6 +233,119 @@ script:
     - /usr/libexec/removeusers
 MODCONF
 
+# Post-Install-Setup: SSH-Schlüssel, chown, sudoers, ilija-update.sh
+# Läuft im chroot des frisch installierten Systems (nach users-Modul)
+cat > /usr/libexec/ilija-postinstall << 'POSTSCRIPT'
+#!/bin/bash
+LOG=/run/ilija-postinstall.log
+echo "=== ilija-postinstall ===" > "$LOG"; date >> "$LOG"
+
+# Ersten normalen Nutzer (UID >= 1000) ermitteln
+NEW_USER=$(awk -F: '$3 >= 1000 && $3 < 65000 && $1 != "nobody" {print $1; exit}' /etc/passwd)
+echo "NEW_USER=${NEW_USER:-LEER}" >> "$LOG"
+
+# SSH-Schlüssel generieren (werden im ISO ausgeschlossen und müssen neu erstellt werden)
+ssh-keygen -A >> "$LOG" 2>&1 && echo "SSH-Schlüssel generiert" >> "$LOG" || echo "WARNUNG: ssh-keygen -A fehlgeschlagen" >> "$LOG"
+systemctl enable ssh >> "$LOG" 2>&1 || true
+
+if [ -n "$NEW_USER" ]; then
+    NEW_HOME=$(getent passwd "$NEW_USER" | cut -d: -f6)
+
+    # /opt/ilija-os dem neuen Nutzer übergeben (inkl. .git → update-Erkennung)
+    if [ -d /opt/ilija-os ]; then
+        chown -R "$NEW_USER:$NEW_USER" /opt/ilija-os >> "$LOG" 2>&1
+        echo "chown /opt/ilija-os → $NEW_USER" >> "$LOG"
+    fi
+
+    # NOPASSWD sudoers für apt-get und systemctl restart ilija
+    cat > /etc/sudoers.d/ilija-update-rules << SUDOEOF
+$NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get
+$NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ilija
+$NEW_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija
+SUDOEOF
+    chmod 440 /etc/sudoers.d/ilija-update-rules
+    echo "Sudoers eingerichtet für $NEW_USER" >> "$LOG"
+
+    # ilija-update.sh an dem Pfad erstellen, den web_server.py erwartet
+    ILIJA_DIR=/opt/ilija-os/ilija
+    UPDATE_SCRIPT=/opt/ilija-os/ilija-update.sh
+    if [ -d "$ILIJA_DIR" ]; then
+        cat > "$UPDATE_SCRIPT" << UPDATEEOF
+#!/bin/bash
+export DEBIAN_FRONTEND=noninteractive
+echo "=== Ilija OS Update gestartet ==="
+
+echo "--- System-Update (apt) ---"
+sudo apt-get update -qq
+sudo apt-get upgrade -y -qq
+sudo apt-get autoremove -y -qq
+echo "--- System-Update abgeschlossen ---"
+
+echo "--- Ilija OS Update (GitHub) ---"
+git config --global --add safe.directory "$ILIJA_DIR" 2>/dev/null || true
+cd "$ILIJA_DIR"
+git fetch origin main --quiet
+LOCAL=\$(git rev-parse HEAD)
+REMOTE=\$(git rev-parse origin/main)
+if [ "\$LOCAL" != "\$REMOTE" ]; then
+    git pull origin main --quiet
+    source "$ILIJA_DIR/venv/bin/activate"
+    pip install -r "$ILIJA_DIR/requirements.txt" --quiet
+    sudo systemctl restart ilija 2>/dev/null || true
+    echo "--- Ilija OS aktualisiert ---"
+else
+    echo "--- Ilija OS ist aktuell (kein Update noetig) ---"
+fi
+echo "=== Fertig ==="
+UPDATEEOF
+        chmod +x "$UPDATE_SCRIPT"
+        chown "$NEW_USER:$NEW_USER" "$UPDATE_SCRIPT"
+        echo "ilija-update.sh erstellt: $UPDATE_SCRIPT" >> "$LOG"
+    fi
+
+    # Symlink im Home des Nutzers (für manuellen Aufruf)
+    if [ -n "$NEW_HOME" ] && [ ! -f "$NEW_HOME/ilija-update.sh" ]; then
+        ln -s "$UPDATE_SCRIPT" "$NEW_HOME/ilija-update.sh" 2>/dev/null || true
+    fi
+fi
+
+echo "=== ilija-postinstall abgeschlossen ===" >> "$LOG"
+exit 0
+POSTSCRIPT
+chmod +x /usr/libexec/ilija-postinstall
+
+# Calamares settings.conf: ilija-postinstall nach users einfügen
+python3 - << 'PYFIX2'
+import re, sys
+path = "/etc/calamares/settings.conf"
+try:
+    txt = open(path).read()
+except FileNotFoundError:
+    sys.exit(0)
+changed = False
+if "id: ilija-postinstall" not in txt:
+    txt = txt.replace(
+        "\nsequence:",
+        "\n- id: ilija-postinstall\n  module: shellprocess\n  config: shellprocess_ilija_postinstall.conf\n\nsequence:",
+        1
+    )
+    changed = True
+if "shellprocess@ilija-postinstall" not in txt:
+    txt = re.sub(r'(\n  - users\b)', r'\1\n  - shellprocess@ilija-postinstall', txt, count=1)
+    changed = True
+if changed:
+    open(path, "w").write(txt)
+    print("settings.conf: ilija-postinstall hinzugefügt")
+PYFIX2
+
+cat > /etc/calamares/modules/shellprocess_ilija_postinstall.conf << 'MODCONF2'
+---
+dontChroot: false
+timeout: 120
+script:
+    - /usr/libexec/ilija-postinstall
+MODCONF2
+
 # ------------------------------------------------------------- squashfs ------
 say "squashfs erzeugen ($COMP) – das dauert (CPU/RAM-intensiv)"
 EXARGS=()

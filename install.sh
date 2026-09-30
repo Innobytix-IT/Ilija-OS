@@ -417,7 +417,9 @@ if [[ ! "$UPDATE_CHOICE" =~ ^[nN]$ ]]; then
     UPDATE_HOUR="${UPDATE_HOUR:-3}"; UPDATE_MIN="${UPDATE_MIN:-0}"
 
     CURRENT_USER=$(whoami)
-    UPDATE_SCRIPT="$HOME/ilija-update.sh"
+    # Update-Skript dort ablegen, wo web_server.py es erwartet: eine Ebene über INSTALL_DIR
+    ILIJA_ABS="$(cd "$INSTALL_DIR" && pwd)"
+    UPDATE_SCRIPT="$(dirname "$ILIJA_ABS")/ilija-update.sh"
 
     # Update-Skript erstellen
     cat > "$UPDATE_SCRIPT" << UPDATEEOF
@@ -456,7 +458,7 @@ UPDATEEOF
         echo "$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get" \
             | sudo tee /etc/sudoers.d/ilija-apt > /dev/null
         sudo chmod 440 /etc/sudoers.d/ilija-apt
-        echo "$CURRENT_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija" \
+        echo "$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ilija, /bin/systemctl restart ilija" \
             | sudo tee /etc/sudoers.d/ilija-restart > /dev/null
         sudo chmod 440 /etc/sudoers.d/ilija-restart
 
