@@ -69,6 +69,12 @@ EXCLUDES=(
   "etc/machine-id" "var/lib/dbus/machine-id"
   "etc/ssh/ssh_host_*"
   "etc/NetworkManager/system-connections/*"   # WLAN-Passwörter etc.
+  # Build-Host-spezifische sudoers-Dateien (Calamares-Postinstall schreibt neue
+  # für den auf dem Zielsystem angelegten User – die alten mit dem Namen des
+  # Builder-Users hier auszuschließen vermeidet tote Regeln im Installat)
+  "etc/sudoers.d/ilija-apt" "etc/sudoers.d/ilija-restart"
+  "etc/sudoers.d/ilija-plymouth" "etc/sudoers.d/ilija-update"
+  "etc/sudoers.d/ilija-whatsapp" "etc/sudoers.d/ilija-update-rules"
   # --- GEHEIMNISSE / persönliche Daten (Ilija/ERP/AHPT) ---
   "home/*/.ssh/*"
   # AHPT: Home-Pfad und /opt-Pfad (geheimnis* deckt geheimnis_elitebook etc.)
@@ -160,6 +166,15 @@ say "initramfs mit Casper aktualisieren"
 # FRAMEBUFFER=y noetig damit der Plymouth-Hook greift (Boot-Splash im initramfs)
 grep -q '^FRAMEBUFFER=y' /etc/initramfs-tools/initramfs.conf \
   || echo 'FRAMEBUFFER=y' >> /etc/initramfs-tools/initramfs.conf
+
+# Live-Boot-Initrd muss auf jeder Hardware das grafische Plymouth zeigen können.
+# Deshalb ALLE gängigen GPU-Treiber ins initramfs baken – jedes Modul lädt nur,
+# wenn seine Hardware auch tatsächlich vorhanden ist, das kostet also nichts.
+for gpu_mod in amdgpu radeon i915 nouveau; do
+    grep -q "^$gpu_mod\$" /etc/initramfs-tools/modules \
+        || echo "$gpu_mod" >> /etc/initramfs-tools/modules
+done
+
 update-initramfs -u || die "update-initramfs fehlgeschlagen"
 
 # Platz grob prüfen
