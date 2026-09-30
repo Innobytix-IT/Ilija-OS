@@ -105,6 +105,10 @@ EXCLUDES=(
   "home/*/.thunderbird/*" "root/.thunderbird/*"
   # System-Datenbanken (koennen Daten enthalten)
   "var/lib/mysql/*" "var/lib/postgresql/*" "var/lib/mongodb/*"
+  # fwupd Client-Zertifikate (werden beim ersten Boot neu generiert; sollen nicht
+  # geteilt werden, sonst identifiziert sich jede installierte Kopie als dieselbe
+  # Maschine gegenueber LVFS)
+  "var/lib/fwupd/pki/*"
   # Alte Passwort-Datei-Backups
   "var/backups/*"
   # Fehlende Root-Aequivalente zu Home-Ausschluessen
