@@ -75,3 +75,41 @@ FALSCH: system/plymouth/ilija.script mit Image.Text("Ilija OS", ...)
 
 RICHTIG: PNG-Dateien + ModuleName=two-step in ilija.plymouth
          → zeigt das echte animierte Ilija OS Logo mit Leuchtringen
+
+
+BOOT vs. SHUTDOWN – WICHTIG!
+-----------------------------
+SYMPTOM: Beim Herunterfahren sieht man das Ilija-Logo (grafisch),
+         beim Hochfahren aber nur "Lubuntu 24.04 LTS" (blauer Text-Screen).
+
+URSACHE: Beim Boot ist der Grafik-Treiber (amdgpu/radeon/i915) noch nicht
+         geladen, wenn Plymouth startet. Plymouth fällt auf text.plymouth
+         zurück. Beim Shutdown ist die Grafik bereits aktiv, deshalb
+         funktioniert es dort.
+
+LÖSUNG (auf betroffener Maschine ausführen):
+
+  1. Framebuffer im initramfs aktivieren:
+     grep -q '^FRAMEBUFFER=y' /etc/initramfs-tools/initramfs.conf \
+       || echo 'FRAMEBUFFER=y' | sudo tee -a /etc/initramfs-tools/initramfs.conf
+
+  2. plymouth-themes Paket installieren (baut initramfs mit richtiger Struktur):
+     sudo apt-get install -y plymouth-themes
+
+  3. GPU-Treiber-Module früh laden (Beispiel für AMD Radeon, für Intel: i915):
+     echo -e "amdgpu\nradeon" | sudo tee -a /etc/initramfs-tools/modules
+
+  4. Initramfs neu bauen:
+     sudo update-initramfs -u
+
+  5. Neu starten.
+
+HARDWARE-ERKENNUNG:
+  lspci | grep -iE 'vga|display|3d'
+  - AMD/ATI:  Modul "amdgpu" (und/oder "radeon" für ältere Chips wie Mullins)
+  - Intel:    Modul "i915"
+  - NVIDIA:   Modul "nouveau" (Open-Source) oder "nvidia" (proprietär)
+
+Der build-iso.sh installiert diese Fixes automatisch. Für Bestandssysteme
+(z.B. Melanies Futro S930 mit AMD Mullins) müssen sie einmalig manuell
+ausgeführt werden.

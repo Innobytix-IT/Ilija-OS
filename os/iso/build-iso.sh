@@ -285,6 +285,36 @@ $NEW_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija
 $NEW_USER ALL=(ALL) NOPASSWD: /usr/sbin/update-initramfs
 $NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/update-alternatives
 SUDOEOF
+
+    # Plymouth-Boot-Fix: Framebuffer im initramfs aktivieren, damit das
+    # grafische Ilija-Logo auch beim BOOT (nicht nur beim Shutdown) erscheint.
+    # Ohne FRAMEBUFFER=y und geladene GPU-Module fällt Plymouth auf text.plymouth
+    # zurück ("Lubuntu 24.04 LTS"-Textscreen).
+    grep -q '^FRAMEBUFFER=y' /etc/initramfs-tools/initramfs.conf \
+        || echo 'FRAMEBUFFER=y' >> /etc/initramfs-tools/initramfs.conf
+    echo "FRAMEBUFFER=y gesetzt" >> "$LOG"
+
+    # GPU-Treibermodule anhand erkannter Hardware ins initramfs zwingen
+    GPU_INFO=$(lspci | grep -iE 'vga|display|3d' 2>/dev/null || echo "")
+    GPU_MODS=""
+    if echo "$GPU_INFO" | grep -qi 'amd\|ati\|radeon'; then
+        GPU_MODS="amdgpu radeon"
+    elif echo "$GPU_INFO" | grep -qi 'intel'; then
+        GPU_MODS="i915"
+    elif echo "$GPU_INFO" | grep -qi 'nvidia'; then
+        GPU_MODS="nouveau"
+    fi
+    for m in $GPU_MODS; do
+        grep -q "^$m\$" /etc/initramfs-tools/modules \
+            || echo "$m" >> /etc/initramfs-tools/modules
+    done
+    echo "GPU-Module ins initramfs: ${GPU_MODS:-KEINE ERKANNT}" >> "$LOG"
+
+    # plymouth-themes stellt sicher, dass alle Plymouth-Assets vorhanden sind
+    DEBIAN_FRONTEND=noninteractive apt-get install -y plymouth-themes >> "$LOG" 2>&1 || true
+
+    # Initramfs mit Framebuffer + GPU-Modulen + Ilija-Theme neu bauen
+    update-initramfs -u >> "$LOG" 2>&1 && echo "initramfs neu gebaut (mit GPU-Modulen)" >> "$LOG"
     chmod 440 /etc/sudoers.d/ilija-update-rules
     echo "Sudoers eingerichtet für $NEW_USER" >> "$LOG"
 
