@@ -28,8 +28,8 @@ jobs:
           # Muster fuer alles was NIE ins ISO gehoert
           BAD_PATTERNS='\.env$|geheimnis|web-auth|outlook_profil|Ilija-Ablage|\.pem$|\.pfx$|\.p12$|id_rsa$|id_ed25519$|id_ecdsa$|id_dsa$|\.gnupg/|\.ssh/|\.aws/|\.azure/|gcloud/|\.docker/config\.json|\.kube/config|\.git-credentials|\.netrc|\.pgpass|\.npmrc|\.pypirc|\.password-store/|\.thunderbird/|/etc/openvpn/|/etc/wireguard/|/etc/wpa_supplicant/|/var/backups/'
 
-          # False-positives ausschliessen: System-Bibliotheken/Beispiele
-          IGNORE='\.env\.example|snap/|usr/lib|usr/share|/venv/|node_modules|actions-runner|/etc/ssl/certs|python3/dist-packages'
+          # False-positives ausschliessen: System-Bibliotheken/Beispiele/Public-Certs
+          IGNORE='\.env\.example|snap/|usr/lib|usr/share|/venv/|node_modules|actions-runner|/etc/ssl/certs|python3/dist-packages|/etc/pki/fwupd|/etc/pki/fwupd-metadata'
 
           HITS=$(echo "$LISTING" | grep -Ei "$BAD_PATTERNS" | grep -vE "$IGNORE" || true)
 

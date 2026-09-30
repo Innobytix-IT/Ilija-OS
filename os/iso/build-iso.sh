@@ -76,8 +76,8 @@ EXCLUDES=(
   "etc/sudoers.d/ilija-plymouth" "etc/sudoers.d/ilija-update"
   "etc/sudoers.d/ilija-whatsapp" "etc/sudoers.d/ilija-update-rules"
   # --- STANDARD-CREDENTIAL-STANDORTE (Linux) ---
-  # SSH-Schluessel (User + root)
-  "home/*/.ssh/*" "root/.ssh/*"
+  # SSH-Schluessel (User + root + Ilija-Systempfad)
+  "home/*/.ssh/*" "root/.ssh/*" "opt/ilija-os/.ssh/*"
   # GnuPG (private Schluessel!)
   "home/*/.gnupg/*" "root/.gnupg/*"
   # Cloud-Provider-Credentials
