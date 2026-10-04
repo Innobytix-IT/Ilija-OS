@@ -200,7 +200,16 @@ if id "$CASPER_USER" &>/dev/null; then
     chown "$CASPER_USER:$CASPER_USER" "$CASPER_HOME"
     chmod 755 "$CASPER_HOME"
     if [ "$CURRENT_HOME" != "$CASPER_HOME" ]; then
-        usermod -d "$CASPER_HOME" "$CASPER_USER"
+        # Direkt /etc/passwd editieren statt usermod -d, weil usermod bei
+        # laufenden Prozessen des Users fehlschlaegt (z.B. WhatsApp-Bridge
+        # unter ilija-User)
+        OLD_LINE=$(getent passwd "$CASPER_USER")
+        NEW_LINE=$(echo "$OLD_LINE" | awk -F: -v OFS=: -v h="$CASPER_HOME" '{$6=h; print}')
+        # BSD-sed-sicher: Backup + atomar
+        awk -F: -v OFS=: -v u="$CASPER_USER" -v h="$CASPER_HOME" \
+            '$1==u {$6=h} {print}' /etc/passwd > /etc/passwd.new \
+            && chmod --reference=/etc/passwd /etc/passwd.new \
+            && mv /etc/passwd.new /etc/passwd
         echo "  HOME von $CASPER_USER korrigiert: $CURRENT_HOME -> $CASPER_HOME"
     else
         echo "  HOME von $CASPER_USER ist bereits $CASPER_HOME"
