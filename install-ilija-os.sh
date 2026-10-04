@@ -21,6 +21,34 @@ ok()   { echo -e "   ${GREEN}OK${RESET} $*"; }
 warn() { echo -e "   ${YELLOW}WARNUNG${RESET} $*"; }
 die()  { echo -e "${RED}FEHLER:${RESET} $*" >&2; exit 1; }
 
+# Spinner mit Live-Uhr fuer stille Operationen. Zeigt alle 0.3s eine
+# rotierende Figur + Beschreibung + verstrichene Sekunden. Bei Fehler
+# werden die letzten 20 Log-Zeilen angezeigt.
+run_quiet() {
+    local msg="$1"; shift
+    local logfile; logfile=$(mktemp /tmp/ilija-install.XXXXXX.log)
+    "$@" >"$logfile" 2>&1 &
+    local pid=$! chars='|/-\' i=0 start=$SECONDS
+    while kill -0 "$pid" 2>/dev/null; do
+        printf "\r   ${CYAN}%s${RESET} %s ... (%ds)" \
+            "${chars:$((i % 4)):1}" "$msg" "$((SECONDS - start))"
+        sleep 0.3
+        i=$((i + 1))
+    done
+    wait "$pid"; local rc=$?
+    local elapsed=$((SECONDS - start))
+    if [ "$rc" -eq 0 ]; then
+        printf "\r   ${GREEN}OK${RESET} %s (%ds)                                \n" "$msg" "$elapsed"
+        rm -f "$logfile"
+    else
+        printf "\r   ${RED}FEHLER${RESET} %s (nach %ds)                        \n" "$msg" "$elapsed"
+        echo "   Letzte Log-Zeilen:"
+        tail -20 "$logfile" | sed 's/^/      /'
+        rm -f "$logfile"
+        return $rc
+    fi
+}
+
 # ----------------------------------------------------------------------- Preflight
 [ "$(id -u)" = 0 ] || die "Bitte als root ausführen: sudo $0"
 
@@ -78,31 +106,38 @@ ok "chown abgeschlossen"
 # ----------------------------------------------------------------------- 1. System-Deps
 say "1/8 System-Abhängigkeiten installieren"
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq \
-    python3 python3-venv python3-pip python3-dev build-essential \
-    git curl wget \
-    plymouth plymouth-themes \
-    tesseract-ocr tesseract-ocr-deu \
-    portaudio19-dev \
-    chromium-browser 2>/dev/null \
-    || apt-get install -y -qq chromium
+
+run_quiet "Paketlisten aktualisieren (apt-get update)" apt-get update -qq
+
+run_quiet "Basis-Pakete installieren (python3, git, plymouth, tesseract-ocr, ca. 15 Pakete)" \
+    apt-get install -y -qq \
+        python3 python3-venv python3-pip python3-dev build-essential \
+        git curl wget \
+        plymouth plymouth-themes \
+        tesseract-ocr tesseract-ocr-deu \
+        portaudio19-dev
+
+info "   Chromium installieren (unter Lubuntu meist via Snap – kann 2-5 Min dauern)"
+run_quiet "Chromium" bash -c "apt-get install -y -qq chromium-browser 2>/dev/null || apt-get install -y -qq chromium"
+
 ok "System-Pakete installiert"
 
 # ----------------------------------------------------------------------- 2. Python-venv
 say "2/8 Python-venv + Ilija-Dependencies"
 cd "$ILIJA_DIR"
 if [ ! -d venv ]; then
-    sudo -u "$TARGET_USER" python3 -m venv venv
-    ok "venv angelegt"
+    run_quiet "venv anlegen (python3 -m venv)" sudo -u "$TARGET_USER" python3 -m venv venv
 else
     ok "venv existiert bereits"
 fi
 
-sudo -u "$TARGET_USER" bash -c "source venv/bin/activate && pip install --quiet --upgrade pip"
+run_quiet "pip aktualisieren" \
+    sudo -u "$TARGET_USER" bash -c "source venv/bin/activate && pip install --quiet --upgrade pip"
+
 if [ -f requirements.txt ]; then
-    sudo -u "$TARGET_USER" bash -c "source venv/bin/activate && pip install --quiet -r requirements.txt"
-    ok "requirements.txt installiert"
+    PKG_COUNT=$(grep -cv '^\s*$\|^\s*#' requirements.txt || echo "?")
+    run_quiet "Python-Pakete installieren (${PKG_COUNT} aus requirements.txt, dauert 2-5 Min)" \
+        sudo -u "$TARGET_USER" bash -c "source venv/bin/activate && pip install --quiet -r requirements.txt"
 fi
 
 # ----------------------------------------------------------------------- 3. .env anlegen
@@ -145,7 +180,7 @@ for m in $GPU_MODS; do
     grep -q "^$m\$" /etc/initramfs-tools/modules || echo "$m" >> /etc/initramfs-tools/modules
 done
 info "   GPU erkannt: ${GPU_MODS:-keine spezifischen Module nötig}"
-update-initramfs -u -k all >/dev/null 2>&1 && ok "initramfs neu gebaut"
+run_quiet "initramfs für alle Kernel neu bauen (1-3 Min)" update-initramfs -u -k all
 
 # ----------------------------------------------------------------------- 6. systemd-Service
 say "6/8 ilija.service einrichten (Autostart beim Boot)"
