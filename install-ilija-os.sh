@@ -66,6 +66,15 @@ echo -e "${RESET}"
 echo -e "${CYAN}${BOLD}  Weg 2: Vorhandenes Linux zu einem echten Ilija OS aufwerten${RESET}"
 echo ""
 
+# ----------------------------------------------------------------------- 0. Ownership
+# WICHTIG und MUSS ganz zuerst passieren: Wenn das Repo mit `sudo git clone`
+# geholt wurde, gehört /opt/ilija-os/ aktuell root. venv, pip & Co. laufen
+# aber im nachfolgenden Schritt als TARGET_USER – ohne diesen chown hier
+# knallt es dort mit Permission denied.
+say "0/8 Besitzrechte /opt/ilija-os -> $TARGET_USER"
+chown -R "$TARGET_USER:$TARGET_USER" /opt/ilija-os
+ok "chown abgeschlossen"
+
 # ----------------------------------------------------------------------- 1. System-Deps
 say "1/8 System-Abhängigkeiten installieren"
 export DEBIAN_FRONTEND=noninteractive
@@ -96,14 +105,13 @@ if [ -f requirements.txt ]; then
     ok "requirements.txt installiert"
 fi
 
-# ----------------------------------------------------------------------- 3. Ownership + .env
-say "3/8 /opt/ilija-os an $TARGET_USER übergeben"
-chown -R "$TARGET_USER:$TARGET_USER" /opt/ilija-os
-ok "chown abgeschlossen"
-
+# ----------------------------------------------------------------------- 3. .env anlegen
+say "3/8 .env-Konfiguration anlegen"
 if [ ! -f .env ] && [ -f .env.example ]; then
     sudo -u "$TARGET_USER" cp .env.example .env
-    info "   .env angelegt – API-Keys trägst du nach dem Setup unter Einstellungen ein."
+    ok ".env angelegt – API-Keys trägst du im Web-UI unter Einstellungen ein."
+else
+    ok ".env existiert bereits oder keine .env.example vorhanden"
 fi
 
 # ----------------------------------------------------------------------- 4. Plymouth-Theme

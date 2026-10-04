@@ -44,21 +44,27 @@ Welcher Weg der richtige ist, hängt davon ab was du schon hast und wie tief Ili
 
 ### Weg 2: Vorhandenes Linux zu einem echten Ilija OS aufwerten
 
-**Für wen:** Du hast schon Ubuntu/Lubuntu/Debian installiert und willst es zu einem Ilija OS machen — mit Plymouth-Boot-Logo, systemd-Service, GPU-Integration, Autostart. Am Ende so tief integriert wie Weg 1.
+**Für wen:** Du hast schon Ubuntu/Lubuntu/Debian installiert und willst es zu einem Ilija OS machen — mit Plymouth-Boot-Logo, systemd-Service, GPU-Integration, Desktop-Icon, Autostart. Am Ende so tief integriert wie Weg 1.
 
 ```bash
-git clone https://github.com/Innobytix-IT/Ilija-OS.git /opt/ilija-os/ilija
+sudo git clone https://github.com/Innobytix-IT/Ilija-OS.git /opt/ilija-os/ilija
 cd /opt/ilija-os/ilija
+sudo chmod +x install-ilija-os.sh
 sudo ./install-ilija-os.sh
 ```
 
-Das Skript installiert:
+Das Skript richtet in 8 Schritten alles ein:
 - Python-App + Dependencies
 - Plymouth-Boot-Theme mit Ilija-Logo
 - GPU-Module ins initramfs (für Boot-Splash)
 - `ilija.service` als systemd-Service (startet beim Boot)
 - Update-Skript + sudoers-Regeln
 - Chromium für die WhatsApp-Brücke
+- **Desktop-Icon, Startmenü-Eintrag und Autostart** – Ilija öffnet sich beim Login automatisch im Browser
+
+**Dauer:** 2–10 Minuten, je nach Internet. Bei Schritt 1 wird Chromium als Snap installiert — das kann sich scheinbar "aufhängen" (gar keine Ausgabe), läuft aber im Hintergrund. Einfach warten.
+
+**Nach dem Durchlauf:** `sudo reboot`. Beim nächsten Hochfahren siehst du den Ilija-Plymouth-Boot-Splash, und nach dem Login öffnet sich Ilija OS automatisch im Browser.
 
 ### Weg 3: Ilija als Anwendung (ohne OS-Integration)
 
