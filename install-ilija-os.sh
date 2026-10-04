@@ -194,10 +194,14 @@ chmod 440 /etc/sudoers.d/ilija-update-rules
 ok "sudoers-Regeln für passwortloses Update installiert"
 
 # Cron-Job: nächtliches Auto-Update
+# WICHTIG: `crontab -l` returned exit 1 wenn der User noch keinen Crontab hat,
+# ebenso `grep -v` wenn nichts matched. Mit set -o pipefail würde das die
+# ganze Pipeline killen → explizites `|| true` an beiden Stellen.
 if [ -f "$UPDATE_SCRIPT" ]; then
     CRON_LINE="0 3 * * * $UPDATE_SCRIPT >> $TARGET_HOME/ilija-update.log 2>&1"
-    (sudo -u "$TARGET_USER" crontab -l 2>/dev/null | grep -v ilija-update.sh; echo "$CRON_LINE") \
-        | sudo -u "$TARGET_USER" crontab -
+    EXISTING=$(sudo -u "$TARGET_USER" crontab -l 2>/dev/null || true)
+    FILTERED=$(printf '%s\n' "$EXISTING" | grep -v 'ilija-update\.sh' || true)
+    printf '%s\n%s\n' "$FILTERED" "$CRON_LINE" | sudo -u "$TARGET_USER" crontab - || warn "Cron-Setup fehlgeschlagen – manuell via 'crontab -e' nachtragen"
     ok "Cron-Job eingerichtet (täglich 03:00 Uhr)"
 fi
 
