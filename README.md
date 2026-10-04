@@ -24,42 +24,78 @@ Ilija OS ist ein KI-Betriebssystem das auf deinem eigenen Gerät läuft. Kein Cl
 
 ---
 
-## Schnellstart
+## Ilija OS bekommen — 4 Wege
+
+Welcher Weg der richtige ist, hängt davon ab was du schon hast und wie tief Ilija OS integriert sein soll.
+
+### Weg 1: Ilija OS als Betriebssystem (empfohlen)
+
+**Für wen:** Du hast einen freien PC/Mini-PC/Thin-Client, auf dem Ilija OS laufen soll.
+**Was du bekommst:** Komplettes Betriebssystem (Ubuntu-Basis + Ilija OS) mit allem drin, inklusive Plymouth-Boot-Logo, Autostart, Desktop-Integration, noVNC-Fernzugriff.
+
+1. ISO aus den [Releases](https://github.com/Innobytix-IT/Ilija-OS/releases) laden (als 5 Teile)
+2. Teile zusammenfügen:
+   ```bash
+   cat ilija-os-24.04-amd64.iso.part* > ilija-os-24.04-amd64.iso
+   sha256sum -c SHA256SUMS.txt
+   ```
+3. Auf USB-Stick schreiben (Balena Etcher oder Rufus unter Windows; `sudo dd if=...iso of=/dev/sdX bs=4M status=progress` unter Linux)
+4. Vom USB-Stick booten, Calamares-Installer durchlaufen — fertig.
+
+### Weg 2: Vorhandenes Linux zu einem echten Ilija OS aufwerten
+
+**Für wen:** Du hast schon Ubuntu/Lubuntu/Debian installiert und willst es zu einem Ilija OS machen — mit Plymouth-Boot-Logo, systemd-Service, GPU-Integration, Autostart. Am Ende so tief integriert wie Weg 1.
 
 ```bash
-# 1. Repository klonen
+git clone https://github.com/Innobytix-IT/Ilija-OS.git /opt/ilija-os/ilija
+cd /opt/ilija-os/ilija
+sudo ./install-ilija-os.sh
+```
+
+Das Skript installiert:
+- Python-App + Dependencies
+- Plymouth-Boot-Theme mit Ilija-Logo
+- GPU-Module ins initramfs (für Boot-Splash)
+- `ilija.service` als systemd-Service (startet beim Boot)
+- Update-Skript + sudoers-Regeln
+- Chromium für die WhatsApp-Brücke
+
+### Weg 3: Ilija als Anwendung (ohne OS-Integration)
+
+**Für wen:** Du willst Ilija nur als normale Anwendung ausprobieren oder auf einem Server ohne grafische Oberfläche laufen lassen. Kein Boot-Logo, kein Autostart beim Hochfahren — nur die App.
+
+```bash
 git clone https://github.com/Innobytix-IT/Ilija-OS.git
 cd Ilija-OS
+./install.sh
+```
 
-# 2. Python-Umgebung einrichten
+Richtet Ilija in deinem Home-Verzeichnis ein mit venv, systemd-Service (optional) und API-Key-Setup. Deutlich leichtgewichtiger als Weg 2.
+
+### Weg 4: Nur die Python-App (Entwickler)
+
+**Für wen:** Du willst am Code arbeiten oder nur mal reinschauen.
+
+```bash
+git clone https://github.com/Innobytix-IT/Ilija-OS.git
+cd Ilija-OS
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-
-# 3. Konfiguration anlegen
 cp .env.example .env
-nano .env   # Mindestens einen KI-API-Key eintragen
-
-# 4. Starten
+nano .env   # API-Key eintragen
 python web_server.py
 ```
 
-Danach Ilija OS im Browser öffnen: **http://localhost:5001**
+Danach im Browser: **http://localhost:5001**. Kein Service, kein Autostart, kein Boot-Logo — manuell starten.
 
 ---
 
-## Automatische Updates (Linux/systemd)
+## Automatische Updates
 
-```bash
-sudo cp system/ilija-update /usr/local/bin/ilija-update
-sudo chmod 755 /usr/local/bin/ilija-update
-sudo cp system/ilija-update.service /etc/systemd/system/
-sudo cp system/ilija-update.timer   /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now ilija-update.timer
-```
+Bei **Weg 1** und **Weg 2** ist das automatische Update eingerichtet: `/opt/ilija-os/ilija-update.sh` wird jede Nacht um 03:00 Uhr per Cron ausgeführt und zieht System-Updates (`apt`) + Code-Änderungen (git pull) + Plymouth-Theme + Python-Pakete nach. Außerdem gibt es im Web-UI einen "Update"-Button.
 
-Ilija OS aktualisiert sich dann täglich um 03:00 Uhr automatisch.
+Bei **Weg 3** optional einrichtbar während `./install.sh` läuft.
 
 ---
 
@@ -76,12 +112,12 @@ Ilija OS aktualisiert sich dann täglich um 03:00 Uhr automatisch.
 
 | | Minimum | Empfohlen |
 |---|---|---|
-| OS | Ubuntu 22.04 / Debian 12 | Ubuntu 24.04 LTS |
+| OS (Weg 2/3/4) | Ubuntu 22.04 / Debian 12 | Ubuntu 24.04 LTS |
 | Python | 3.10 | 3.12 |
 | RAM | 512 MB | 2 GB |
 | Speicher | 2 GB | 10 GB |
 
-Läuft auch auf: Raspberry Pi 4/5, Windows (WSL2), macOS
+Weg 1 (ISO) läuft auf jeder BIOS/UEFI-fähigen x86-64-Hardware. Weg 2–4 laufen auch auf: Raspberry Pi 4/5, Windows (WSL2), macOS.
 
 ---
 
