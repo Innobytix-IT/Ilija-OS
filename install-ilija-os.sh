@@ -193,6 +193,57 @@ if [ -f "$UPDATE_SCRIPT" ]; then
     ok "Cron-Job eingerichtet (täglich 03:00 Uhr)"
 fi
 
+# ----------------------------------------------------------------------- 7b. Desktop-Integration
+say "7b/8 Desktop-Integration (Menü-Eintrag, Icon, Autostart)"
+
+# .desktop-Datei fuer Menue und Starter – benutzt xdg-open auf die lokale URL,
+# so dass der Default-Browser des Users geoeffnet wird (Firefox, Chromium, ...).
+cat > /usr/share/applications/ilija-os.desktop << DESKTOP
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Ilija OS
+GenericName=KI-Assistent
+Comment=Dein persoenlicher KI-Assistent – lokal und privat
+Exec=xdg-open http://localhost:5001
+Terminal=false
+Categories=Network;WebBrowser;Office;
+Keywords=KI;AI;Assistent;Chat;DMS;Ilija;
+StartupNotify=true
+DESKTOP
+
+# Icon – wenn das Repo ein branding/icon hat, nehmen wir das, sonst Generisch
+if [ -f "$ILIJA_DIR/branding/ilija-icon.png" ]; then
+    cp "$ILIJA_DIR/branding/ilija-icon.png" /usr/share/icons/hicolor/256x256/apps/ilija-os.png 2>/dev/null || true
+    echo "Icon=ilija-os" >> /usr/share/applications/ilija-os.desktop
+    gtk-update-icon-cache /usr/share/icons/hicolor >/dev/null 2>&1 || true
+else
+    echo "Icon=applications-internet" >> /usr/share/applications/ilija-os.desktop
+fi
+
+# Autostart im User-Home: Browser oeffnet beim Login die Ilija-Web-UI
+AUTOSTART_DIR="$TARGET_HOME/.config/autostart"
+mkdir -p "$AUTOSTART_DIR"
+cp /usr/share/applications/ilija-os.desktop "$AUTOSTART_DIR/ilija-os.desktop"
+# Autostart erst 5 Sekunden nach Login, damit Service bis dahin laeuft
+sed -i 's|^Exec=.*|Exec=sh -c "sleep 5; xdg-open http://localhost:5001"|' \
+    "$AUTOSTART_DIR/ilija-os.desktop"
+chown -R "$TARGET_USER:$TARGET_USER" "$TARGET_HOME/.config/autostart"
+
+# Desktop-Icon fuer den User (optional, falls LXQt/XFCE Desktop-Icons zeigen)
+DESKTOP_DIR="$TARGET_HOME/Desktop"
+[ -d "$DESKTOP_DIR" ] || DESKTOP_DIR="$TARGET_HOME/Schreibtisch"
+if [ -d "$DESKTOP_DIR" ]; then
+    cp /usr/share/applications/ilija-os.desktop "$DESKTOP_DIR/ilija-os.desktop"
+    chmod +x "$DESKTOP_DIR/ilija-os.desktop"
+    chown "$TARGET_USER:$TARGET_USER" "$DESKTOP_DIR/ilija-os.desktop"
+    # LXQt/LXDE: "trusted" Flag setzen damit das Icon nicht grau mit Warnhinweis bleibt
+    sudo -u "$TARGET_USER" gio set "$DESKTOP_DIR/ilija-os.desktop" "metadata::trusted" true 2>/dev/null || true
+fi
+
+update-desktop-database >/dev/null 2>&1 || true
+ok "Menü-Eintrag + Autostart + Desktop-Icon eingerichtet"
+
 # ----------------------------------------------------------------------- 8. Start
 say "8/8 Dienst starten"
 systemctl start ilija.service
@@ -216,11 +267,15 @@ DONE
 echo -e "${RESET}"
 
 LOCAL_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
-echo -e "${CYAN}Web-UI:${RESET}       http://${LOCAL_IP}:5001"
-echo -e "${CYAN}API-Keys:${RESET}     im Browser unter Einstellungen eintragen"
+echo -e "${CYAN}So startest du Ilija:${RESET}"
+echo "  • Icon 'Ilija OS' auf dem Desktop oder im Startmenü anklicken"
+echo "  • Oder im Browser: http://localhost:5001 (bzw. http://${LOCAL_IP}:5001 von einem anderen Gerät)"
+echo "  • Beim nächsten Login startet Ilija automatisch im Standard-Browser"
+echo ""
+echo -e "${CYAN}API-Keys:${RESET}     im Web-UI unter Einstellungen eintragen"
 echo -e "${CYAN}Boot-Splash:${RESET}  wird nach dem nächsten Neustart aktiv"
 echo -e "${CYAN}Auto-Update:${RESET}  täglich 03:00 Uhr, oder im Web-UI der Update-Button"
 echo ""
-echo "Neustart empfohlen (für Plymouth-Boot-Splash):"
+echo "Neustart empfohlen (für Plymouth-Boot-Splash + Autostart-Test):"
 echo "  sudo reboot"
 echo ""
