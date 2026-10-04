@@ -241,106 +241,205 @@ if [ -f "$UPDATE_SCRIPT" ]; then
 fi
 
 # ----------------------------------------------------------------------- 7b. Desktop-Integration
-say "7b/8 Desktop-Integration (Menü-Eintrag, Icon, Autostart)"
+say "7b/8 Desktop-Integration (App-Launcher, 5 Icons, Autostart)"
 
-# .desktop-Datei fuer Menue und Starter – benutzt xdg-open auf die lokale URL,
-# so dass der Default-Browser des Users geoeffnet wird (Firefox, Chromium, ...).
-cat > /usr/share/applications/ilija-os.desktop << DESKTOP
+# Alte generische Ilija-OS-Verknuepfung entfernen (vorherige Script-Version)
+rm -f /usr/share/applications/ilija-os.desktop
+rm -f "$TARGET_HOME/Desktop/ilija-os.desktop" "$TARGET_HOME/Schreibtisch/ilija-os.desktop" 2>/dev/null
+
+# Branding-Assets system-weit ablegen (werden von den .desktop-Dateien referenziert)
+mkdir -p /usr/share/ilija-os/branding/assets
+if [ -d "$ILIJA_DIR/branding/assets" ]; then
+    cp "$ILIJA_DIR/branding/assets/"*.png /usr/share/ilija-os/branding/assets/ 2>/dev/null || true
+fi
+# Auch die Top-Level-Branding-Dateien übernehmen (ilija-icon.png etc.)
+cp "$ILIJA_DIR/branding/"*.png /usr/share/ilija-os/branding/assets/ 2>/dev/null || true
+
+# ilija-app Launcher: oeffnet eine URL als eigenstaendiges App-Fenster
+# via Chromium --app= statt im normalen Browser mit URL-Leiste. Jede App
+# bekommt eigenes User-Profile + WM-Klasse (eigenes Taskbar-Icon).
+cat > /usr/local/bin/ilija-app << 'LAUNCHER'
+#!/bin/bash
+# Ilija OS: oeffnet eine Ilija-Seite als eigenstaendiges App-Fenster
+# (Chromium App-Modus, ohne Browser-Leiste).
+# Aufruf: ilija-app <URL> <WM-Klasse>
+set -u
+URL="${1:-http://localhost:5001/}"
+KLASSE="${2:-ilija-app}"
+BROWSER="$(command -v chromium-browser || command -v chromium)"
+if [ -z "$BROWSER" ]; then
+  echo "Chromium nicht gefunden." >&2
+  exit 1
+fi
+# Snap-Chromium darf nicht in ~/.config schreiben -> snap-eigener Ordner
+if [ -d "$HOME/snap/chromium" ]; then
+  BASIS="$HOME/snap/chromium/common/ilija-os-apps"
+else
+  BASIS="${XDG_CONFIG_HOME:-$HOME/.config}/ilija-os/app-profile"
+fi
+PROFIL="$BASIS/$KLASSE"
+mkdir -p "$PROFIL"
+exec "$BROWSER" --app="$URL" --class="$KLASSE" --name="$KLASSE" \
+     --user-data-dir="$PROFIL" --start-maximized \
+     --no-first-run --no-default-browser-check >/dev/null 2>&1
+LAUNCHER
+chmod 755 /usr/local/bin/ilija-app
+
+# Eine Hilfsfunktion fuer die immer gleichen .desktop-Eintraege
+mk_app_desktop() {
+    local slug="$1" name="$2" category="$3" url="$4"
+    cat > "/usr/share/applications/ilija-$slug.desktop" << APP
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Ilija OS
-GenericName=KI-Assistent
-Comment=Dein persoenlicher KI-Assistent – lokal und privat
-Exec=xdg-open http://localhost:5001
+Name=$name
+GenericName=Ilija OS
+Comment=$name – Ilija OS
+Exec=/usr/local/bin/ilija-app $url ilija-$slug
+Icon=/usr/share/ilija-os/branding/assets/ilija-app-icon.png
 Terminal=false
-Categories=Network;WebBrowser;Office;
-Keywords=KI;AI;Assistent;Chat;DMS;Ilija;
+Categories=$category
+StartupWMClass=ilija-$slug
 StartupNotify=true
-DESKTOP
+APP
+}
 
-# Icon – wenn das Repo ein branding/icon hat, nehmen wir das, sonst Generisch
-if [ -f "$ILIJA_DIR/branding/ilija-icon.png" ]; then
-    cp "$ILIJA_DIR/branding/ilija-icon.png" /usr/share/icons/hicolor/256x256/apps/ilija-os.png 2>/dev/null || true
-    echo "Icon=ilija-os" >> /usr/share/applications/ilija-os.desktop
-    gtk-update-icon-cache /usr/share/icons/hicolor >/dev/null 2>&1 || true
-else
-    echo "Icon=applications-internet" >> /usr/share/applications/ilija-os.desktop
+# Die 5 Standard-Ilija-Apps (identisch zur ISO)
+mk_app_desktop "chat"     "Chat"            "Network;"              "http://localhost:5001/chat"
+mk_app_desktop "dms"      "DMS"             "Office;"               "http://localhost:5001/dms"
+mk_app_desktop "kalender" "Kalender"        "Office;"               "http://localhost:5001/local_calendar"
+mk_app_desktop "workflow" "Workflow Studio" "Development;"          "http://localhost:5001/"
+mk_app_desktop "cloud"    "Cloud"           "Network;FileManager;"  "http://localhost:5001/cloud"
+
+# OpenPhoenix ERP – nur wenn installiert
+if [ -d /opt/ilija-os/openphoenix ] && [ -f /opt/ilija-os/openphoenix/main.py ]; then
+    cat > /usr/local/bin/openphoenix << 'OPX'
+#!/bin/bash
+cd "/opt/ilija-os/openphoenix" || exit 1
+exec "/opt/ilija-os/openphoenix/venv/bin/python" "/opt/ilija-os/openphoenix/main.py" "$@"
+OPX
+    chmod 755 /usr/local/bin/openphoenix
+    cat > /usr/share/applications/openphoenix-erp.desktop << OPXD
+[Desktop Entry]
+Type=Application
+Name=OpenPhönix ERP
+Comment=Warenwirtschaft / ERP
+Exec=/usr/local/bin/openphoenix
+Icon=/opt/ilija-os/openphoenix/resources/icons/myicon.png
+Terminal=false
+Categories=Office;Finance;
+OPXD
+    info "   OpenPhönix ERP erkannt – Icon zusätzlich angelegt"
 fi
 
-# Autostart im User-Home: Browser oeffnet beim Login die Ilija-Web-UI
-AUTOSTART_DIR="$TARGET_HOME/.config/autostart"
-mkdir -p "$AUTOSTART_DIR"
-cp /usr/share/applications/ilija-os.desktop "$AUTOSTART_DIR/ilija-os.desktop"
-# Autostart erst 5 Sekunden nach Login, damit Service bis dahin laeuft
-sed -i 's|^Exec=.*|Exec=sh -c "sleep 5; xdg-open http://localhost:5001"|' \
-    "$AUTOSTART_DIR/ilija-os.desktop"
-chown -R "$TARGET_USER:$TARGET_USER" "$TARGET_HOME/.config/autostart"
-
-# Desktop-Icon fuer den User (optional, falls LXQt/XFCE Desktop-Icons zeigen)
+# Icons auf den Desktop kopieren (fuer User die Desktop-Icons sehen wollen)
 DESKTOP_DIR="$TARGET_HOME/Desktop"
 [ -d "$DESKTOP_DIR" ] || DESKTOP_DIR="$TARGET_HOME/Schreibtisch"
 if [ -d "$DESKTOP_DIR" ]; then
-    cp /usr/share/applications/ilija-os.desktop "$DESKTOP_DIR/ilija-os.desktop"
-    chmod +x "$DESKTOP_DIR/ilija-os.desktop"
-    chown "$TARGET_USER:$TARGET_USER" "$DESKTOP_DIR/ilija-os.desktop"
-    # LXQt/LXDE: "trusted" Flag setzen damit das Icon nicht grau mit Warnhinweis bleibt
-    sudo -u "$TARGET_USER" gio set "$DESKTOP_DIR/ilija-os.desktop" "metadata::trusted" true 2>/dev/null || true
+    for slug in chat dms kalender workflow cloud; do
+        cp "/usr/share/applications/ilija-$slug.desktop" "$DESKTOP_DIR/"
+        chmod +x "$DESKTOP_DIR/ilija-$slug.desktop"
+        chown "$TARGET_USER:$TARGET_USER" "$DESKTOP_DIR/ilija-$slug.desktop"
+    done
+    [ -f /usr/share/applications/openphoenix-erp.desktop ] && \
+        cp /usr/share/applications/openphoenix-erp.desktop "$DESKTOP_DIR/" && \
+        chmod +x "$DESKTOP_DIR/openphoenix-erp.desktop" && \
+        chown "$TARGET_USER:$TARGET_USER" "$DESKTOP_DIR/openphoenix-erp.desktop"
+fi
+
+# Autostart-Trust-Script: markiert alle Desktop-.desktop-Dateien beim Login als
+# vertrauenswürdig, damit sie nicht grau mit "nicht vertraut"-Hinweis erscheinen.
+# (LXQt-Spezifikum – ohne das sieht man beim ersten Login nur Fragezeichen-Icons)
+AUTOSTART_DIR="$TARGET_HOME/.config/autostart"
+sudo -u "$TARGET_USER" mkdir -p "$AUTOSTART_DIR"
+cat > "$AUTOSTART_DIR/ilija-trust-desktop.desktop" << TRUST
+[Desktop Entry]
+Type=Application
+Name=Ilija OS Desktop-Icons
+Comment=Markiert die Desktop-Starter als vertrauenswuerdig, damit sie erscheinen
+Exec=bash -c 'sleep 3; for f in "\$HOME"/Desktop/*.desktop "\$HOME"/Schreibtisch/*.desktop; do [ -f "\$f" ] || continue; chmod +x "\$f" 2>/dev/null; gio set "\$f" metadata::trusted true 2>/dev/null; touch "\$f" 2>/dev/null; done'
+NoDisplay=true
+X-LXQt-Need-Tray=false
+TRUST
+chown "$TARGET_USER:$TARGET_USER" "$AUTOSTART_DIR/ilija-trust-desktop.desktop"
+
+# Fuer die aktuell laufende Session direkt vertrauenswuerdig markieren,
+# damit nach dem Install (ohne Logout) die Icons sofort sichtbar sind
+if [ -d "$DESKTOP_DIR" ]; then
+    for f in "$DESKTOP_DIR"/*.desktop; do
+        [ -f "$f" ] || continue
+        sudo -u "$TARGET_USER" gio set "$f" "metadata::trusted" true 2>/dev/null || true
+    done
 fi
 
 update-desktop-database >/dev/null 2>&1 || true
-ok "Menü-Eintrag + Autostart + Desktop-Icon eingerichtet"
+ok "App-Launcher + 5 Ilija-Icons (Chat/DMS/Kalender/Workflow/Cloud) + Trust-Autostart eingerichtet"
 
 # ----------------------------------------------------------------------- Wallpaper
-# Ilija-OS-Wallpaper system-weit ablegen und fuer den Target-User setzen.
+# Ilija-OS-Wallpaper – identischer Pfad + Mode wie bei der ISO, damit
+# Verhalten und Erscheinungsbild übereinstimmen.
 WALLPAPER_SRC="$ILIJA_DIR/branding/ilija-splash.png"
-WALLPAPER_DST="/usr/share/backgrounds/ilija-os-wallpaper.png"
+WALLPAPER_DST="/usr/share/ilija-os/branding/assets/ilija-splash.png"
 if [ -f "$WALLPAPER_SRC" ]; then
-    mkdir -p /usr/share/backgrounds
+    # Datei liegt dort schon vom Branding-Asset-Copy weiter oben,
+    # trotzdem zur Sicherheit nochmal (falls alte Script-Version lief)
+    mkdir -p /usr/share/ilija-os/branding/assets
     cp "$WALLPAPER_SRC" "$WALLPAPER_DST"
     chmod 644 "$WALLPAPER_DST"
 
-    # LXQt (Lubuntu): via pcmanfm-qt-Konfig; braucht genau EIN Profil-Verzeichnis
+    # LXQt (Lubuntu): pcmanfm-qt-Konfig fuer alle Profile unter dem User
     LXQT_CFG_DIR="$TARGET_HOME/.config/pcmanfm-qt"
-    if [ -d "$LXQT_CFG_DIR" ]; then
-        for profile in "$LXQT_CFG_DIR"/*/; do
-            [ -d "$profile" ] || continue
-            cfg="${profile}settings.conf"
-            sudo -u "$TARGET_USER" mkdir -p "$profile"
-            # Wallpaper + Mode in Section [Desktop] setzen (idempotent)
-            sudo -u "$TARGET_USER" python3 - "$cfg" "$WALLPAPER_DST" << 'PYSET'
+    sudo -u "$TARGET_USER" mkdir -p "$LXQT_CFG_DIR/lxqt"
+    for profile in "$LXQT_CFG_DIR"/*/; do
+        [ -d "$profile" ] || continue
+        cfg="${profile}settings.conf"
+        # Idempotent: existierende Config lesen, Desktop-Keys setzen/updaten
+        sudo -u "$TARGET_USER" python3 - "$cfg" "$WALLPAPER_DST" << 'PYSET'
 import sys, os, configparser
 cfg, wp = sys.argv[1], sys.argv[2]
-cp = configparser.ConfigParser(interpolation=None)
+cp = configparser.ConfigParser(interpolation=None, strict=False)
 cp.optionxform = str
 if os.path.exists(cfg):
-    cp.read(cfg)
+    try: cp.read(cfg)
+    except Exception: pass
 if "Desktop" not in cp:
     cp["Desktop"] = {}
 cp["Desktop"]["Wallpaper"] = wp
-cp["Desktop"]["WallpaperMode"] = "stretch"
+cp["Desktop"]["WallpaperMode"] = "fit"
+cp["Desktop"]["BgColor"] = "#000000"
+cp["Desktop"]["FgColor"] = "#ffffff"
+cp["Desktop"]["PerScreenWallpaper"] = "true"
+os.makedirs(os.path.dirname(cfg), exist_ok=True)
 with open(cfg, "w") as f:
     cp.write(f, space_around_delimiters=False)
 PYSET
-        done
-        info "   Wallpaper für LXQt (pcmanfm-qt) gesetzt"
-    fi
+    done
+    info "   Wallpaper-Config in pcmanfm-qt gesetzt (Mode: fit, Pfad: $WALLPAPER_DST)"
+
+    # Fuer die LAUFENDE Session: pcmanfm-qt direkt anweisen, Wallpaper neu zu laden.
+    # Ohne das muesste der User sich erst aus-/einloggen.
+    USER_UID=$(id -u "$TARGET_USER")
+    DBUS_ADDR="unix:path=/run/user/$USER_UID/bus"
+    sudo -u "$TARGET_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" DISPLAY=:0 \
+        pcmanfm-qt --set-wallpaper="$WALLPAPER_DST" --wallpaper-mode=fit 2>/dev/null || true
 
     # GNOME / Cinnamon / Unity
     if command -v gsettings &>/dev/null; then
-        sudo -u "$TARGET_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$TARGET_USER")/bus" \
+        sudo -u "$TARGET_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" \
             gsettings set org.gnome.desktop.background picture-uri "file://$WALLPAPER_DST" 2>/dev/null || true
-        sudo -u "$TARGET_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$TARGET_USER")/bus" \
+        sudo -u "$TARGET_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" \
             gsettings set org.gnome.desktop.background picture-uri-dark "file://$WALLPAPER_DST" 2>/dev/null || true
+        sudo -u "$TARGET_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" \
+            gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
     fi
 
     # XFCE
     if command -v xfconf-query &>/dev/null; then
-        sudo -u "$TARGET_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$TARGET_USER")/bus" \
+        sudo -u "$TARGET_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" \
             bash -c 'for p in $(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E "last-image$"); do xfconf-query -c xfce4-desktop -p "$p" -s "'"$WALLPAPER_DST"'"; done' 2>/dev/null || true
     fi
 
-    ok "Ilija-OS-Wallpaper gesetzt (wird bei LXQt erst nach Logout/Login sichtbar)"
+    ok "Ilija-OS-Wallpaper gesetzt (ggf. Logout/Login nötig damit es sichtbar wird)"
 else
     warn "branding/ilija-splash.png fehlt – Wallpaper übersprungen"
 fi
