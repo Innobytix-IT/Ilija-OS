@@ -252,6 +252,60 @@ fi
 update-desktop-database >/dev/null 2>&1 || true
 ok "Menü-Eintrag + Autostart + Desktop-Icon eingerichtet"
 
+# ----------------------------------------------------------------------- Wallpaper
+# Ilija-OS-Wallpaper system-weit ablegen und fuer den Target-User setzen.
+WALLPAPER_SRC="$ILIJA_DIR/branding/ilija-splash.png"
+WALLPAPER_DST="/usr/share/backgrounds/ilija-os-wallpaper.png"
+if [ -f "$WALLPAPER_SRC" ]; then
+    mkdir -p /usr/share/backgrounds
+    cp "$WALLPAPER_SRC" "$WALLPAPER_DST"
+    chmod 644 "$WALLPAPER_DST"
+
+    # LXQt (Lubuntu): via pcmanfm-qt-Konfig; braucht genau EIN Profil-Verzeichnis
+    LXQT_CFG_DIR="$TARGET_HOME/.config/pcmanfm-qt"
+    if [ -d "$LXQT_CFG_DIR" ]; then
+        for profile in "$LXQT_CFG_DIR"/*/; do
+            [ -d "$profile" ] || continue
+            cfg="${profile}settings.conf"
+            sudo -u "$TARGET_USER" mkdir -p "$profile"
+            # Wallpaper + Mode in Section [Desktop] setzen (idempotent)
+            sudo -u "$TARGET_USER" python3 - "$cfg" "$WALLPAPER_DST" << 'PYSET'
+import sys, os, configparser
+cfg, wp = sys.argv[1], sys.argv[2]
+cp = configparser.ConfigParser(interpolation=None)
+cp.optionxform = str
+if os.path.exists(cfg):
+    cp.read(cfg)
+if "Desktop" not in cp:
+    cp["Desktop"] = {}
+cp["Desktop"]["Wallpaper"] = wp
+cp["Desktop"]["WallpaperMode"] = "stretch"
+with open(cfg, "w") as f:
+    cp.write(f, space_around_delimiters=False)
+PYSET
+        done
+        info "   Wallpaper für LXQt (pcmanfm-qt) gesetzt"
+    fi
+
+    # GNOME / Cinnamon / Unity
+    if command -v gsettings &>/dev/null; then
+        sudo -u "$TARGET_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$TARGET_USER")/bus" \
+            gsettings set org.gnome.desktop.background picture-uri "file://$WALLPAPER_DST" 2>/dev/null || true
+        sudo -u "$TARGET_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$TARGET_USER")/bus" \
+            gsettings set org.gnome.desktop.background picture-uri-dark "file://$WALLPAPER_DST" 2>/dev/null || true
+    fi
+
+    # XFCE
+    if command -v xfconf-query &>/dev/null; then
+        sudo -u "$TARGET_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$TARGET_USER")/bus" \
+            bash -c 'for p in $(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E "last-image$"); do xfconf-query -c xfce4-desktop -p "$p" -s "'"$WALLPAPER_DST"'"; done' 2>/dev/null || true
+    fi
+
+    ok "Ilija-OS-Wallpaper gesetzt (wird bei LXQt erst nach Logout/Login sichtbar)"
+else
+    warn "branding/ilija-splash.png fehlt – Wallpaper übersprungen"
+fi
+
 # ----------------------------------------------------------------------- 8. Start
 say "8/8 Dienst starten"
 systemctl start ilija.service
