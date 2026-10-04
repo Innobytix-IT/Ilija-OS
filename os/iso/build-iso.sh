@@ -182,6 +182,35 @@ fi
 KVER="$(uname -r)"
 [ -e "/boot/vmlinuz-$KVER" ] || die "Kernel /boot/vmlinuz-$KVER nicht gefunden"
 
+# ------------------------------------------- Casper-Live-User reparieren -----
+# Der Casper-User $CASPER_USER (Standard: 'ilija') muss im Live-System ein
+# BESCHREIBBARES HOME haben, sonst scheitert die LXQt-Session beim Start der
+# Live-Sitzung reihenweise ("Einrichtungsdatei .../.config/... laesst sich
+# nicht speichern"). Auf dem Builder kann es passieren, dass $CASPER_USER
+# seine HOME-Konfig auf /opt/ilija-os/ zeigen hat (fruehere Service-Rolle),
+# obwohl das Verzeichnis inzwischen einem anderen User gehoert (hier: dem
+# normalen Benutzer, der ilija.service betreibt).
+# Fix: $CASPER_USER bekommt /home/$CASPER_USER als HOME, Verzeichnis existiert
+# und gehoert ihm.
+say "Casper-Live-User '$CASPER_USER' pruefen und HOME absichern"
+if id "$CASPER_USER" &>/dev/null; then
+    CASPER_HOME="/home/$CASPER_USER"
+    CURRENT_HOME=$(getent passwd "$CASPER_USER" | cut -d: -f6)
+    mkdir -p "$CASPER_HOME"
+    chown "$CASPER_USER:$CASPER_USER" "$CASPER_HOME"
+    chmod 755 "$CASPER_HOME"
+    if [ "$CURRENT_HOME" != "$CASPER_HOME" ]; then
+        usermod -d "$CASPER_HOME" "$CASPER_USER"
+        echo "  HOME von $CASPER_USER korrigiert: $CURRENT_HOME -> $CASPER_HOME"
+    else
+        echo "  HOME von $CASPER_USER ist bereits $CASPER_HOME"
+    fi
+else
+    useradd -m -s /bin/bash -c "Live Session User" "$CASPER_USER"
+    passwd -d "$CASPER_USER" >/dev/null  # kein Passwort noetig fuer Live-Login
+    echo "  $CASPER_USER User neu angelegt mit HOME /home/$CASPER_USER"
+fi
+
 # ------------------------------------------------------------- Plymouth ------
 say "Plymouth-Theme 'ilija' installieren"
 PLYMOUTH_SRC="$REPO_ROOT/system/plymouth"
