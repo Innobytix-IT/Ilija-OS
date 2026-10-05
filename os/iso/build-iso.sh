@@ -367,50 +367,76 @@ if [ -n "$NEW_USER" ]; then
         echo "chown /opt/ilija-os → $NEW_USER" >> "$LOG"
     fi
 
-    # NOPASSWD sudoers für apt-get, systemctl restart ilija und Plymouth-Updates
+    # NOPASSWD sudoers – muss alle Services abdecken, die das Update-Script
+    # und der Ilija-Service autonom restarten koennen soll (ilija, x11vnc,
+    # xvfb, novnc – fuer den noVNC-Fernzugriff und das Script-Self-Update).
     cat > /etc/sudoers.d/ilija-update-rules << SUDOEOF
 $NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get
-$NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ilija
-$NEW_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija
+$NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ilija, /usr/bin/systemctl restart x11vnc, /usr/bin/systemctl restart x11vnc.service, /usr/bin/systemctl restart xvfb, /usr/bin/systemctl restart xvfb.service, /usr/bin/systemctl restart novnc, /usr/bin/systemctl restart novnc.service
+$NEW_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija, /bin/systemctl restart x11vnc, /bin/systemctl restart x11vnc.service, /bin/systemctl restart xvfb, /bin/systemctl restart xvfb.service, /bin/systemctl restart novnc, /bin/systemctl restart novnc.service
 $NEW_USER ALL=(ALL) NOPASSWD: /usr/sbin/update-initramfs
 $NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/update-alternatives
 SUDOEOF
+    chmod 440 /etc/sudoers.d/ilija-update-rules
+    echo "Sudoers eingerichtet für $NEW_USER (ilija + x11vnc + xvfb + novnc)" >> "$LOG"
 
-    # Plymouth-Boot-Fix: Framebuffer im initramfs aktivieren, damit das
-    # grafische Ilija-Logo auch beim BOOT (nicht nur beim Shutdown) erscheint.
-    # Ohne FRAMEBUFFER=y und geladene GPU-Module fällt Plymouth auf text.plymouth
-    # zurück ("Lubuntu 24.04 LTS"-Textscreen).
-    grep -q '^FRAMEBUFFER=y' /etc/initramfs-tools/initramfs.conf \
-        || echo 'FRAMEBUFFER=y' >> /etc/initramfs-tools/initramfs.conf
-    echo "FRAMEBUFFER=y gesetzt" >> "$LOG"
-
-    # GPU-Treibermodule anhand erkannter Hardware ins initramfs zwingen
-    GPU_INFO=$(lspci | grep -iE 'vga|display|3d' 2>/dev/null || echo "")
-    GPU_MODS=""
-    if echo "$GPU_INFO" | grep -qi 'amd\|ati\|radeon'; then
-        GPU_MODS="amdgpu radeon"
-    elif echo "$GPU_INFO" | grep -qi 'intel'; then
-        GPU_MODS="i915"
-    elif echo "$GPU_INFO" | grep -qi 'nvidia'; then
-        GPU_MODS="nouveau"
+    # VM-Erkennung: In VMs ist Plymouth-Grafik instabil und FRAMEBUFFER=y +
+    # echte GPU-Module konfligieren mit VBoxVGA/QXL/virtio-vga -> Boot-Hang
+    # am Logo. In VMs daher splash raus, plymouth.enable=0, kein FRAMEBUFFER.
+    IS_VM=0
+    if command -v systemd-detect-virt >/dev/null 2>&1; then
+        VIRT_TYPE=$(systemd-detect-virt 2>/dev/null || echo "none")
+        [ "$VIRT_TYPE" != "none" ] && IS_VM=1
     fi
+    echo "VM-Erkennung: IS_VM=$IS_VM VIRT_TYPE=${VIRT_TYPE:-}" >> "$LOG"
+
+    if [ "$IS_VM" = "1" ]; then
+        # Vorhandene FRAMEBUFFER=y rausnehmen (ggf. aus altem Lauf)
+        sed -i '/^FRAMEBUFFER=y$/d' /etc/initramfs-tools/initramfs.conf 2>/dev/null || true
+        # VM-passendes Grafik-Modul ins initramfs
+        case "$VIRT_TYPE" in
+            oracle|virtualbox) GPU_MODS="vboxvideo" ;;
+            kvm|qemu)          GPU_MODS="qxl virtio_gpu" ;;
+            vmware)            GPU_MODS="vmwgfx" ;;
+            *)                 GPU_MODS="" ;;
+        esac
+        # GRUB: splash raus + plymouth.enable=0 anhaengen (gegen Boot-Hang)
+        GRUB_FILE=/etc/default/grub
+        if [ -f "$GRUB_FILE" ]; then
+            sed -i -E 's/(^GRUB_CMDLINE_LINUX_DEFAULT="[^"]*)\bsplash\b/\1/' "$GRUB_FILE" 2>/dev/null || true
+            if ! grep -qE '^GRUB_CMDLINE_LINUX_DEFAULT=.*plymouth\.enable=0' "$GRUB_FILE"; then
+                sed -i -E 's/^(GRUB_CMDLINE_LINUX_DEFAULT="[^"]*)"/\1 plymouth.enable=0"/' "$GRUB_FILE" 2>/dev/null || true
+            fi
+            sed -i -E 's/(^GRUB_CMDLINE_LINUX_DEFAULT="[^"]*)  +/\1 /g' "$GRUB_FILE" 2>/dev/null || true
+            update-grub >> "$LOG" 2>&1 || true
+            echo "GRUB: splash raus + plymouth.enable=0 (VM-Boot-Hang-Fix)" >> "$LOG"
+        fi
+    else
+        # Echte Hardware: FRAMEBUFFER=y + echte GPU-Module (frueher Splash)
+        grep -q '^FRAMEBUFFER=y' /etc/initramfs-tools/initramfs.conf \
+            || echo 'FRAMEBUFFER=y' >> /etc/initramfs-tools/initramfs.conf
+        echo "FRAMEBUFFER=y gesetzt (echte Hardware)" >> "$LOG"
+        GPU_INFO=$(lspci | grep -iE 'vga|display|3d' 2>/dev/null || echo "")
+        GPU_MODS=""
+        if   echo "$GPU_INFO" | grep -qi 'amd\|ati\|radeon'; then GPU_MODS="amdgpu radeon"
+        elif echo "$GPU_INFO" | grep -qi 'intel';            then GPU_MODS="i915"
+        elif echo "$GPU_INFO" | grep -qi 'nvidia';           then GPU_MODS="nouveau"
+        fi
+    fi
+
     for m in $GPU_MODS; do
         grep -q "^$m\$" /etc/initramfs-tools/modules \
             || echo "$m" >> /etc/initramfs-tools/modules
     done
-    echo "GPU-Module ins initramfs: ${GPU_MODS:-KEINE ERKANNT}" >> "$LOG"
+    echo "GPU-Module: ${GPU_MODS:-keine}" >> "$LOG"
 
     # plymouth-themes stellt sicher, dass alle Plymouth-Assets vorhanden sind
     DEBIAN_FRONTEND=noninteractive apt-get install -y plymouth-themes >> "$LOG" 2>&1 || true
 
     # Initramfs mit Framebuffer + GPU-Modulen + Ilija-Theme neu bauen
-    update-initramfs -u >> "$LOG" 2>&1 && echo "initramfs neu gebaut (mit GPU-Modulen)" >> "$LOG"
-    chmod 440 /etc/sudoers.d/ilija-update-rules
-    echo "Sudoers eingerichtet für $NEW_USER" >> "$LOG"
+    update-initramfs -u >> "$LOG" 2>&1 && echo "initramfs neu gebaut" >> "$LOG"
 
     # ilija-update.sh aus dem Repo an den Pfad kopieren, den web_server.py erwartet.
-    # Die kanonische Version liegt in system/ilija-update.sh (mit Plymouth-Auto-
-    # Install und Self-Update).
     ILIJA_DIR=/opt/ilija-os/ilija
     UPDATE_SCRIPT=/opt/ilija-os/ilija-update.sh
     CANONICAL_UPDATE="$ILIJA_DIR/system/ilija-update.sh"
@@ -426,6 +452,94 @@ SUDOEOF
     # Symlink im Home des Nutzers (für manuellen Aufruf)
     if [ -n "$NEW_HOME" ] && [ ! -f "$NEW_HOME/ilija-update.sh" ]; then
         ln -s "$UPDATE_SCRIPT" "$NEW_HOME/ilija-update.sh" 2>/dev/null || true
+    fi
+
+    # noVNC-Launcher-Script aus Repo deployen (fuer Fernzugriff ueber Browser)
+    if [ -f "$ILIJA_DIR/system/x11vnc-smart.sh" ]; then
+        cp "$ILIJA_DIR/system/x11vnc-smart.sh" /opt/ilija-os/x11vnc-smart.sh
+        chmod 755 /opt/ilija-os/x11vnc-smart.sh
+        echo "x11vnc-smart.sh deployed" >> "$LOG"
+    fi
+
+    # noVNC-Services (xvfb, x11vnc, novnc) als systemd-Units installieren
+    DEBIAN_FRONTEND=noninteractive apt-get install -y novnc x11vnc xvfb websockify openbox >> "$LOG" 2>&1 || true
+
+    cat > /etc/systemd/system/xvfb.service << 'XVFB'
+[Unit]
+Description=X Virtual Frame Buffer (Xvfb)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/Xvfb :1 -screen 0 1280x1024x24 -nolisten tcp
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+XVFB
+
+    cat > /etc/systemd/system/x11vnc.service << 'X11VNC'
+[Unit]
+Description=x11vnc VNC Server (hybrid: :0 oder :1)
+After=xvfb.service
+Requires=xvfb.service
+
+[Service]
+Type=simple
+ExecStart=/opt/ilija-os/x11vnc-smart.sh
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+X11VNC
+
+    cat > /etc/systemd/system/novnc.service << 'NOVNC'
+[Unit]
+Description=noVNC WebSocket Proxy
+After=x11vnc.service
+Requires=x11vnc.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/websockify --web=/usr/share/novnc 6080 localhost:5900
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+NOVNC
+
+    systemctl daemon-reload >> "$LOG" 2>&1 || true
+    systemctl enable xvfb.service x11vnc.service novnc.service >> "$LOG" 2>&1 || true
+    echo "noVNC-Services (xvfb, x11vnc, novnc) installiert" >> "$LOG"
+
+    # Startsound: WAV nach /opt/ilija-os/sounds/startup.wav + XDG-Autostart
+    SOUND_SRC="$ILIJA_DIR/sounds/Ilija_OS_Start_Sound.wav"
+    SOUND_DST="/opt/ilija-os/sounds/startup.wav"
+    if [ -f "$SOUND_SRC" ]; then
+        mkdir -p "$(dirname "$SOUND_DST")"
+        cp "$SOUND_SRC" "$SOUND_DST"
+        chmod 644 "$SOUND_DST"
+        chown -R "$NEW_USER:$NEW_USER" /opt/ilija-os/sounds
+        # pulseaudio-utils fuer paplay bereitstellen
+        DEBIAN_FRONTEND=noninteractive apt-get install -y pulseaudio-utils >> "$LOG" 2>&1 || true
+        # XDG-Autostart im Home des neuen Nutzers
+        AUTOSTART_DIR="$NEW_HOME/.config/autostart"
+        mkdir -p "$AUTOSTART_DIR"
+        cat > "$AUTOSTART_DIR/ilija-startsound.desktop" << SOUND
+[Desktop Entry]
+Type=Application
+Name=Ilija OS Startsound
+Comment=Spielt den Ilija-OS-Jingle einmal beim Login
+Exec=bash -c 'sleep 1; paplay --volume=45000 $SOUND_DST 2>/dev/null || aplay -q $SOUND_DST 2>/dev/null || true'
+NoDisplay=true
+X-LXQt-Need-Tray=false
+X-GNOME-Autostart-enabled=true
+SOUND
+        chown -R "$NEW_USER:$NEW_USER" "$NEW_HOME/.config"
+        echo "Startsound + Autostart installiert" >> "$LOG"
     fi
 fi
 
