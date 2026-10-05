@@ -109,14 +109,13 @@ export DEBIAN_FRONTEND=noninteractive
 
 run_quiet "Paketlisten aktualisieren (apt-get update)" apt-get update -qq
 
-run_quiet "Basis-Pakete installieren (python3, node, git, plymouth, tesseract-ocr, ca. 17 Pakete)" \
+run_quiet "Basis-Pakete installieren (python3, git, plymouth, tesseract-ocr, ca. 15 Pakete)" \
     apt-get install -y -qq \
         python3 python3-venv python3-pip python3-dev build-essential \
         git curl wget \
         plymouth plymouth-themes \
         tesseract-ocr tesseract-ocr-deu \
-        portaudio19-dev \
-        nodejs npm
+        portaudio19-dev
 
 info "   Chromium installieren (unter Lubuntu meist via Snap – kann 2-5 Min dauern)"
 run_quiet "Chromium" bash -c "apt-get install -y -qq chromium-browser 2>/dev/null || apt-get install -y -qq chromium"
@@ -549,6 +548,22 @@ say "7c/8 WhatsApp-Bridge (Baileys / Node.js) einrichten"
 
 WA_BRIDGE_DIR="$ILIJA_DIR/baileys-bridge"
 if [ -d "$WA_BRIDGE_DIR" ] && [ -f "$WA_BRIDGE_DIR/package.json" ]; then
+    # Node 20+ installieren (Baileys 6.7+ fordert >=20; Lubuntu-Default ist nur
+    # Node 18, deshalb NodeSource-Repo einbinden). Nur wenn aktuelles node
+    # nicht bereits >=20 ist.
+    NODE_MAJOR=0
+    if command -v node &>/dev/null; then
+        NODE_MAJOR=$(node -v 2>/dev/null | sed 's/^v\([0-9]\+\).*/\1/')
+    fi
+    if [ "${NODE_MAJOR:-0}" -lt 20 ]; then
+        info "   Node $([ "$NODE_MAJOR" = "0" ] && echo "fehlt" || echo "$NODE_MAJOR ist zu alt") – installiere Node 20 LTS via NodeSource"
+        run_quiet "NodeSource-Repo einrichten (setup_20.x)" \
+            bash -c "curl -fsSL https://deb.nodesource.com/setup_20.x | bash -"
+        run_quiet "Node.js 20 installieren" apt-get install -y -qq nodejs
+    else
+        info "   Node $NODE_MAJOR bereits installiert – ok"
+    fi
+
     run_quiet "Node-Dependencies installieren (npm install, 1-3 Min)" \
         sudo -u "$TARGET_USER" bash -c "cd '$WA_BRIDGE_DIR' && npm install --omit=dev --no-audit --no-fund --silent"
 
