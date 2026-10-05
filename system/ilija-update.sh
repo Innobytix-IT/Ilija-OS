@@ -96,6 +96,15 @@ if [ "$LOCAL" != "$REMOTE" ]; then
             echo "WARNUNG: Startsound nicht nach $SOUND_DST kopierbar"
         fi
     fi
+    # Audio-Player fuer den Startsound sicherstellen (paplay kommt aus
+    # pulseaudio-utils, ist unter Lubuntu nicht per Default dabei).
+    # sudo apt-get ist in der sudoers mit NOPASSWD erlaubt – kein Prompt.
+    if [ -f "$SOUND_DST" ] && ! command -v paplay >/dev/null 2>&1; then
+        echo "--- pulseaudio-utils fuer Startsound nachinstallieren ---"
+        sudo apt-get install -y -qq pulseaudio-utils 2>/dev/null \
+            && echo "--- paplay verfuegbar ---" \
+            || echo "WARNUNG: paplay konnte nicht installiert werden"
+    fi
     # Autostart-Eintrag anlegen falls fehlt (im User-Home, ohne sudo)
     AUTOSTART_FILE="$HOME/.config/autostart/ilija-startsound.desktop"
     if [ -f "$SOUND_DST" ] && [ ! -f "$AUTOSTART_FILE" ]; then
