@@ -549,6 +549,24 @@ def einstellungen_page():
     return render_template("einstellungen.html")
 
 
+def _lan_ip():
+    """Ermittelt die LAN-IP dieses Servers (nicht loopback). Fuer den noVNC-
+    Link damit andere Geraete im Netzwerk ihn auch anklicken koennen –
+    nicht nur der Host auf dem Ilija selbst laeuft."""
+    import socket as _sock
+    try:
+        s = _sock.socket(_sock.AF_INET, _sock.SOCK_DGRAM)
+        try:
+            # UDP-"connect" ohne tatsaechlichen Traffic ermittelt das Interface
+            # das in Richtung dieses Ziels raus-routen wuerde
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+        finally:
+            s.close()
+    except OSError:
+        return "127.0.0.1"
+
+
 @app.route("/api/novnc-info")
 def novnc_info():
     import socket as _sock
@@ -583,7 +601,15 @@ def novnc_info():
             has_desktop = r.returncode == 0
         except Exception:
             pass
-    host = request.host.split(":")[0]
+    # Wenn Ilija ueber localhost aufgerufen wurde, fuer die Links die LAN-IP
+    # verwenden – damit kann man den noVNC-Link kopieren und auf anderen
+    # Geraeten im Netz oeffnen. Wenn der Client schon mit einer LAN-IP
+    # kommt, die uebernehmen.
+    client_host = request.host.split(":")[0]
+    if client_host in ("localhost", "127.0.0.1", "::1"):
+        host = _lan_ip()
+    else:
+        host = client_host
     user = getpass.getuser()
     return jsonify({
         "available": available,
