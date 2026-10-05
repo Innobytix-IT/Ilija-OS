@@ -543,6 +543,83 @@ else
     warn "branding/ilija-splash.png fehlt – Wallpaper übersprungen"
 fi
 
+# ----------------------------------------------------------------------- 7c. noVNC-Fernzugriff
+say "7c/8 noVNC-Fernzugriff einrichten (Browser-Remote-Desktop auf Port 6080)"
+
+run_quiet "noVNC + x11vnc + xvfb installieren" apt-get install -y -qq novnc x11vnc xvfb websockify
+
+# Hybrid-Launcher: wartet bis zu 60s auf Display :0 (echter Desktop), fällt
+# andernfalls auf :1 (Xvfb, headless) zurück. Damit funktioniert noVNC in
+# beiden Fällen – Thin-Client mit lokalem Display und Server im Regal ohne.
+cat > /opt/ilija-os/x11vnc-smart.sh << 'XSCRIPT'
+#!/bin/bash
+for i in $(seq 1 60); do
+    if DISPLAY=:0 xdpyinfo >/dev/null 2>&1; then
+        echo "[x11vnc] Verbinde mit :0 (Versuch $i)" | systemd-cat -t x11vnc
+        exec /usr/bin/x11vnc -display :0 -forever -nopw -listen localhost -rfbport 5900
+    fi
+    sleep 1
+done
+echo "[x11vnc] Fallback auf :1 (Xvfb)" | systemd-cat -t x11vnc
+exec /usr/bin/x11vnc -display :1 -forever -nopw -listen localhost -rfbport 5900
+XSCRIPT
+chmod 755 /opt/ilija-os/x11vnc-smart.sh
+
+# xvfb.service – virtueller X-Server als Fallback wenn kein echter Desktop da ist
+cat > /etc/systemd/system/xvfb.service << 'XVFB'
+[Unit]
+Description=X Virtual Frame Buffer (Xvfb)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/Xvfb :1 -screen 0 1280x1024x24 -nolisten tcp
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+XVFB
+
+# x11vnc.service – VNC-Server (nutzt den Hybrid-Launcher oben)
+cat > /etc/systemd/system/x11vnc.service << 'X11VNC'
+[Unit]
+Description=x11vnc VNC Server (hybrid: :0 oder :1)
+After=xvfb.service
+Requires=xvfb.service
+
+[Service]
+Type=simple
+ExecStart=/opt/ilija-os/x11vnc-smart.sh
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+X11VNC
+
+# novnc.service – WebSocket-Proxy, macht VNC über HTTPS/WS im Browser nutzbar
+cat > /etc/systemd/system/novnc.service << 'NOVNC'
+[Unit]
+Description=noVNC WebSocket Proxy
+After=x11vnc.service
+Requires=x11vnc.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/websockify --web=/usr/share/novnc 6080 localhost:5900
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+NOVNC
+
+systemctl daemon-reload
+systemctl enable xvfb.service x11vnc.service novnc.service >/dev/null 2>&1
+systemctl restart xvfb.service x11vnc.service novnc.service >/dev/null 2>&1 || true
+ok "noVNC auf Port 6080 verfügbar (Browser: http://<ip>:6080/vnc.html)"
+
 # ----------------------------------------------------------------------- 8. Start
 say "8/8 Dienst starten"
 systemctl start ilija.service
