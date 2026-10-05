@@ -81,6 +81,38 @@ if [ "$LOCAL" != "$REMOTE" ]; then
     }
 
     deploy_pair "system/ilija-update.sh"  "$UPDATE_SCRIPT"                 "Update-Skript"
+
+    # Startsound deployen – WAV und Autostart-Eintrag, beides ohne sudo.
+    # /opt/ilija-os/sounds/ gehoert laut Installer-Finaler-chown dem User.
+    SOUND_SRC="$ILIJA_DIR/sounds/Ilija_OS_Start_Sound.wav"
+    SOUND_DST="/opt/ilija-os/sounds/startup.wav"
+    if [ -f "$SOUND_SRC" ] && ! cmp -s "$SOUND_SRC" "$SOUND_DST" 2>/dev/null; then
+        echo "--- Startsound aktualisieren ---"
+        mkdir -p "$(dirname "$SOUND_DST")" 2>/dev/null || true
+        if cp "$SOUND_SRC" "$SOUND_DST" 2>/dev/null; then
+            chmod 644 "$SOUND_DST" 2>/dev/null || true
+            echo "--- Startsound aktualisiert ---"
+        else
+            echo "WARNUNG: Startsound nicht nach $SOUND_DST kopierbar"
+        fi
+    fi
+    # Autostart-Eintrag anlegen falls fehlt (im User-Home, ohne sudo)
+    AUTOSTART_FILE="$HOME/.config/autostart/ilija-startsound.desktop"
+    if [ -f "$SOUND_DST" ] && [ ! -f "$AUTOSTART_FILE" ]; then
+        mkdir -p "$(dirname "$AUTOSTART_FILE")" 2>/dev/null || true
+        cat > "$AUTOSTART_FILE" << 'SOUND_AUTOSTART'
+[Desktop Entry]
+Type=Application
+Name=Ilija OS Startsound
+Comment=Spielt den Ilija-OS-Jingle einmal beim Login
+Exec=bash -c 'sleep 1; paplay --volume=45000 /opt/ilija-os/sounds/startup.wav 2>/dev/null || aplay -q /opt/ilija-os/sounds/startup.wav 2>/dev/null || true'
+NoDisplay=true
+X-LXQt-Need-Tray=false
+X-GNOME-Autostart-enabled=true
+SOUND_AUTOSTART
+        echo "--- Startsound-Autostart installiert (greift beim naechsten Login) ---"
+    fi
+
     if deploy_pair "system/x11vnc-smart.sh" "/opt/ilija-os/x11vnc-smart.sh" "noVNC-Launcher"; then
         # Wenn das noVNC-Script neu ist, den VNC-Dienst neu starten damit
         # die neue Logik sofort greift (ohne Reboot).

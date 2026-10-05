@@ -448,6 +448,40 @@ fi
 update-desktop-database >/dev/null 2>&1 || true
 ok "App-Launcher + 5 Ilija-Icons (Chat/DMS/Kalender/Workflow/Cloud) + Trust-Autostart eingerichtet"
 
+# ----------------------------------------------------------------------- Startsound beim Desktop-Login
+# Spielt beim ersten Erscheinen des LXQt-Desktops den Ilija-OS-Jingle.
+# Nicht beim Boot (da gibt es noch keinen Audio-Kontext) und nicht als Teil
+# des systemd-Services (der laeuft als Daemon ohne User-Session).
+SOUND_SRC="$ILIJA_DIR/sounds/Ilija_OS_Start_Sound.wav"
+if [ -f "$SOUND_SRC" ]; then
+    SOUND_DST_DIR="/opt/ilija-os/sounds"
+    SOUND_DST="$SOUND_DST_DIR/startup.wav"
+    mkdir -p "$SOUND_DST_DIR"
+    cp "$SOUND_SRC" "$SOUND_DST"
+    chmod 644 "$SOUND_DST"
+
+    # Audio-Player bereitstellen; paplay deckt PipeWire-Pulse und PulseAudio ab
+    # und ist unter Lubuntu 24.04 Standard. Falls fehlt, nachinstallieren.
+    if ! command -v paplay >/dev/null 2>&1; then
+        run_quiet "pulseaudio-utils fuer Startsound installieren" \
+            apt-get install -y -qq pulseaudio-utils
+    fi
+
+    # XDG-Autostart-Eintrag: triggert nach dem Desktop-Login
+    cat > "$AUTOSTART_DIR/ilija-startsound.desktop" << SOUND
+[Desktop Entry]
+Type=Application
+Name=Ilija OS Startsound
+Comment=Spielt den Ilija-OS-Jingle einmal beim Login
+Exec=bash -c 'sleep 1; paplay --volume=45000 $SOUND_DST 2>/dev/null || aplay -q $SOUND_DST 2>/dev/null || true'
+NoDisplay=true
+X-LXQt-Need-Tray=false
+X-GNOME-Autostart-enabled=true
+SOUND
+    chown "$TARGET_USER:$TARGET_USER" "$AUTOSTART_DIR/ilija-startsound.desktop"
+    ok "Startsound installiert (spielt beim Desktop-Login)"
+fi
+
 # ----------------------------------------------------------------------- System-Branding-Overlay
 # LXQt-Startbutton + SDDM-Login-Screen + GRUB-Theme auf Ilija-OS umstellen
 if [ -d "$ILIJA_DIR/branding/overlay" ]; then
