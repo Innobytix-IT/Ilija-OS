@@ -109,13 +109,14 @@ export DEBIAN_FRONTEND=noninteractive
 
 run_quiet "Paketlisten aktualisieren (apt-get update)" apt-get update -qq
 
-run_quiet "Basis-Pakete installieren (python3, git, plymouth, tesseract-ocr, ca. 15 Pakete)" \
+run_quiet "Basis-Pakete installieren (python3, node, git, plymouth, tesseract-ocr, ca. 17 Pakete)" \
     apt-get install -y -qq \
         python3 python3-venv python3-pip python3-dev build-essential \
         git curl wget \
         plymouth plymouth-themes \
         tesseract-ocr tesseract-ocr-deu \
-        portaudio19-dev
+        portaudio19-dev \
+        nodejs npm
 
 info "   Chromium installieren (unter Lubuntu meist via Snap – kann 2-5 Min dauern)"
 run_quiet "Chromium" bash -c "apt-get install -y -qq chromium-browser 2>/dev/null || apt-get install -y -qq chromium"
@@ -543,8 +544,52 @@ else
     warn "branding/ilija-splash.png fehlt – Wallpaper übersprungen"
 fi
 
-# ----------------------------------------------------------------------- 7c. noVNC-Fernzugriff
-say "7c/8 noVNC-Fernzugriff einrichten (Browser-Remote-Desktop auf Port 6080)"
+# ----------------------------------------------------------------------- 7c. WhatsApp-Bridge
+say "7c/8 WhatsApp-Bridge (Baileys / Node.js) einrichten"
+
+WA_BRIDGE_DIR="$ILIJA_DIR/baileys-bridge"
+if [ -d "$WA_BRIDGE_DIR" ] && [ -f "$WA_BRIDGE_DIR/package.json" ]; then
+    run_quiet "Node-Dependencies installieren (npm install, 1-3 Min)" \
+        sudo -u "$TARGET_USER" bash -c "cd '$WA_BRIDGE_DIR' && npm install --omit=dev --no-audit --no-fund --silent"
+
+    cat > /etc/systemd/system/whatsapp-bridge.service << WABRIDGE
+[Unit]
+Description=Ilija WhatsApp Bridge (Baileys)
+After=network-online.target ilija.service
+Wants=network-online.target ilija.service
+
+[Service]
+Type=simple
+User=$TARGET_USER
+Group=$TARGET_USER
+WorkingDirectory=$WA_BRIDGE_DIR
+Environment=ILIJA_API=http://localhost:5001/api/whatsapp
+Environment=AUTH_DIR=$WA_BRIDGE_DIR/auth_info
+Environment=LOG_LEVEL=silent
+ExecStart=/usr/bin/node bridge.js
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+WABRIDGE
+    systemctl daemon-reload
+    systemctl enable whatsapp-bridge.service >/dev/null 2>&1
+
+    # Sudoers damit Ilija (als TARGET_USER) den whatsapp-bridge-Service
+    # ueber /api/whatsapp/bridge starten/stoppen kann (ohne Passwort-Prompt)
+    cat > /etc/sudoers.d/ilija-whatsapp-bridge << SUDOWA
+$TARGET_USER ALL=(ALL) NOPASSWD: /bin/systemctl start whatsapp-bridge, /bin/systemctl stop whatsapp-bridge, /bin/systemctl restart whatsapp-bridge
+$TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl start whatsapp-bridge, /usr/bin/systemctl stop whatsapp-bridge, /usr/bin/systemctl restart whatsapp-bridge
+SUDOWA
+    chmod 440 /etc/sudoers.d/ilija-whatsapp-bridge
+    ok "whatsapp-bridge.service eingerichtet + sudoers (Start/Stop via Web-UI)"
+else
+    warn "baileys-bridge/ fehlt – WhatsApp-Bridge übersprungen"
+fi
+
+# ----------------------------------------------------------------------- 7d. noVNC-Fernzugriff
+say "7d/8 noVNC-Fernzugriff einrichten (Browser-Remote-Desktop auf Port 6080)"
 
 run_quiet "noVNC + x11vnc + xvfb installieren" apt-get install -y -qq novnc x11vnc xvfb websockify
 
@@ -622,7 +667,16 @@ ok "noVNC auf Port 6080 verfügbar (Browser: http://<ip>:6080/vnc.html)"
 
 # ----------------------------------------------------------------------- 8. Start
 say "8/8 Dienst starten"
+
+# Finaler chown: alle data/-Files und baileys-bridge/-Artefakte an TARGET_USER
+# (manche werden während des Script-Laufs mit root erzeugt, der Dienst läuft
+# aber als TARGET_USER und bekäme sonst PermissionError beim Schreiben)
+chown -R "$TARGET_USER:$TARGET_USER" /opt/ilija-os
+
 systemctl start ilija.service
+if [ -f /etc/systemd/system/whatsapp-bridge.service ]; then
+    systemctl start whatsapp-bridge.service 2>/dev/null || true
+fi
 sleep 3
 if systemctl is-active --quiet ilija.service; then
     ok "ilija.service läuft"
