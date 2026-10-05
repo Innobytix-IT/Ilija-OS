@@ -390,32 +390,26 @@ if [ -d "$ILIJA_DIR/branding/overlay" ]; then
     ok "System-Branding (Startbutton, SDDM, GRUB) umgestellt"
 fi
 
-# Lubuntu-Default-Desktop-Icons entfernen (die bleiben nach dem Lubuntu-Install
-# als .desktop im User-Home liegen; verwaesserung des "Ilija OS"-Looks)
+# "Lubuntu Manual"-Icon vom Desktop entfernen (nicht gewuenscht, suggeriert
+# dem Nutzer "das ist Lubuntu" statt "das ist Ilija OS").
+# Case-insensitive find damit Namensvarianten (Lubuntu Manual.desktop,
+# lubuntu-manual.desktop, Lubuntu-Manual.desktop) alle gefangen werden.
+# Die LXQt-automatischen Shortcuts (Rechner, Papierkorb, User, Netzwerk)
+# BLEIBEN – gewuenschtes Verhalten.
 if [ -d "$DESKTOP_DIR" ]; then
-    for junk in "Lubuntu Manual.desktop" lubuntu-manual.desktop \
-                Fehler.desktop fehler.desktop screen.jpg; do
-        rm -f "$DESKTOP_DIR/$junk" 2>/dev/null || true
-    done
-    # Auch die LXQt-automatischen Shortcuts (Home, Trash, Computer, Network)
-    # abschalten – via DesktopShortcuts= in pcmanfm-qt-config
-    for cfg in "$TARGET_HOME/.config/pcmanfm-qt/"*/settings.conf; do
-        [ -f "$cfg" ] || continue
-        sudo -u "$TARGET_USER" python3 - "$cfg" << 'PYHIDE'
-import sys, os, configparser
-cfg = sys.argv[1]
-cp = configparser.ConfigParser(interpolation=None, strict=False)
-cp.optionxform = str
-try: cp.read(cfg)
-except Exception: pass
-if "Desktop" not in cp:
-    cp["Desktop"] = {}
-cp["Desktop"]["DesktopShortcuts"] = ""
-with open(cfg, "w") as f:
-    cp.write(f, space_around_delimiters=False)
-PYHIDE
-    done
-    ok "Lubuntu-Default-Icons vom Desktop entfernt"
+    find "$DESKTOP_DIR" -maxdepth 1 -iname "*lubuntu*manual*" -delete 2>/dev/null || true
+    ok "Lubuntu-Manual-Icon vom Desktop entfernt"
+fi
+
+# LXQt-Panel neu starten, damit der neu kopierte mainmenu.svg (Startbutton-
+# Icon aus dem Overlay) in der laufenden Session direkt sichtbar wird.
+# Ohne das muesste der Nutzer sich ab-/anmelden.
+USER_UID=$(id -u "$TARGET_USER")
+DBUS_ADDR="unix:path=/run/user/$USER_UID/bus"
+if pgrep -u "$TARGET_USER" lxqt-panel >/dev/null 2>&1; then
+    sudo -u "$TARGET_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR" DISPLAY=:0 \
+        bash -c 'pkill lxqt-panel; sleep 0.5; (lxqt-panel >/dev/null 2>&1 &) ; sleep 1' 2>/dev/null || true
+    info "   LXQt-Panel neu geladen (Startbutton zeigt neues Icon direkt)"
 fi
 
 # ----------------------------------------------------------------------- Wallpaper
