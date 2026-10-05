@@ -186,6 +186,12 @@ input[type=number]{max-width:90px}
 .upload-txt{font-size:.8rem;color:var(--tx2)}
 .upload-hint{font-size:.72rem;color:var(--tx3);margin-top:4px}
 
+/* Hilfe-Button an row-labels, unauffaellig aber auffindbar */
+.help-link{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:500;color:var(--tx3);text-decoration:none;padding:4px 10px;border:1px solid var(--bdr2);border-radius:12px;transition:all .15s;letter-spacing:.02em}
+.help-link:hover{color:var(--g);border-color:var(--g);background:var(--gd)}
+.help-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--bdr2);color:var(--tx2);font-size:.7rem;font-weight:700;transition:all .15s}
+.help-link:hover .help-icon{background:var(--g);color:var(--bg)}
+
 /* ── Save Bar ────────────────────────────────────────────── */
 .save-bar{display:flex;align-items:center;gap:10px;padding-top:14px;border-top:1px solid var(--bdr);margin-top:14px}
 .save-msg{font-size:.78rem;font-weight:600;opacity:0;transition:opacity .2s}
@@ -1032,7 +1038,13 @@ function buildGoogleCard() {
   return `
   <div class="card">
     <div class="row row-wide">
-      <div class="row-label">OAuth credentials.json hochladen</div>
+      <div class="row-label" style="display:flex;align-items:center;gap:10px;justify-content:space-between">
+        <span>OAuth credentials.json hochladen</span>
+        <a href="/static/help/google-credentials.html" target="_blank" rel="noopener"
+           class="help-link" title="Ausführliche Schritt-für-Schritt-Anleitung öffnen">
+          <span class="help-icon">?</span><span class="help-text">Hilfe</span>
+        </a>
+      </div>
       <label class="upload-zone" id="google-drop" ondragover="ev.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="onGoogleDrop(event)">
         <input type="file" id="google-file" accept=".json" onchange="uploadGoogle(this.files[0])">
         <div class="upload-icon">📂</div>
