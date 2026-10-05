@@ -219,6 +219,36 @@ for m in $GPU_MODS; do
     grep -q "^$m\$" /etc/initramfs-tools/modules || echo "$m" >> /etc/initramfs-tools/modules
 done
 info "   GPU-Module: ${GPU_MODS:-keine spezifischen Module nötig}"
+
+# In VMs: splash aus Kernel-Cmdline + plymouth.enable=0 anhaengen.
+# Grund: selbst mit korrektem Framebuffer rendert Plymouth in VirtualBox
+# unzuverlaessig und haelt den Boot fuer unbegrenzte Zeit am Logo an,
+# so dass nach Reboot nur ein Hard-Reset hilft. Ohne splash bootet
+# Lubuntu klassisch mit systemd-Fortschritt, kein Plymouth-Fenster, kein
+# Hang. Echte Hardware behaelt den schoenen Boot-Splash.
+if [ "$IS_VM" = "1" ]; then
+    GRUB_FILE="/etc/default/grub"
+    if [ -f "$GRUB_FILE" ]; then
+        CHANGED=0
+        # splash aus GRUB_CMDLINE_LINUX_DEFAULT nehmen (haeufigste Position)
+        if grep -qE '^GRUB_CMDLINE_LINUX_DEFAULT=.*splash' "$GRUB_FILE"; then
+            sed -i -E 's/(^GRUB_CMDLINE_LINUX_DEFAULT="[^"]*)\bsplash\b/\1/' "$GRUB_FILE"
+            CHANGED=1
+        fi
+        # plymouth.enable=0 anhaengen, falls noch nicht drin
+        if ! grep -qE '^GRUB_CMDLINE_LINUX_DEFAULT=.*plymouth\.enable=0' "$GRUB_FILE"; then
+            sed -i -E 's/^(GRUB_CMDLINE_LINUX_DEFAULT="[^"]*)"/\1 plymouth.enable=0"/' "$GRUB_FILE"
+            CHANGED=1
+        fi
+        # Doppel-Leerzeichen in Cmdline zusammenziehen
+        sed -i -E 's/(^GRUB_CMDLINE_LINUX_DEFAULT="[^"]*)  +/\1 /g' "$GRUB_FILE"
+        if [ "$CHANGED" = "1" ]; then
+            info "   VM: splash raus + plymouth.enable=0 angehaengt (verhindert Boot-Hang)"
+            update-grub >/dev/null 2>&1 || true
+        fi
+    fi
+fi
+
 run_quiet "initramfs für alle Kernel neu bauen (1-3 Min)" update-initramfs -u -k all
 
 # ----------------------------------------------------------------------- 6. systemd-Service
