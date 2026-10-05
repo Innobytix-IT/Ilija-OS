@@ -601,15 +601,15 @@ def novnc_info():
             has_desktop = r.returncode == 0
         except Exception:
             pass
-    # Wenn Ilija ueber localhost aufgerufen wurde, fuer die Links die LAN-IP
-    # verwenden – damit kann man den noVNC-Link kopieren und auf anderen
-    # Geraeten im Netz oeffnen. Wenn der Client schon mit einer LAN-IP
-    # kommt, die uebernehmen.
+    # Fuer den noVNC-Link den gleichen Host benutzen, ueber den der User
+    # Ilija gerade aufruft. Wichtig fuer Setups mit Port-Forwarding (z.B.
+    # VirtualBox NAT): dort funktioniert *localhost:6080* aus Sicht des
+    # Nutzers, waehrend _lan_ip() die VM-interne IP (10.0.2.15) zurueckgeben
+    # wuerde – von aussen nicht erreichbar. Fuer echten LAN-Zugriff ruft
+    # der User Ilija ohnehin schon mit der LAN-IP auf; dann steht die
+    # richtige IP im request.host.
     client_host = request.host.split(":")[0]
-    if client_host in ("localhost", "127.0.0.1", "::1"):
-        host = _lan_ip()
-    else:
-        host = client_host
+    host = client_host or "localhost"
     user = getpass.getuser()
     return jsonify({
         "available": available,
