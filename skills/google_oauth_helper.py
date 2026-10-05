@@ -131,7 +131,12 @@ def start_oauth(service: str, redirect_uri: str) -> tuple[str, str]:
     auth_url, _ = flow.authorization_url(
         access_type="offline",
         prompt="consent",       # garantiert refresh_token im response
-        include_granted_scopes="true",
+        # KEIN include_granted_scopes: Wir fuehren pro Service einen eigenen
+        # Token mit genau den noetigen Scopes. include_granted_scopes="true"
+        # wuerde Google veranlassen, alle vorher erteilten Scopes dieses
+        # Google-Kontos mit zurueckzugeben – der Flow bekaeme dann z.B. beim
+        # Drive-Login auch Gmail-Scopes, was zu einem "Scope has changed"-
+        # ValueError in google-auth-oauthlib fuehrt.
         state=state,
     )
 
