@@ -26,6 +26,14 @@ if [ "$LOCAL" != "$REMOTE" ]; then
     git pull origin main --quiet
     AFTER=$(git rev-parse HEAD)
 
+    SHORT_BEFORE=$(git rev-parse --short "$BEFORE" 2>/dev/null || echo "?")
+    SHORT_AFTER=$(git rev-parse --short "$AFTER")
+    echo "--- git pull: $SHORT_BEFORE -> $SHORT_AFTER ---"
+    # Liste der neuen Commits (max. 10) als Mini-Changelog
+    if [ -n "$BEFORE" ]; then
+        git log --oneline "$BEFORE..$AFTER" 2>/dev/null | head -10 | sed 's/^/    /'
+    fi
+
     # Python-Abhängigkeiten
     source "$ILIJA_DIR/venv/bin/activate"
     pip install -r "$ILIJA_DIR/requirements.txt" --quiet
@@ -56,8 +64,13 @@ if [ "$LOCAL" != "$REMOTE" ]; then
         echo "--- Update-Skript aktualisiert (wird beim naechsten Update aktiv) ---"
     fi
 
+    # WICHTIG: Erst Abschluss-Meldung ausgeben, dann Service neustarten.
+    # Der Restart killt die SSE-Verbindung zum Web-UI; alles was danach
+    # kommt, sieht der User nicht mehr.
+    echo "--- Ilija OS aktualisiert auf $SHORT_AFTER ---"
+    echo "=== Fertig ==="
     sudo systemctl restart ilija 2>/dev/null || true
-    echo "--- Ilija OS aktualisiert ---"
+    exit 0
 else
     echo "--- Ilija OS ist aktuell (kein Update noetig) ---"
 fi
