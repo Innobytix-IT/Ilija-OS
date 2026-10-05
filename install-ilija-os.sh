@@ -243,9 +243,13 @@ fi
 # ----------------------------------------------------------------------- 7b. Desktop-Integration
 say "7b/8 Desktop-Integration (App-Launcher, 5 Icons, Autostart)"
 
-# Alte generische Ilija-OS-Verknuepfung entfernen (vorherige Script-Version)
+# Alte Reste von frueheren Script-Versionen entfernen:
+# - Generische Ilija-OS-Desktopverknuepfung (System + User-Desktop)
+# - Browser-Autostart der nach jedem Login Chromium mit localhost:5001 oeffnet
+#   (unerwuenscht – der User soll Ilija per Icon selbst starten)
 rm -f /usr/share/applications/ilija-os.desktop
 rm -f "$TARGET_HOME/Desktop/ilija-os.desktop" "$TARGET_HOME/Schreibtisch/ilija-os.desktop" 2>/dev/null
+rm -f "$TARGET_HOME/.config/autostart/ilija-os.desktop" 2>/dev/null
 
 # Branding-Assets system-weit ablegen (werden von den .desktop-Dateien referenziert)
 mkdir -p /usr/share/ilija-os/branding/assets
@@ -524,9 +528,8 @@ echo -e "${RESET}"
 
 LOCAL_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
 echo -e "${CYAN}So startest du Ilija:${RESET}"
-echo "  • Icon 'Ilija OS' auf dem Desktop oder im Startmenü anklicken"
+echo "  • Eines der Icons (Chat / DMS / Kalender / Workflow / Cloud) anklicken"
 echo "  • Oder im Browser: http://localhost:5001 (bzw. http://${LOCAL_IP}:5001 von einem anderen Gerät)"
-echo "  • Beim nächsten Login startet Ilija automatisch im Standard-Browser"
 echo ""
 echo -e "${CYAN}API-Keys:${RESET}     im Web-UI unter Einstellungen eintragen"
 echo -e "${CYAN}Boot-Splash:${RESET}  wird nach dem nächsten Neustart aktiv"
