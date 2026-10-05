@@ -44,9 +44,10 @@ Welcher Weg der richtige ist, hängt davon ab was du schon hast und wie tief Ili
 
 ### Weg 2: Vorhandenes Linux zu einem echten Ilija OS aufwerten
 
-**Für wen:** Du hast schon Ubuntu/Lubuntu/Debian installiert und willst es zu einem Ilija OS machen — mit Plymouth-Boot-Logo, systemd-Service, GPU-Integration, Desktop-Icon, Autostart. Am Ende so tief integriert wie Weg 1.
+**Für wen:** Du hast schon Lubuntu/Ubuntu/Debian installiert und willst es zu einem Ilija OS machen — mit Plymouth-Boot-Logo, SDDM-Login-Branding, systemd-Autostart, Ilija-Wallpaper, Startbutton-Icon und 5 App-Icons auf dem Desktop. Am Ende so tief integriert wie Weg 1.
 
 ```bash
+sudo apt update && sudo apt install -y git
 sudo git clone https://github.com/Innobytix-IT/Ilija-OS.git /opt/ilija-os/ilija
 cd /opt/ilija-os/ilija
 sudo chmod +x install-ilija-os.sh
@@ -54,17 +55,36 @@ sudo ./install-ilija-os.sh
 ```
 
 Das Skript richtet in 8 Schritten alles ein:
-- Python-App + Dependencies
-- Plymouth-Boot-Theme mit Ilija-Logo
-- GPU-Module ins initramfs (für Boot-Splash)
-- `ilija.service` als systemd-Service (startet beim Boot)
-- Update-Skript + sudoers-Regeln
-- Chromium für die WhatsApp-Brücke
-- **Desktop-Icon, Startmenü-Eintrag und Autostart** – Ilija öffnet sich beim Login automatisch im Browser
 
-**Dauer:** 2–10 Minuten, je nach Internet. Bei Schritt 1 wird Chromium als Snap installiert — das kann sich scheinbar "aufhängen" (gar keine Ausgabe), läuft aber im Hintergrund. Einfach warten.
+| Schritt | Was passiert |
+|---|---|
+| 0/8 | Besitzrechte `/opt/ilija-os` → dein User |
+| 1/8 | System-Pakete (python3, plymouth, tesseract, Chromium für die WhatsApp-Brücke) |
+| 2/8 | Python-venv + PyTorch CPU-only + alle Dependencies aus `requirements.txt` |
+| 3/8 | `.env`-Konfigurationsdatei |
+| 4/8 | Plymouth-Boot-Theme `ilija` |
+| 5/8 | initramfs mit passenden Grafik-Modulen (erkennt VM vs. echte Hardware) |
+| 6/8 | `ilija.service` als systemd-Autostart |
+| 7/8 | Update-System: Cron (03:00 Uhr nachts) + Web-UI-Button + sudoers |
+| 7b/8 | 5 Desktop-Icons (Chat, DMS, Kalender, Workflow, Cloud), `ilija-app`-Launcher, Startbutton-Overlay, SDDM-Login-Branding, GRUB-Theme, Ilija-Wallpaper |
+| 8/8 | Dienst starten |
 
-**Nach dem Durchlauf:** `sudo reboot`. Beim nächsten Hochfahren siehst du den Ilija-Plymouth-Boot-Splash, und nach dem Login öffnet sich Ilija OS automatisch im Browser.
+**Dauer:** 10–20 Minuten, je nach Internet. Bei Schritt 1 wird Chromium als Snap installiert — das kann sich scheinbar "aufhängen" (gar keine Ausgabe), läuft aber im Hintergrund. Einfach warten.
+
+**Nach dem Durchlauf:** `sudo reboot`. Beim nächsten Hochfahren siehst du den Ilija-Plymouth-Boot-Splash, den Ilija-SDDM-Login und einen voll gebrandeten Ilija-OS-Desktop. Starten tust du Ilija dann über eins der 5 App-Icons.
+
+**Bestätigt getestet** auf: Lubuntu 24.04 (bare metal + VirtualBox).
+
+#### Troubleshooting
+
+- **Script bricht bei `pip install` mit "incomplete-download" ab**  
+  Netzwerk zu wackelig für die ~250 MB PyTorch. Script hat `--resume-retries 50` aber bei komplettem Internet-Ausfall ist Ende. Netzwerk fixen, Script läuft idempotent nochmal durch.
+
+- **Nach Reboot bleibt der Boot am Plymouth-Logo stehen**  
+  Grafik-Treiber-Konflikt. Dann im GRUB-Menü (sofort nach VM-Start) `e` drücken, bei der `linux /vmlinuz...`-Zeile am Ende ` nomodeset` einfügen, `Ctrl+X` zum Booten. Danach `sudo git pull && sudo ./install-ilija-os.sh` nochmal — zieht ggf. Fix für deine Hardware.
+
+- **Icons bleiben grau mit "nicht vertrauenswürdig"**  
+  Logout + Login — der Autostart markiert die Icons dann als trusted.
 
 ### Weg 3: Ilija als Anwendung (ohne OS-Integration)
 
@@ -118,12 +138,15 @@ Bei **Weg 3** optional einrichtbar während `./install.sh` läuft.
 
 | | Minimum | Empfohlen |
 |---|---|---|
-| OS (Weg 2/3/4) | Ubuntu 22.04 / Debian 12 | Ubuntu 24.04 LTS |
+| OS (Weg 2/3/4) | Ubuntu 22.04 / Debian 12 | Ubuntu 24.04 LTS / Lubuntu 24.04 |
 | Python | 3.10 | 3.12 |
-| RAM | 512 MB | 2 GB |
-| Speicher | 2 GB | 10 GB |
+| RAM (Install) | 3 GB | 4 GB+ |
+| RAM (Betrieb) | 1 GB | 2 GB |
+| Speicher | 5 GB | 15 GB |
 
-Weg 1 (ISO) läuft auf jeder BIOS/UEFI-fähigen x86-64-Hardware. Weg 2–4 laufen auch auf: Raspberry Pi 4/5, Windows (WSL2), macOS.
+Weg 1 (ISO) läuft auf jeder BIOS/UEFI-fähigen x86-64-Hardware. Weg 2 ist auf Lubuntu 24.04 getestet und produktiv (bare metal + VirtualBox). Weg 3–4 laufen auch auf: Raspberry Pi 4/5, Windows (WSL2), macOS.
+
+**Hinweis zum RAM beim Install**: Während `pip install` wird kurzzeitig PyTorch gebaut, das peakt bei ~2 GB. VMs mit weniger als 3 GB können an dieser Stelle scheitern.
 
 ---
 
