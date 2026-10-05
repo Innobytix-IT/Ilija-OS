@@ -259,8 +259,8 @@ fi
 
 cat > /etc/sudoers.d/ilija-update-rules << SUDO
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get
-$TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ilija
-$TARGET_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija
+$TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ilija, /usr/bin/systemctl restart x11vnc, /usr/bin/systemctl restart x11vnc.service, /usr/bin/systemctl restart xvfb, /usr/bin/systemctl restart xvfb.service, /usr/bin/systemctl restart novnc, /usr/bin/systemctl restart novnc.service
+$TARGET_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija, /bin/systemctl restart x11vnc, /bin/systemctl restart x11vnc.service, /bin/systemctl restart xvfb, /bin/systemctl restart xvfb.service, /bin/systemctl restart novnc, /bin/systemctl restart novnc.service
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/sbin/update-initramfs
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/update-alternatives
 SUDO
@@ -606,24 +606,20 @@ fi
 # ----------------------------------------------------------------------- 7d. noVNC-Fernzugriff
 say "7d/8 noVNC-Fernzugriff einrichten (Browser-Remote-Desktop auf Port 6080)"
 
-run_quiet "noVNC + x11vnc + xvfb installieren" apt-get install -y -qq novnc x11vnc xvfb websockify
+run_quiet "noVNC + x11vnc + xvfb + openbox installieren" apt-get install -y -qq novnc x11vnc xvfb websockify openbox
 
-# Hybrid-Launcher: wartet bis zu 60s auf Display :0 (echter Desktop), fällt
-# andernfalls auf :1 (Xvfb, headless) zurück. Damit funktioniert noVNC in
-# beiden Fällen – Thin-Client mit lokalem Display und Server im Regal ohne.
-cat > /opt/ilija-os/x11vnc-smart.sh << 'XSCRIPT'
-#!/bin/bash
-for i in $(seq 1 60); do
-    if DISPLAY=:0 xdpyinfo >/dev/null 2>&1; then
-        echo "[x11vnc] Verbinde mit :0 (Versuch $i)" | systemd-cat -t x11vnc
-        exec /usr/bin/x11vnc -display :0 -forever -nopw -listen localhost -rfbport 5900
-    fi
-    sleep 1
-done
-echo "[x11vnc] Fallback auf :1 (Xvfb)" | systemd-cat -t x11vnc
-exec /usr/bin/x11vnc -display :1 -forever -nopw -listen localhost -rfbport 5900
-XSCRIPT
-chmod 755 /opt/ilija-os/x11vnc-smart.sh
+# Hybrid-Launcher aus Repo installieren (siehe system/x11vnc-smart.sh).
+# Script getrennt ins Repo gelegt, damit es bei Updates automatisch
+# mitgezogen wird (siehe deploy_runtime_scripts in ilija-update.sh).
+X11VNC_SCRIPT_SRC="$ILIJA_DIR/system/x11vnc-smart.sh"
+X11VNC_SCRIPT_DST="/opt/ilija-os/x11vnc-smart.sh"
+if [ -f "$X11VNC_SCRIPT_SRC" ]; then
+    cp "$X11VNC_SCRIPT_SRC" "$X11VNC_SCRIPT_DST"
+    chmod 755 "$X11VNC_SCRIPT_DST"
+    ok "x11vnc-smart.sh installiert"
+else
+    warn "$X11VNC_SCRIPT_SRC fehlt – noVNC Launcher nicht installiert"
+fi
 
 # xvfb.service – virtueller X-Server als Fallback wenn kein echter Desktop da ist
 cat > /etc/systemd/system/xvfb.service << 'XVFB'

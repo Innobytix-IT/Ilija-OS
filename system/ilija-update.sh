@@ -55,21 +55,39 @@ if [ "$LOCAL" != "$REMOTE" ]; then
         fi
     fi
 
-    # Self-Update: neue Version dieses Skripts aus Repo übernehmen.
-    # /opt/ilija-os/ilija-update.sh gehoert laut Installer dem TARGET_USER
-    # (siehe install-ilija-os.sh: chown $TARGET_USER:$TARGET_USER $UPDATE_SCRIPT),
-    # und der ilija-Service laeuft als derselbe User – also funktioniert cp
-    # OHNE sudo. Frueher stand hier "sudo cp"; das scheiterte lautlos, weil
-    # sudo im headless Service kein Passwort einlesen kann.
-    NEW_SCRIPT="$ILIJA_DIR/system/ilija-update.sh"
-    if [ -f "$NEW_SCRIPT" ] && ! cmp -s "$NEW_SCRIPT" "$UPDATE_SCRIPT"; then
-        echo "--- Update-Skript selbst aktualisieren ---"
-        if cp "$NEW_SCRIPT" "$UPDATE_SCRIPT" 2>/dev/null && chmod +x "$UPDATE_SCRIPT" 2>/dev/null; then
-            echo "--- Update-Skript aktualisiert (wird beim naechsten Update aktiv) ---"
-        else
-            echo "WARNUNG: $UPDATE_SCRIPT konnte nicht aktualisiert werden."
-            echo "         Rechte pruefen: ls -l $UPDATE_SCRIPT"
-            echo "         Manueller Fix:  sudo chown \$USER:\$USER $UPDATE_SCRIPT"
+    # Runtime-Scripts aus dem Repo an ihre Ziele unter /opt/ilija-os/
+    # synchronisieren. Datei gehoert laut Installer dem TARGET_USER, der
+    # ilija-Service laeuft als derselbe User – also cp OHNE sudo.
+    # Hier aufgelistet jedes Script das NICHT direkt aus dem Repo laeuft
+    # sondern separat deployed wird. Wenn du ein neues hinzufuegst, einfach
+    # unten einen Eintrag "repo-pfad:ziel-pfad" ergaenzen.
+    deploy_pair() {
+        local src="$ILIJA_DIR/$1"
+        local dst="$2"
+        local label="$3"
+        if [ -f "$src" ] && ! cmp -s "$src" "$dst" 2>/dev/null; then
+            echo "--- $label aktualisieren ---"
+            if cp "$src" "$dst" 2>/dev/null && chmod +x "$dst" 2>/dev/null; then
+                echo "--- $label aktualisiert ---"
+                return 0
+            else
+                echo "WARNUNG: $dst konnte nicht aktualisiert werden."
+                echo "         Rechte pruefen: ls -l $dst"
+                echo "         Manueller Fix:  sudo chown \$USER:\$USER $dst"
+                return 1
+            fi
+        fi
+        return 0
+    }
+
+    deploy_pair "system/ilija-update.sh"  "$UPDATE_SCRIPT"                 "Update-Skript"
+    if deploy_pair "system/x11vnc-smart.sh" "/opt/ilija-os/x11vnc-smart.sh" "noVNC-Launcher"; then
+        # Wenn das noVNC-Script neu ist, den VNC-Dienst neu starten damit
+        # die neue Logik sofort greift (ohne Reboot).
+        if [ -f "$ILIJA_DIR/system/x11vnc-smart.sh" ] && \
+           ! cmp -s "$ILIJA_DIR/system/x11vnc-smart.sh" "/opt/ilija-os/x11vnc-smart.sh.applied" 2>/dev/null; then
+            sudo systemctl restart x11vnc.service 2>/dev/null || true
+            cp "$ILIJA_DIR/system/x11vnc-smart.sh" "/opt/ilija-os/x11vnc-smart.sh.applied" 2>/dev/null || true
         fi
     fi
 
