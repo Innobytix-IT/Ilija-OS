@@ -136,8 +136,12 @@ run_quiet "pip aktualisieren" \
 
 if [ -f requirements.txt ]; then
     PKG_COUNT=$(grep -cv '^\s*$\|^\s*#' requirements.txt || echo "?")
-    run_quiet "Python-Pakete installieren (${PKG_COUNT} aus requirements.txt, dauert 2-5 Min)" \
-        sudo -u "$TARGET_USER" bash -c "source venv/bin/activate && pip install --quiet -r requirements.txt"
+    # Hohe Retry-Zahl + grosszuegiger Timeout, damit grosse transitive Downloads
+    # (z.B. nvidia-cublas, ~400 MB) auch auf wackeliger VM-NAT-Verbindung
+    # oder lahmen Mobile-Hotspots zuverlaessig durchkommen. Ohne das kippt
+    # pip nach 6 Resume-Versuchen und das Script bricht ab.
+    run_quiet "Python-Pakete installieren (${PKG_COUNT} aus requirements.txt, dauert 2-10 Min)" \
+        sudo -u "$TARGET_USER" bash -c "source venv/bin/activate && pip install --quiet --resume-retries 50 --timeout 180 -r requirements.txt"
 fi
 
 # ----------------------------------------------------------------------- 3. .env anlegen
