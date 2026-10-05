@@ -1520,19 +1520,39 @@ async function renderAhptQr() {
   const a = allData.ahpt || {};
   const relay = (document.getElementById('ahpt-relay')?.value || a.relay || '').trim();
   const pubkey = a.pubkey || '';
-  if (!relay && !pubkey) return;
+  const kopEl = document.getElementById('qr-koppeln');
+  if (!kopEl) return;
+
+  if (!relay && !pubkey) {
+    // Noch nichts konfiguriert – Hinweis statt leerer Flaeche
+    kopEl.innerHTML = `
+      <div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:16px;box-sizing:border-box;color:#555;text-align:center;font-size:.72rem;line-height:1.4;background:#fafafa;border:2px dashed #ccc;border-radius:6px">
+        <div style="font-size:1.6rem">🔑</div>
+        <div style="font-weight:600;color:#333">QR erscheint hier</div>
+        <div>Trage erst die <b>Relay-Basis-URL</b> unten ein und klicke <b>Speichern</b>.</div>
+      </div>
+    `;
+    return;
+  }
+  if (!relay) {
+    kopEl.innerHTML = `
+      <div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:16px;box-sizing:border-box;color:#555;text-align:center;font-size:.72rem;line-height:1.4;background:#fafafa;border:2px dashed #ccc;border-radius:6px">
+        <div style="font-size:1.6rem">🔗</div>
+        <div style="font-weight:600;color:#333">Relay-URL fehlt</div>
+        <div>Trage die <b>Relay-Basis-URL</b> unten ein und klicke <b>Speichern</b>.</div>
+      </div>
+    `;
+    return;
+  }
 
   const payload = JSON.stringify({relay, agent_pub: pubkey});
-  const kopEl = document.getElementById('qr-koppeln');
-  if (kopEl) {
-    kopEl.innerHTML = '';
-    new QRCode(kopEl, {
-      text: payload,
-      width: 200, height: 200,
-      colorDark: '#000000',
-      colorLight: '#ffffff',
-    });
-  }
+  kopEl.innerHTML = '';
+  new QRCode(kopEl, {
+    text: payload,
+    width: 200, height: 200,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+  });
 }
 
 // ── noVNC / SSH-Bar ───────────────────────────────────────────
