@@ -55,13 +55,22 @@ if [ "$LOCAL" != "$REMOTE" ]; then
         fi
     fi
 
-    # Self-Update: neue Version dieses Skripts aus Repo übernehmen
+    # Self-Update: neue Version dieses Skripts aus Repo übernehmen.
+    # /opt/ilija-os/ilija-update.sh gehoert laut Installer dem TARGET_USER
+    # (siehe install-ilija-os.sh: chown $TARGET_USER:$TARGET_USER $UPDATE_SCRIPT),
+    # und der ilija-Service laeuft als derselbe User – also funktioniert cp
+    # OHNE sudo. Frueher stand hier "sudo cp"; das scheiterte lautlos, weil
+    # sudo im headless Service kein Passwort einlesen kann.
     NEW_SCRIPT="$ILIJA_DIR/system/ilija-update.sh"
     if [ -f "$NEW_SCRIPT" ] && ! cmp -s "$NEW_SCRIPT" "$UPDATE_SCRIPT"; then
         echo "--- Update-Skript selbst aktualisieren ---"
-        sudo cp "$NEW_SCRIPT" "$UPDATE_SCRIPT"
-        sudo chmod +x "$UPDATE_SCRIPT"
-        echo "--- Update-Skript aktualisiert (wird beim naechsten Update aktiv) ---"
+        if cp "$NEW_SCRIPT" "$UPDATE_SCRIPT" 2>/dev/null && chmod +x "$UPDATE_SCRIPT" 2>/dev/null; then
+            echo "--- Update-Skript aktualisiert (wird beim naechsten Update aktiv) ---"
+        else
+            echo "WARNUNG: $UPDATE_SCRIPT konnte nicht aktualisiert werden."
+            echo "         Rechte pruefen: ls -l $UPDATE_SCRIPT"
+            echo "         Manueller Fix:  sudo chown \$USER:\$USER $UPDATE_SCRIPT"
+        fi
     fi
 
     # WICHTIG: Erst Abschluss-Meldung ausgeben, dann Service neustarten.
