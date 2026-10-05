@@ -1222,8 +1222,17 @@ def get_google_status():
     port = int(os.environ.get("PORT", 5001))
     if info["type"] == "installed":
         suggested = f"http://localhost:{port}/api/google-oauth-callback"
+    elif info["type"] == "web":
+        # Konsistenz mit /api/google-oauth-start: wenn credentials.json schon
+        # eine passende redirect_uri enthält, zeige die, sonst LAN-IP-Vorschlag
+        configured = info.get("redirect_uris_configured") or []
+        callback_uris = [u for u in configured if u.endswith("/api/google-oauth-callback")]
+        if callback_uris:
+            suggested = callback_uris[0]
+        else:
+            suggested = f"http://{_lan_ip_local()}:{port}/api/google-oauth-callback"
     else:
-        suggested = f"http://{_lan_ip_local()}:{port}/api/google-oauth-callback"
+        suggested = f"http://localhost:{port}/api/google-oauth-callback"
     return jsonify({
         "credentials_ok":        info["exists"],
         "credentials_type":      info["type"],
@@ -1282,17 +1291,25 @@ def google_oauth_start(service):
     elif info["type"] == "web":
         # Webanwendung: die redirect_uri die wir hier übergeben MUSS in der
         # Google Cloud Console als "Authorized redirect URI" eingetragen sein.
-        # Wir nehmen die LAN-IP damit sowohl lokale als auch remote Nutzer
-        # erreicht werden (localhost würde nur lokale erreichen)
-        import socket as _s
-        try:
-            sk = _s.socket(_s.AF_INET, _s.SOCK_DGRAM)
-            sk.connect(("8.8.8.8", 80))
-            lan_ip = sk.getsockname()[0]
-            sk.close()
-        except OSError:
-            lan_ip = "localhost"
-        redirect_uri = f"http://{lan_ip}:{port}/api/google-oauth-callback"
+        # Strategie – wir nehmen die beste Übereinstimmung aus den vorhandenen
+        # Quellen in dieser Reihenfolge:
+        #   1) /api/google-oauth-callback-URI aus credentials.json
+        #      (so wie der User sie in der Console eingetragen hat)
+        #   2) Fallback: LAN-IP (für direkten LAN-Zugriff ohne Port-Forwarding)
+        configured = info.get("redirect_uris_configured") or []
+        callback_uris = [u for u in configured if u.endswith("/api/google-oauth-callback")]
+        if callback_uris:
+            redirect_uri = callback_uris[0]
+        else:
+            import socket as _s
+            try:
+                sk = _s.socket(_s.AF_INET, _s.SOCK_DGRAM)
+                sk.connect(("8.8.8.8", 80))
+                lan_ip = sk.getsockname()[0]
+                sk.close()
+            except OSError:
+                lan_ip = "localhost"
+            redirect_uri = f"http://{lan_ip}:{port}/api/google-oauth-callback"
     else:
         return jsonify({"ok": False, "error": "credentials.json ist weder "
                         "'installed' noch 'web' – bitte korrekte OAuth-"
