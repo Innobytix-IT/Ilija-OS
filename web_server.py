@@ -1183,20 +1183,55 @@ def save_dms_settings():
 # ── Google-Status ─────────────────────────────────────────────
 @app.route("/api/google-status")
 def get_google_status():
+    """
+    Status aller 4 Google-Services + Credential-Typ-Info für die UI.
+
+    Response-Struktur:
+      {
+        credentials_ok:       bool,          # credentials.json ist hochgeladen
+        credentials_type:     "installed"|"web"|null,
+        credentials_client_id: str|null,     # erstes Kürzel zur Identifikation
+        redirect_uri_suggested: str,         # je nach Typ die passende URL
+        services: { gmail, google_drive, google_docs, google_kalender }
+      }
+    """
+    from skills.google_oauth_helper import credentials_info
+    info = credentials_info()
     base = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(base, "data")
-    cred_paths = [
-        os.path.join(data_dir, "google_kalender", "credentials.json"),
-        os.path.join(base, "credentials.json"),
-    ]
-    creds_ok = any(os.path.exists(p) for p in cred_paths)
     services = {
         "gmail":           os.path.exists(os.path.join(data_dir, "gmail",           "token.json")),
         "google_drive":    os.path.exists(os.path.join(data_dir, "google_drive",    "token.json")),
         "google_docs":     os.path.exists(os.path.join(data_dir, "google_docs",     "token.json")),
         "google_kalender": os.path.exists(os.path.join(data_dir, "google_kalender", "token.json")),
     }
-    return jsonify({"credentials_ok": creds_ok, "services": services})
+    # Welche redirect_uri sollte der User in Google Cloud Console eintragen?
+    # Je nach Typ unterschiedlich — Desktop-Creds können nur localhost,
+    # Webanwendungs-Creds erlauben alles was in der Console steht
+    from skills.google_oauth_helper import _CREDENTIALS_PATH  # noqa
+    def _lan_ip_local():
+        import socket as _s
+        try:
+            sk = _s.socket(_s.AF_INET, _s.SOCK_DGRAM)
+            sk.connect(("8.8.8.8", 80))
+            ip = sk.getsockname()[0]
+            sk.close()
+            return ip
+        except OSError:
+            return "127.0.0.1"
+    port = int(os.environ.get("PORT", 5001))
+    if info["type"] == "installed":
+        suggested = f"http://localhost:{port}/api/google-oauth-callback"
+    else:
+        suggested = f"http://{_lan_ip_local()}:{port}/api/google-oauth-callback"
+    return jsonify({
+        "credentials_ok":        info["exists"],
+        "credentials_type":      info["type"],
+        "credentials_client_id": (info["client_id"] or "")[:40],
+        "redirect_uri_suggested": suggested,
+        "services":              services,
+    })
+
 
 @app.route("/api/google-credentials-upload", methods=["POST"])
 def upload_google_credentials():
@@ -1217,7 +1252,135 @@ def upload_google_credentials():
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     with open(dest, "w", encoding="utf-8") as out:
         json.dump(content, out, ensure_ascii=False, indent=2)
-    return jsonify({"ok": True, "message": "credentials.json erfolgreich installiert."})
+    cred_type = "installed" if "installed" in content else "web"
+    return jsonify({"ok": True, "message": "credentials.json erfolgreich installiert.",
+                    "type": cred_type})
+
+
+# ── Google-OAuth-Flow ─────────────────────────────────────────
+@app.route("/api/google-oauth-start/<service>", methods=["POST"])
+def google_oauth_start(service):
+    """
+    Startet den OAuth-Flow für einen Google-Service.
+    Frontend ruft das auf, bekommt die auth_url zurück und öffnet die in
+    einem neuen Browser-Tab via window.open().
+
+    URL wird so gebaut dass die redirect_uri zum Credential-Typ passt:
+    - Desktop-Credentials: http://localhost:5001/api/google-oauth-callback
+    - Webanwendungs-Credentials: http://<ilija-lan-ip>:5001/api/google-oauth-callback
+    """
+    from skills.google_oauth_helper import start_oauth, credentials_info
+    info = credentials_info()
+    if not info["exists"]:
+        return jsonify({"ok": False, "error": "credentials.json fehlt – "
+                        "bitte zuerst hochladen"}), 400
+
+    port = int(os.environ.get("PORT", 5001))
+    if info["type"] == "installed":
+        # Desktop-App: Google akzeptiert nur localhost/127.0.0.1
+        redirect_uri = f"http://localhost:{port}/api/google-oauth-callback"
+    elif info["type"] == "web":
+        # Webanwendung: die redirect_uri die wir hier übergeben MUSS in der
+        # Google Cloud Console als "Authorized redirect URI" eingetragen sein.
+        # Wir nehmen die LAN-IP damit sowohl lokale als auch remote Nutzer
+        # erreicht werden (localhost würde nur lokale erreichen)
+        import socket as _s
+        try:
+            sk = _s.socket(_s.AF_INET, _s.SOCK_DGRAM)
+            sk.connect(("8.8.8.8", 80))
+            lan_ip = sk.getsockname()[0]
+            sk.close()
+        except OSError:
+            lan_ip = "localhost"
+        redirect_uri = f"http://{lan_ip}:{port}/api/google-oauth-callback"
+    else:
+        return jsonify({"ok": False, "error": "credentials.json ist weder "
+                        "'installed' noch 'web' – bitte korrekte OAuth-"
+                        "Credentials aus der Google Cloud Console laden"}), 400
+
+    try:
+        auth_url, state = start_oauth(service, redirect_uri)
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"OAuth-Start fehlgeschlagen: {e}"}), 500
+
+    return jsonify({
+        "ok":           True,
+        "auth_url":     auth_url,
+        "state":        state,
+        "redirect_uri": redirect_uri,
+    })
+
+
+@app.route("/api/google-oauth-callback")
+def google_oauth_callback():
+    """
+    Google redirectet nach erfolgreichem Login hierher mit ?code=...&state=...
+    Wir tauschen den code gegen das Token, speichern es und zeigen eine
+    Erfolgsseite die sich selbst schließt.
+    """
+    from skills.google_oauth_helper import complete_oauth
+    code  = request.args.get("code")
+    state = request.args.get("state")
+    error = request.args.get("error")
+
+    def _html_response(ok, title, message, service=None):
+        color = "#2dd4bf" if ok else "#ef4444"
+        service_js = f"'{service}'" if service else "null"
+        return f"""<!doctype html>
+<html lang="de"><head><meta charset="utf-8">
+<title>Ilija OS · Google-Autorisierung</title>
+<style>
+  body{{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;
+       display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px}}
+  .box{{max-width:500px;text-align:center;background:#1e293b;border:1px solid {color};
+       padding:40px 30px;border-radius:12px}}
+  h1{{color:{color};margin:0 0 12px;font-size:1.4rem}}
+  p{{margin:8px 0;line-height:1.5}}
+  .small{{font-size:.85rem;color:#94a3b8;margin-top:20px}}
+</style></head><body>
+<div class="box">
+  <h1>{title}</h1>
+  <p>{message}</p>
+  <p class="small">Dieses Fenster schließt sich automatisch in 3 Sekunden.</p>
+</div>
+<script>
+  try {{
+    if (window.opener) window.opener.postMessage({{
+      type:'google-oauth', ok:{str(ok).lower()}, service:{service_js}
+    }}, '*');
+  }} catch(_) {{}}
+  setTimeout(() => window.close(), 3000);
+</script>
+</body></html>"""
+
+    if error:
+        return _html_response(False, "Abgebrochen",
+                              f"Google hat die Autorisierung abgebrochen: {error}"), 400
+    if not code or not state:
+        return _html_response(False, "Fehler",
+                              "Fehlende Parameter – OAuth konnte nicht abgeschlossen werden."), 400
+    try:
+        service = complete_oauth(code, state)
+    except ValueError as e:
+        return _html_response(False, "Autorisierung fehlgeschlagen", str(e)), 400
+    except Exception as e:
+        return _html_response(False, "Technischer Fehler", str(e)), 500
+
+    label = {"gmail": "Gmail", "google_drive": "Google Drive",
+             "google_docs": "Google Docs", "google_kalender": "Google Kalender"}.get(service, service)
+    return _html_response(True, "Verbunden ✓",
+                          f"{label} wurde erfolgreich mit Ilija OS verknüpft.",
+                          service=service)
+
+
+@app.route("/api/google-revoke/<service>", methods=["POST"])
+def google_revoke(service):
+    """Löscht das token.json eines Google-Services (lokaler Logout)."""
+    from skills.google_oauth_helper import revoke
+    ok = revoke(service)
+    return jsonify({"ok": ok})
 
 
 @app.route("/api/whatsapp", methods=["POST"])

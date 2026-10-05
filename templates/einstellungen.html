@@ -155,9 +155,28 @@ input[type=number]{max-width:90px}
 .svc-row{display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid var(--bdr);font-size:.82rem}
 .svc-row:last-child{border:none}
 .svc-name{flex:1;color:var(--tx)}
+.svc-right{display:flex;align-items:center;gap:12px}
 .svc-status{font-size:.72rem;font-weight:600}
 .svc-ok{color:var(--green)}
 .svc-miss{color:var(--tx3)}
+.svc-btn{font-size:.7rem;font-weight:600;padding:5px 12px;border-radius:6px;border:1px solid var(--bdr2);cursor:pointer;background:transparent;color:var(--tx2);transition:all .15s}
+.svc-btn:hover{border-color:var(--g);color:var(--g);background:var(--gd)}
+.btn-primary{background:var(--g);border-color:var(--g);color:var(--bg)}
+.btn-primary:hover{background:#d49826;border-color:#d49826;color:var(--bg)}
+.btn-ghost{background:transparent;color:var(--tx3)}
+
+/* ── Google Credential-Type-Hinweis ─────────────────────── */
+.google-type-hint{margin-top:12px;padding:12px 14px;border-radius:8px;font-size:.75rem;line-height:1.5}
+.google-type-hint .type-head{font-weight:600;margin-bottom:6px;color:var(--tx)}
+.google-type-hint .type-body{color:var(--tx2)}
+.google-type-hint .type-body ol{color:var(--tx2)}
+.google-type-hint .type-body a{color:var(--g)}
+.google-type-hint .type-uri{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;background:var(--s2);border-radius:6px;overflow-x:auto}
+.google-type-hint .type-uri code{font-family:var(--m);font-size:.7rem;color:var(--g);flex:1;white-space:nowrap}
+.google-type-desktop{background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.2)}
+.google-type-web{background:rgba(230,162,46,.06);border:1px solid rgba(230,162,46,.2)}
+.google-type-unknown{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25)}
+.google-type-howto{background:var(--s2);border:1px solid var(--bdr)}
 
 /* ── File Upload ─────────────────────────────────────────── */
 .upload-zone{border:2px dashed var(--bdr2);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all .15s}
@@ -946,11 +965,70 @@ function buildGoogleCard() {
   const svcNames = {gmail:'Gmail',google_drive:'Google Drive',google_docs:'Google Docs',google_kalender:'Google Kalender'};
   const svcRows = Object.entries(svcNames).map(([k,name])=>{
     const ok = g.services && g.services[k];
+    const btn = g.credentials_ok
+      ? (ok
+          ? `<button class="btn-ghost svc-btn" onclick="revokeGoogle('${k}')" title="Verbindung lösen">Lösen</button>`
+          : `<button class="btn-primary svc-btn" onclick="startGoogleOAuth('${k}')">Verbinden</button>`)
+      : '';
     return `<div class="svc-row">
       <span class="svc-name">${name}</span>
-      <span class="svc-status ${ok?'svc-ok':'svc-miss'}">${ok?'✓ Verbunden':'Nicht autorisiert'}</span>
+      <span class="svc-right">
+        <span class="svc-status ${ok?'svc-ok':'svc-miss'}">${ok?'✓ Verbunden':'Nicht autorisiert'}</span>
+        ${btn}
+      </span>
     </div>`;
   }).join('');
+
+  // Je nach Credential-Typ unterschiedlicher Hinweis
+  let typeHint = '';
+  if (g.credentials_ok && g.credentials_type === 'installed') {
+    typeHint = `
+      <div class="google-type-hint google-type-desktop">
+        <div class="type-head">✓ Credentials erkannt: <b>Desktop-App</b></div>
+        <div class="type-body">
+          Funktioniert sofort, wenn du Ilija vom <b>selben Gerät</b> bedienst. Wenn du
+          Ilija von einem anderen Gerät aus steuerst, erstelle besser
+          <b>Webanwendungs-Credentials</b> – die funktionieren in beiden Fällen.
+        </div>
+      </div>`;
+  } else if (g.credentials_ok && g.credentials_type === 'web') {
+    const uri = g.redirect_uri_suggested || '';
+    typeHint = `
+      <div class="google-type-hint google-type-web">
+        <div class="type-head">✓ Credentials erkannt: <b>Webanwendung</b></div>
+        <div class="type-body">
+          Trage diese URL in <b>Google Cloud Console → Anmeldedaten → OAuth-Credentials →
+          Authorized redirect URIs</b> ein (einmalig, bevor du auf "Verbinden" klickst):
+        </div>
+        <div class="type-uri">
+          <code>${uri}</code>
+          <button class="btn-ghost svc-btn" onclick="navigator.clipboard?.writeText('${uri}').then(()=>toast('URL kopiert'))">Kopieren</button>
+        </div>
+      </div>`;
+  } else if (g.credentials_ok) {
+    typeHint = `
+      <div class="google-type-hint google-type-unknown">
+        <div class="type-head">⚠ Credentials erkannt, aber Typ unklar</div>
+        <div class="type-body">
+          Die Datei enthält weder "installed" noch "web". Bitte lade eine echte
+          OAuth-credentials.json aus der Google Cloud Console herunter.
+        </div>
+      </div>`;
+  } else {
+    typeHint = `
+      <div class="google-type-hint google-type-howto">
+        <div class="type-head">So kommst du an die credentials.json</div>
+        <div class="type-body">
+          <ol style="margin:6px 0 0;padding-left:18px;line-height:1.6">
+            <li><a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> → neues Projekt</li>
+            <li>APIs & Dienste → Bibliothek → <b>Gmail</b>, <b>Drive</b>, <b>Docs</b>, <b>Calendar API</b> aktivieren</li>
+            <li>Anmeldedaten → OAuth-Client-ID erstellen → <b>Webanwendung</b> (empfohlen) oder Desktop</li>
+            <li>JSON herunterladen und hier hochladen</li>
+          </ol>
+        </div>
+      </div>`;
+  }
+
   return `
   <div class="card">
     <div class="row row-wide">
@@ -961,11 +1039,101 @@ function buildGoogleCard() {
         <div class="upload-txt">${g.credentials_ok ? '✅ credentials.json installiert' : 'credentials.json auswählen oder hier ablegen'}</div>
         <div class="upload-hint">${g.credentials_ok ? 'Erneut hochladen um zu aktualisieren' : 'JSON-Datei von console.cloud.google.com'}</div>
       </label>
+      ${typeHint}
     </div>
   </div>
   <div class="card" style="margin-top:10px">
     ${svcRows}
   </div>`;
+}
+
+// ── Google-OAuth-Flow ─────────────────────────────────────────
+let _googleAuthWindow = null;
+let _googleAuthPollInterval = null;
+let _googleAuthService = null;
+
+async function startGoogleOAuth(service) {
+  try {
+    const r = await fetch(`/api/google-oauth-start/${service}`, {method:'POST'});
+    const d = await r.json();
+    if (!d.ok) {
+      toast('Fehler: ' + (d.error || 'OAuth konnte nicht gestartet werden'));
+      return;
+    }
+    _googleAuthService = service;
+    // In neuem Tab öffnen (im Browser des Users, nicht des Servers)
+    _googleAuthWindow = window.open(d.auth_url, 'google-oauth-' + service,
+      'width=640,height=750,menubar=no,toolbar=no');
+    if (!_googleAuthWindow) {
+      // Popup-Blocker hat zugeschlagen
+      toast('Bitte Popup-Blocker für localhost erlauben und erneut klicken');
+      return;
+    }
+    toast('Google-Login-Fenster geöffnet – bitte dort einloggen');
+    // Polling: alle 2 Sek. Status prüfen, bis Service autorisiert ist (max 5 Min)
+    if (_googleAuthPollInterval) clearInterval(_googleAuthPollInterval);
+    let attempts = 0;
+    _googleAuthPollInterval = setInterval(async () => {
+      attempts++;
+      if (attempts > 150 || !_googleAuthWindow || _googleAuthWindow.closed) {
+        clearInterval(_googleAuthPollInterval);
+        _googleAuthPollInterval = null;
+        try {
+          const r2 = await fetch('/api/google-status');
+          allData.google = await r2.json();
+          renderGoogle();
+        } catch(_) {}
+        return;
+      }
+      try {
+        const r2 = await fetch('/api/google-status');
+        const g2 = await r2.json();
+        if (g2.services && g2.services[service]) {
+          clearInterval(_googleAuthPollInterval);
+          _googleAuthPollInterval = null;
+          allData.google = g2;
+          renderGoogle();
+          toast('✓ ' + service + ' erfolgreich verbunden');
+          if (_googleAuthWindow && !_googleAuthWindow.closed) {
+            try { _googleAuthWindow.close(); } catch(_) {}
+          }
+        }
+      } catch(_) {}
+    }, 2000);
+  } catch(e) {
+    toast('Fehler: ' + e.message);
+  }
+}
+
+async function revokeGoogle(service) {
+  if (!confirm(`Verbindung zu ${service} wirklich lösen? Du musst dich dann neu autorisieren.`)) return;
+  try {
+    await fetch(`/api/google-revoke/${service}`, {method:'POST'});
+    const r = await fetch('/api/google-status');
+    allData.google = await r.json();
+    renderGoogle();
+    toast('Verbindung gelöst');
+  } catch(e) {
+    toast('Fehler: ' + e.message);
+  }
+}
+
+// Postmessage vom OAuth-Callback-Fenster abfangen (optional, Polling tut es auch)
+window.addEventListener('message', (ev) => {
+  if (ev.data && ev.data.type === 'google-oauth' && ev.data.ok) {
+    (async () => {
+      try {
+        const r = await fetch('/api/google-status');
+        allData.google = await r.json();
+        renderGoogle();
+      } catch(_) {}
+    })();
+  }
+});
+
+function renderGoogle() {
+  const el = document.getElementById('google-card');
+  if (el) el.innerHTML = buildGoogleCard();
 }
 
 function buildKalCard() {

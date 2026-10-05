@@ -12,13 +12,13 @@ ZEITZONE         = "Europe/Berlin"
 def _get_service(credentials_pfad: str = ""):
     """
     Lädt OAuth2-Credentials und gibt einen Google Calendar API Service zurück.
-    Beim ersten Aufruf öffnet sich einmalig ein Browser-Fenster zur Autorisierung.
+
+    Die Autorisierung läuft über das Web-UI (Einstellungen → Google → Verbinden),
+    nicht mehr automatisch über einen Browser-Launch aus dem Service heraus.
+    Grund: Ilija läuft als systemd-Service ohne DISPLAY/DBUS – xdg-open scheitert.
     """
     try:
-        from google.oauth2.credentials      import Credentials
-        from google_auth_oauthlib.flow      import InstalledAppFlow
-        from google.auth.transport.requests import Request
-        from googleapiclient.discovery      import build
+        from googleapiclient.discovery import build
     except ImportError:
         raise ImportError(
             "Google-Bibliotheken fehlen. Bitte installieren:\n"
@@ -26,37 +26,22 @@ def _get_service(credentials_pfad: str = ""):
             "google-auth-oauthlib"
         )
 
-    creds_pfad = credentials_pfad.strip() or CREDENTIALS_PATH
+    # Credentials über den zentralen Helper holen (automatischer Refresh inklusive)
+    try:
+        from skills.google_oauth_helper import get_credentials  # type: ignore
+    except ImportError:
+        # Fallback für Direkt-Aufrufe (z.B. Tests) – ohne Web-UI nicht nutzbar
+        get_credentials = None
 
-    if not os.path.exists(creds_pfad):
-        raise FileNotFoundError(
-            f"credentials.json nicht gefunden: {creds_pfad}\n"
-            "Bitte aus der Google Cloud Console herunterladen:\n"
-            "APIs & Dienste → Anmeldedaten → OAuth-Client → JSON herunterladen"
+    creds = get_credentials("google_kalender") if get_credentials else None
+
+    if not creds:
+        raise PermissionError(
+            "Google Kalender ist noch nicht autorisiert.\n"
+            "Bitte im Ilija-Web-UI unter Einstellungen → Google die "
+            "credentials.json hochladen und beim Dienst »Google Kalender« "
+            "auf »Verbinden« klicken."
         )
-
-    creds = None
-    if os.path.exists(TOKEN_PATH):
-        try:
-            creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
-        except Exception:
-            creds = None
-
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            try:
-                creds.refresh(Request())
-            except Exception:
-                creds = None
-
-        if not creds or not creds.valid:
-            # Einmalig: Browser öffnet sich, User klickt "Zulassen"
-            flow  = InstalledAppFlow.from_client_secrets_file(creds_pfad, SCOPES)
-            creds = flow.run_local_server(port=0, open_browser=True)
-
-        os.makedirs(os.path.dirname(TOKEN_PATH), exist_ok=True)
-        with open(TOKEN_PATH, "w", encoding="utf-8") as f:
-            f.write(creds.to_json())
 
     return build("calendar", "v3", credentials=creds, cache_discovery=False)
 
