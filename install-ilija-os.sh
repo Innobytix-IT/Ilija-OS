@@ -181,19 +181,44 @@ fi
 
 # ----------------------------------------------------------------------- 5. initramfs mit GPU
 say "5/8 initramfs mit FRAMEBUFFER + GPU-Modulen neu bauen (Boot-Splash)"
-grep -q '^FRAMEBUFFER=y' /etc/initramfs-tools/initramfs.conf \
-    || echo 'FRAMEBUFFER=y' >> /etc/initramfs-tools/initramfs.conf
 
-GPU_INFO=$(lspci 2>/dev/null | grep -iE 'vga|display|3d' || echo "")
-GPU_MODS=""
-if   echo "$GPU_INFO" | grep -qi 'amd\|ati\|radeon'; then GPU_MODS="amdgpu radeon"
-elif echo "$GPU_INFO" | grep -qi 'intel';            then GPU_MODS="i915"
-elif echo "$GPU_INFO" | grep -qi 'nvidia';           then GPU_MODS="nouveau"
+# Virtualisierung erkennen – in VMs ist FRAMEBUFFER=y + reale GPU-Module
+# kontraproduktiv (konfligiert mit VBoxVGA/QXL/virtio-vga), fuehrt zu Boot-
+# Hang am Plymouth-Logo. In VMs: einfach "vboxvideo" oder "qxl" nachladen,
+# aber kein FRAMEBUFFER=y erzwingen.
+IS_VM=0
+if command -v systemd-detect-virt &>/dev/null; then
+    VIRT_TYPE=$(systemd-detect-virt 2>/dev/null || echo "none")
+    [ "$VIRT_TYPE" != "none" ] && IS_VM=1
 fi
+
+if [ "$IS_VM" = "1" ]; then
+    info "   Virtualisierung erkannt: $VIRT_TYPE – überspringe FRAMEBUFFER=y"
+    # Vorhandene FRAMEBUFFER=y rausnehmen falls aus vorherigem Lauf drin
+    sed -i '/^FRAMEBUFFER=y$/d' /etc/initramfs-tools/initramfs.conf 2>/dev/null || true
+    # Passendes VM-Grafik-Modul ins initramfs
+    case "$VIRT_TYPE" in
+        oracle|virtualbox) GPU_MODS="vboxvideo" ;;
+        kvm|qemu)          GPU_MODS="qxl virtio_gpu" ;;
+        vmware)            GPU_MODS="vmwgfx" ;;
+        *)                 GPU_MODS="" ;;
+    esac
+else
+    # Echte Hardware: FRAMEBUFFER=y damit Plymouth-Grafik frueh greift
+    grep -q '^FRAMEBUFFER=y' /etc/initramfs-tools/initramfs.conf \
+        || echo 'FRAMEBUFFER=y' >> /etc/initramfs-tools/initramfs.conf
+    GPU_INFO=$(lspci 2>/dev/null | grep -iE 'vga|display|3d' || echo "")
+    GPU_MODS=""
+    if   echo "$GPU_INFO" | grep -qi 'amd\|ati\|radeon'; then GPU_MODS="amdgpu radeon"
+    elif echo "$GPU_INFO" | grep -qi 'intel';            then GPU_MODS="i915"
+    elif echo "$GPU_INFO" | grep -qi 'nvidia';           then GPU_MODS="nouveau"
+    fi
+fi
+
 for m in $GPU_MODS; do
     grep -q "^$m\$" /etc/initramfs-tools/modules || echo "$m" >> /etc/initramfs-tools/modules
 done
-info "   GPU erkannt: ${GPU_MODS:-keine spezifischen Module nötig}"
+info "   GPU-Module: ${GPU_MODS:-keine spezifischen Module nötig}"
 run_quiet "initramfs für alle Kernel neu bauen (1-3 Min)" update-initramfs -u -k all
 
 # ----------------------------------------------------------------------- 6. systemd-Service
