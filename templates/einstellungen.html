@@ -1118,17 +1118,31 @@ async function revokeGoogle(service) {
   }
 }
 
-// Postmessage vom OAuth-Callback-Fenster abfangen (optional, Polling tut es auch)
-window.addEventListener('message', (ev) => {
-  if (ev.data && ev.data.type === 'google-oauth' && ev.data.ok) {
-    (async () => {
-      try {
-        const r = await fetch('/api/google-status');
-        allData.google = await r.json();
-        renderGoogle();
-      } catch(_) {}
-    })();
-  }
+// Nachrichten vom OAuth-Callback-Fenster abfangen – auf drei Wegen, weil
+// Chromes COOP-Policy nach dem Google-Redirect window.opener auf null setzen
+// kann. localStorage-Events ueberleben das zuverlaessig innerhalb desselben
+// origins, BroadcastChannel ebenfalls.
+async function _onGoogleOAuthEvent(evt) {
+  if (!evt || evt.type !== 'google-oauth' || !evt.ok) return;
+  try {
+    const r = await fetch('/api/google-status');
+    allData.google = await r.json();
+    renderGoogle();
+    if (evt.service) toast('✓ ' + evt.service + ' erfolgreich verbunden');
+    if (_googleAuthPollInterval) { clearInterval(_googleAuthPollInterval); _googleAuthPollInterval = null; }
+  } catch(_) {}
+}
+// 1) postMessage vom window.opener-Weg (schnellster Weg wenn Chrome mitspielt)
+window.addEventListener('message', (ev) => _onGoogleOAuthEvent(ev && ev.data));
+// 2) BroadcastChannel – unabhaengig von opener-Beziehung
+try {
+  const _bc = new BroadcastChannel('ilija-google-oauth');
+  _bc.addEventListener('message', (ev) => _onGoogleOAuthEvent(ev && ev.data));
+} catch(_) {}
+// 3) localStorage storage-Event – feuert in anderen Tabs/Fenstern desselben origins
+window.addEventListener('storage', (ev) => {
+  if (ev.key !== 'ilija-google-oauth-event' || !ev.newValue) return;
+  try { _onGoogleOAuthEvent(JSON.parse(ev.newValue)); } catch(_) {}
 });
 
 function renderGoogle() {

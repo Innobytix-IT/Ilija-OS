@@ -1363,11 +1363,13 @@ def google_oauth_callback():
   <p class="small">Dieses Fenster schließt sich automatisch in 3 Sekunden.</p>
 </div>
 <script>
-  try {{
-    if (window.opener) window.opener.postMessage({{
-      type:'google-oauth', ok:{str(ok).lower()}, service:{service_js}
-    }}, '*');
-  }} catch(_) {{}}
+  // Dreifach-Benachrichtigung: postMessage, BroadcastChannel, localStorage.
+  // Grund: Chrome's COOP-Policy kann window.opener nach dem Google-Redirect
+  // auf null setzen; BroadcastChannel und localStorage-Events ueberleben das.
+  var _evt = {{type:'google-oauth', ok:{str(ok).lower()}, service:{service_js}, ts:Date.now()}};
+  try {{ if (window.opener) window.opener.postMessage(_evt, '*'); }} catch(_) {{}}
+  try {{ var _bc = new BroadcastChannel('ilija-google-oauth'); _bc.postMessage(_evt); _bc.close(); }} catch(_) {{}}
+  try {{ localStorage.setItem('ilija-google-oauth-event', JSON.stringify(_evt)); }} catch(_) {{}}
   setTimeout(() => window.close(), 3000);
 </script>
 </body></html>"""
