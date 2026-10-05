@@ -390,15 +390,34 @@ if [ -d "$ILIJA_DIR/branding/overlay" ]; then
     ok "System-Branding (Startbutton, SDDM, GRUB) umgestellt"
 fi
 
-# "Lubuntu Manual"-Icon vom Desktop entfernen (nicht gewuenscht, suggeriert
-# dem Nutzer "das ist Lubuntu" statt "das ist Ilija OS").
-# Case-insensitive find damit Namensvarianten (Lubuntu Manual.desktop,
-# lubuntu-manual.desktop, Lubuntu-Manual.desktop) alle gefangen werden.
+# "Lubuntu Manual"-Icon dauerhaft entfernen – aus dem User-Desktop UND
+# aus /etc/skel/Desktop/ (sonst legt Lubuntu es bei jedem neuen Login/
+# User-Neuanlage wieder an). Fuer bestehende User zusaetzlich alle
+# /home/*/Desktop/-Instanzen suchen.
 # Die LXQt-automatischen Shortcuts (Rechner, Papierkorb, User, Netzwerk)
 # BLEIBEN – gewuenschtes Verhalten.
+LUBUNTU_MANUAL_REMOVED=0
+# 1) User-Desktop des Target-Users
 if [ -d "$DESKTOP_DIR" ]; then
-    find "$DESKTOP_DIR" -maxdepth 1 -iname "*lubuntu*manual*" -delete 2>/dev/null || true
-    ok "Lubuntu-Manual-Icon vom Desktop entfernt"
+    if find "$DESKTOP_DIR" -maxdepth 1 -iname "*lubuntu*manual*" -print -delete 2>/dev/null | grep -q .; then
+        LUBUNTU_MANUAL_REMOVED=1
+    fi
+fi
+# 2) Schablonen-Verzeichnis fuer neue Nutzer
+if [ -d /etc/skel/Desktop ]; then
+    if find /etc/skel/Desktop -maxdepth 1 -iname "*lubuntu*manual*" -print -delete 2>/dev/null | grep -q .; then
+        LUBUNTU_MANUAL_REMOVED=1
+    fi
+fi
+# 3) Alle bestehenden User-Desktops im System (falls mehrere Nutzer)
+for user_desktop in /home/*/Desktop /home/*/Schreibtisch; do
+    [ -d "$user_desktop" ] || continue
+    find "$user_desktop" -maxdepth 1 -iname "*lubuntu*manual*" -delete 2>/dev/null || true
+done
+if [ "$LUBUNTU_MANUAL_REMOVED" = "1" ]; then
+    ok "Lubuntu-Manual-Icon dauerhaft entfernt (User + /etc/skel/)"
+else
+    ok "Keine Lubuntu-Manual-Datei gefunden (schon weg oder nie da)"
 fi
 
 # LXQt-Panel neu starten, damit der neu kopierte mainmenu.svg (Startbutton-
