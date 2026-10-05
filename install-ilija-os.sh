@@ -136,6 +136,16 @@ run_quiet "pip aktualisieren" \
 
 if [ -f requirements.txt ]; then
     PKG_COUNT=$(grep -cv '^\s*$\|^\s*#' requirements.txt || echo "?")
+
+    # Zuerst torch CPU-only vorinstallieren, bevor requirements.txt sentence-
+    # transformers/openai-whisper installiert. Grund: diese Deps ziehen sonst
+    # transitiv torch mit GPU-CUDA-Variante (~2 GB inkl. nvidia-cublas,
+    # nvidia-cudnn etc.). CPU-only ist deutlich schlanker (~250 MB) und
+    # funktioniert fuer alle Ilija-Features (Whisper laeuft auf CPU, Embeddings
+    # laufen auf CPU). Dedizierter CPU-Index von pytorch.org.
+    run_quiet "PyTorch CPU-only installieren (~250 MB statt ~2 GB mit CUDA)" \
+        sudo -u "$TARGET_USER" bash -c "source venv/bin/activate && pip install --quiet --resume-retries 50 --timeout 180 --index-url https://download.pytorch.org/whl/cpu torch"
+
     # Hohe Retry-Zahl + grosszuegiger Timeout, damit grosse transitive Downloads
     # (z.B. nvidia-cublas, ~400 MB) auch auf wackeliger VM-NAT-Verbindung
     # oder lahmen Mobile-Hotspots zuverlaessig durchkommen. Ohne das kippt
