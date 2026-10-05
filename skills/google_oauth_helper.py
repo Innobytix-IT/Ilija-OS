@@ -135,6 +135,12 @@ def start_oauth(service: str, redirect_uri: str) -> tuple[str, str]:
         state=state,
     )
 
+    # PKCE: flow.authorization_url() hat intern einen code_verifier erzeugt
+    # und den code_challenge an Google geschickt. Beim Callback brauchen wir
+    # genau diesen code_verifier wieder, um das Token zu bekommen – also mit
+    # dem State mitspeichern.
+    code_verifier = getattr(flow, "code_verifier", None)
+
     with _states_lock:
         # Alte expired States aufräumen (lazy GC)
         now = time.time()
@@ -143,9 +149,10 @@ def start_oauth(service: str, redirect_uri: str) -> tuple[str, str]:
             _oauth_states.pop(s, None)
         # Neuen State speichern
         _oauth_states[state] = {
-            "service":      service,
-            "redirect_uri": redirect_uri,
-            "expires":      now + _STATE_TTL,
+            "service":       service,
+            "redirect_uri":  redirect_uri,
+            "code_verifier": code_verifier,
+            "expires":       now + _STATE_TTL,
         }
 
     return auth_url, state
@@ -177,8 +184,9 @@ def complete_oauth(code: str, state: str) -> str:
         raise ValueError("OAuth-Sitzung ist abgelaufen (max. 10 Min). "
                          "Bitte neu starten.")
 
-    service      = state_data["service"]
-    redirect_uri = state_data["redirect_uri"]
+    service       = state_data["service"]
+    redirect_uri  = state_data["redirect_uri"]
+    code_verifier = state_data.get("code_verifier")
 
     from google_auth_oauthlib.flow import Flow  # type: ignore
 
@@ -189,6 +197,13 @@ def complete_oauth(code: str, state: str) -> str:
         redirect_uri=redirect_uri,
         state=state,
     )
+
+    # PKCE: code_verifier wiederherstellen, den start_oauth() beim Erzeugen der
+    # Autorisierungs-URL verwendet hat – ohne ihn lehnt Google den Token-Tausch
+    # mit "invalid_grant: Missing code verifier" ab.
+    if code_verifier:
+        flow.code_verifier = code_verifier
+
     flow.fetch_token(code=code)
 
     # Token in service-spezifischem Ordner ablegen
