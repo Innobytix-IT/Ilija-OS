@@ -1541,16 +1541,19 @@ async function checkNovnc() {
     const r = await fetch('/api/novnc-info');
     const d = await r.json();
     if (d.available) {
+      // noVNC-Fernzugriff verfuegbar -> Link zeigen
       const bar  = document.getElementById('novnc-bar');
       const link = document.getElementById('novnc-link');
       if (bar)  { bar.style.display = 'flex'; }
       if (link) { link.href = d.url; link.textContent = d.url.replace('http://','') + ' →'; }
-    } else {
+    } else if (!d.has_desktop) {
+      // Kein noVNC UND kein Desktop -> SSH-Hinweis zeigen
       const bar = document.getElementById('ssh-bar');
       const cmd = document.getElementById('ssh-cmd');
       if (bar) { bar.style.display = 'flex'; }
       if (cmd) { cmd.textContent = d.ssh || `ssh ${d.user||'user'}@${d.host||''}`; }
     }
+    // Sonst: Desktop da, aber kein noVNC -> nichts anzeigen (lokaler Zugriff reicht)
   } catch(_) {}
 }
 

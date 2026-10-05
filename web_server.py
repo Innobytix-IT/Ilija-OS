@@ -552,17 +552,42 @@ def einstellungen_page():
 @app.route("/api/novnc-info")
 def novnc_info():
     import socket as _sock
-    import getpass
+    import getpass, os as _os, subprocess as _sp
+    # 1) noVNC-Server erreichbar?
     available = False
     try:
         with _sock.create_connection(("127.0.0.1", 6080), timeout=0.5):
             available = True
     except OSError:
         pass
+    # 2) Laeuft ueberhaupt ein grafischer Desktop auf dieser Maschine?
+    #    Pruefung in dieser Reihenfolge:
+    #    a) Env-Variablen (greifen wenn Ilija selbst in einer Desktop-Session laeuft)
+    #    b) X11-Socket in /tmp/.X11-unix (greift wenn Ilija als Service laeuft, aber ein X-Server aktiv ist)
+    #    c) Session-Manager-Prozess (ultimativer Fallback)
+    has_desktop = bool(_os.environ.get("DISPLAY") or _os.environ.get("WAYLAND_DISPLAY"))
+    if not has_desktop:
+        try:
+            x11_dir = "/tmp/.X11-unix"
+            if _os.path.isdir(x11_dir) and _os.listdir(x11_dir):
+                has_desktop = True
+        except OSError:
+            pass
+    if not has_desktop:
+        try:
+            r = _sp.run(
+                ["pgrep", "-f",
+                 "lxqt-session|gnome-session|xfce4-session|plasmashell|cinnamon-session|mate-session|lxsession|budgie-wm"],
+                capture_output=True, timeout=1
+            )
+            has_desktop = r.returncode == 0
+        except Exception:
+            pass
     host = request.host.split(":")[0]
     user = getpass.getuser()
     return jsonify({
         "available": available,
+        "has_desktop": has_desktop,
         "url": f"http://{host}:6080/vnc.html",
         "ssh": f"ssh {user}@{host}",
         "host": host,
