@@ -328,8 +328,8 @@ fi
 
 cat > /etc/sudoers.d/ilija-update-rules << SUDO
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get
-$TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ilija, /usr/bin/systemctl restart x11vnc, /usr/bin/systemctl restart x11vnc.service, /usr/bin/systemctl restart xvfb, /usr/bin/systemctl restart xvfb.service, /usr/bin/systemctl restart novnc, /usr/bin/systemctl restart novnc.service
-$TARGET_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija, /bin/systemctl restart x11vnc, /bin/systemctl restart x11vnc.service, /bin/systemctl restart xvfb, /bin/systemctl restart xvfb.service, /bin/systemctl restart novnc, /bin/systemctl restart novnc.service
+$TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ilija, /usr/bin/systemctl restart x11vnc, /usr/bin/systemctl restart x11vnc.service, /usr/bin/systemctl restart x11vnc-desktop, /usr/bin/systemctl restart x11vnc-desktop.service, /usr/bin/systemctl restart xvfb, /usr/bin/systemctl restart xvfb.service, /usr/bin/systemctl restart novnc, /usr/bin/systemctl restart novnc.service, /usr/bin/systemctl restart novnc-desktop, /usr/bin/systemctl restart novnc-desktop.service
+$TARGET_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija, /bin/systemctl restart x11vnc, /bin/systemctl restart x11vnc.service, /bin/systemctl restart x11vnc-desktop, /bin/systemctl restart x11vnc-desktop.service, /bin/systemctl restart xvfb, /bin/systemctl restart xvfb.service, /bin/systemctl restart novnc, /bin/systemctl restart novnc.service, /bin/systemctl restart novnc-desktop, /bin/systemctl restart novnc-desktop.service
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl enable ai-api-proxy, /usr/bin/systemctl enable ai-api-proxy.service, /usr/bin/systemctl disable ai-api-proxy, /usr/bin/systemctl disable ai-api-proxy.service, /usr/bin/systemctl restart ai-api-proxy, /usr/bin/systemctl restart ai-api-proxy.service, /usr/bin/systemctl stop ai-api-proxy, /usr/bin/systemctl stop ai-api-proxy.service, /usr/bin/systemctl start ai-api-proxy, /usr/bin/systemctl start ai-api-proxy.service
 $TARGET_USER ALL=(ALL) NOPASSWD: /bin/systemctl enable ai-api-proxy, /bin/systemctl enable ai-api-proxy.service, /bin/systemctl disable ai-api-proxy, /bin/systemctl disable ai-api-proxy.service, /bin/systemctl restart ai-api-proxy, /bin/systemctl restart ai-api-proxy.service, /bin/systemctl stop ai-api-proxy, /bin/systemctl stop ai-api-proxy.service, /bin/systemctl start ai-api-proxy, /bin/systemctl start ai-api-proxy.service
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/sbin/update-initramfs
@@ -784,7 +784,7 @@ X11VNC
 # novnc.service – WebSocket-Proxy, macht VNC über HTTPS/WS im Browser nutzbar
 cat > /etc/systemd/system/novnc.service << 'NOVNC'
 [Unit]
-Description=noVNC WebSocket Proxy
+Description=noVNC WebSocket Proxy (Headless-Fallback)
 After=x11vnc.service
 Requires=x11vnc.service
 
@@ -798,10 +798,54 @@ RestartSec=3
 WantedBy=multi-user.target
 NOVNC
 
+# x11vnc-desktop.service – zweiter VNC-Server, der DIREKT an die echte
+# User-Session (:0) andockt. Laeuft als root, damit er die SDDM-Xauthority
+# in /run/sddm/ lesen kann. Bindet auf Port 5901.
+X11VNC_DESKTOP_SH=/opt/ilija-os/x11vnc-desktop.sh
+if [ -f "$ILIJA_DIR/system/x11vnc-desktop.sh" ]; then
+    cp "$ILIJA_DIR/system/x11vnc-desktop.sh" "$X11VNC_DESKTOP_SH"
+    chmod 755 "$X11VNC_DESKTOP_SH"
+fi
+cat > /etc/systemd/system/x11vnc-desktop.service << 'X11VNC_D'
+[Unit]
+Description=x11vnc VNC Server (User-Desktop :0)
+After=sddm.service graphical.target
+
+[Service]
+Type=simple
+User=root
+Environment=PORT=5901
+ExecStart=/opt/ilija-os/x11vnc-desktop.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+X11VNC_D
+
+# novnc-desktop.service – zweiter WebSocket-Proxy, 6081 -> localhost:5901
+cat > /etc/systemd/system/novnc-desktop.service << 'NOVNC_D'
+[Unit]
+Description=noVNC WebSocket Proxy (Echter Desktop)
+After=x11vnc-desktop.service
+Requires=x11vnc-desktop.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/websockify --web=/usr/share/novnc 6081 localhost:5901
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+NOVNC_D
+
 systemctl daemon-reload
-systemctl enable xvfb.service x11vnc.service novnc.service >/dev/null 2>&1
-systemctl restart xvfb.service x11vnc.service novnc.service >/dev/null 2>&1 || true
-ok "noVNC auf Port 6080 verfügbar (Browser: http://<ip>:6080/vnc.html)"
+systemctl enable xvfb.service x11vnc.service novnc.service \
+                 x11vnc-desktop.service novnc-desktop.service >/dev/null 2>&1
+systemctl restart xvfb.service x11vnc.service novnc.service \
+                  x11vnc-desktop.service novnc-desktop.service >/dev/null 2>&1 || true
+ok "noVNC auf Port 6080 (Headless) + 6081 (Echter Desktop) verfügbar"
 
 # ----------------------------------------------------------------------- 8. Start
 say "8/8 Dienst starten"

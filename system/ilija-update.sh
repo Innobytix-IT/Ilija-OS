@@ -82,6 +82,7 @@ if [ "$LOCAL" != "$REMOTE" ]; then
 
     deploy_pair "system/ilija-update.sh"  "$UPDATE_SCRIPT"                 "Update-Skript"
     deploy_pair "system/show-setup-wizard.sh" "/opt/ilija-os/show-setup-wizard.sh" "Setup-Wizard-Launcher"
+    deploy_pair "system/x11vnc-desktop.sh" "/opt/ilija-os/x11vnc-desktop.sh" "x11vnc-Desktop-Launcher"
 
     # AI-API-Proxy: venv + requirements + Service-File nachinstallieren falls fehlt
     AI_PROXY_SRC="$ILIJA_DIR/vendor/ai-api-proxy"

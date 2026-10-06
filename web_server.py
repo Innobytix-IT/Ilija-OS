@@ -611,10 +611,23 @@ def novnc_info():
     client_host = request.host.split(":")[0]
     host = client_host or "localhost"
     user = getpass.getuser()
+
+    # Prueft ob der zweite Stream (Live-Desktop auf Port 6080+1=6081) laeuft.
+    # Dieser dockt direkt an den SDDM-X-Server auf :0 an, zeigt den echten
+    # LXQt-Desktop, nicht den Openbox-Fallback von Port 6080.
+    desktop_available = False
+    try:
+        with _sock.create_connection(("127.0.0.1", 6081), timeout=0.5):
+            desktop_available = True
+    except OSError:
+        pass
+
     return jsonify({
         "available": available,
         "has_desktop": has_desktop,
         "url": f"http://{host}:6080/vnc.html",
+        "url_desktop": f"http://{host}:6081/vnc.html",
+        "desktop_available": desktop_available,
         "ssh": f"ssh {user}@{host}",
         "host": host,
         "user": user,
