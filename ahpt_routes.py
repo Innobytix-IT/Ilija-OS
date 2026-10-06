@@ -106,27 +106,30 @@ def _get_pubkey():
 
 def _service_status():
     """Gibt den Status des AHPT-Agent-systemd-user-services zurueck.
-    Unterscheidet 'active' / 'inactive' / 'failed' / 'not-installed' / 'unknown'."""
+    Hierarchie:
+      1. TOML-Config fehlt?           -> 'not-configured'
+      2. Service-Unit nicht installiert? -> 'not-installed'
+      3. systemctl is-active-Status:  'active' / 'inactive' / 'failed'
+    """
+    if not os.path.exists(_TOML_PATH):
+        return "not-configured"
     try:
         env = os.environ.copy()
         env.setdefault("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+        # Erst pruefen ob Service-Unit ueberhaupt existiert
+        r_list = subprocess.run(
+            ["systemctl", "--user", "list-unit-files", f"{_SERVICE}.service", "--no-legend"],
+            capture_output=True, text=True, timeout=5, env=env)
+        if not (r_list.stdout or "").strip():
+            return "not-installed"
+        # Jetzt den Status abfragen
         r = subprocess.run(
             ["systemctl", "--user", "is-active", _SERVICE],
             capture_output=True, text=True, timeout=5, env=env)
         state = (r.stdout or "").strip()
-        # systemctl liefert bei nicht-existenten Units "inactive" + stderr
-        # "Unit X.service could not be found." - das wollen wir unterscheiden.
-        if "could not be found" in (r.stderr or "").lower():
-            return "not-installed"
         if state in ("active", "inactive", "failed", "activating", "deactivating"):
             return state
-        # Fallback: Prozess-Scan nach relay_agent.py mit passender Host-Config
-        r2 = subprocess.run(
-            ["pgrep", "-fa", "relay_agent.py"],
-            capture_output=True, text=True, timeout=5)
-        if r2.returncode == 0 and f"agent_{_HOST_TAG}" in r2.stdout:
-            return "active"
-        return "inactive"
+        return "unknown"
     except Exception:
         return "unknown"
 
@@ -147,6 +150,7 @@ def register_ahpt_routes(app):
             "service":    _SERVICE,
             "host":       _HOSTNAME,
             "user":       _CURRENT_USER,
+            "home_hint":  os.path.expanduser("~"),
         })
 
     @bp.route("/api/ahpt-settings", methods=["POST"])
@@ -217,9 +221,23 @@ def register_ahpt_routes(app):
         action = data.get("action", "")
         if action not in ("start", "stop", "restart"):
             return jsonify({"ok": False, "message": "Ungültige Aktion."}), 400
+        # Vorab-Checks: wenn Service nicht da ist, direkt klarer Hinweis
+        pre_status = _service_status()
+        if pre_status == "not-configured":
+            return jsonify({
+                "ok": False,
+                "status": pre_status,
+                "service": _SERVICE,
+                "message": "AHPT ist nicht eingerichtet – bitte oben die Konfiguration ausfüllen und speichern.",
+            })
+        if pre_status == "not-installed":
+            return jsonify({
+                "ok": False,
+                "status": pre_status,
+                "service": _SERVICE,
+                "message": f"systemd-Unit {_SERVICE}.service ist nicht installiert.",
+            })
         try:
-            # systemctl --user laeuft als der User unter dem der Flask-Server
-            # auch laeuft (Ilija-Service). XDG_RUNTIME_DIR passend zur UID.
             env = os.environ.copy()
             env.setdefault("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
             r = subprocess.run(

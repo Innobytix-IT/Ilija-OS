@@ -564,9 +564,9 @@ input[type=number]{max-width:90px}
               <div class="row-hint" id="ahpt-status-text">Wird geladen…</div>
             </div>
             <div class="row-control" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-              <button class="btn btn-teal btn-sm" onclick="ahptControl('start')">▶ Start</button>
-              <button class="btn btn-danger btn-sm" onclick="ahptControl('stop')">⏹ Stop</button>
-              <button class="btn btn-ghost btn-sm" onclick="ahptControl('restart')">🔄 Restart</button>
+              <button id="ahpt-btn-start"   class="btn btn-teal btn-sm"   onclick="ahptControl('start')">▶ Start</button>
+              <button id="ahpt-btn-stop"    class="btn btn-danger btn-sm" onclick="ahptControl('stop')">⏹ Stop</button>
+              <button id="ahpt-btn-restart" class="btn btn-ghost btn-sm"  onclick="ahptControl('restart')">🔄 Restart</button>
             </div>
           </div>
         </div>
@@ -1726,7 +1726,7 @@ function buildAhptCard() {
     </div>
     <div class="row row-wide" style="background:var(--s1)">
       <div class="row-label" style="color:var(--tx2)">📂 Dienst: dateien (Hauptfreigabe)</div>
-      <input type="text" id="ahpt-dat-pfad" placeholder="/home/manuel" value="${esc(datD.wurzel||'')}" style="color:var(--tx3)" readonly>
+      <input type="text" id="ahpt-dat-pfad" placeholder="${esc(allData.ahpt?.home_hint || '~/')}" value="${esc(datD.wurzel||'')}" style="color:var(--tx3)" readonly>
     </div>
     <div class="row" style="background:var(--s1)">
       <div class="row-left">
@@ -1764,18 +1764,26 @@ function updateAhptStatus(status, service) {
   const el = document.getElementById('ahpt-status-text');
   if (!el) return;
   const map = {
-    active:   ['🟢 AHPT-Tunnel läuft',                       'var(--green)'],
-    inactive: ['⚫ AHPT-Tunnel inaktiv (lokaler Chat funktioniert trotzdem)', 'var(--tx3)'],
-    failed:   ['🔴 AHPT-Tunnel fehlgeschlagen',              'var(--red)'],
-    'not-installed': ['⚪ AHPT-Tunnel nicht eingerichtet',     'var(--tx3)'],
-    unknown:  ['⚪ Status unbekannt',                         'var(--tx3)'],
+    active:           ['🟢 AHPT-Tunnel läuft',                                          'var(--green)'],
+    inactive:         ['⚫ AHPT-Tunnel inaktiv (lokaler Chat funktioniert trotzdem)',    'var(--tx3)'],
+    failed:           ['🔴 AHPT-Tunnel fehlgeschlagen',                                 'var(--red)'],
+    'not-configured': ['⚪ AHPT nicht eingerichtet – Konfiguration oben ausfüllen und speichern', 'var(--tx3)'],
+    'not-installed':  ['⚪ systemd-Unit nicht installiert (Installer erneut laufen lassen)', 'var(--tx3)'],
+    unknown:          ['⚪ Status unbekannt',                                            'var(--tx3)'],
   };
   const [text, color] = map[status] || ['⚪ ' + (status||'…'), 'var(--tx3)'];
   el.textContent = text;
   el.style.color = color;
-  // Service-Name in Sub-Headline aktualisieren (dynamisch pro Host)
-  const svcEl = document.getElementById('ahpt-service-name');
-  if (svcEl && service) svcEl.textContent = service;
+  if (service) {
+    const svcEl = document.getElementById('ahpt-service-name');
+    if (svcEl) svcEl.textContent = service;
+  }
+  // Buttons disablen wenn Service nicht konfiguriert/installiert ist
+  const disabled = (status === 'not-configured' || status === 'not-installed');
+  ['ahpt-btn-start','ahpt-btn-stop','ahpt-btn-restart'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) { b.disabled = disabled; b.style.opacity = disabled ? '0.4' : '1'; b.style.cursor = disabled ? 'not-allowed' : 'pointer'; }
+  });
 }
 
 // ── QR-Code Generierung ────────────────────────────────────────
