@@ -549,10 +549,13 @@ input[type=number]{max-width:90px}
           <span class="save-msg" id="ahpt-msg"></span>
         </div>
 
-        <!-- Agent-Status -->
+        <!-- AHPT-Agent-Status -->
         <div class="sec-head" style="margin-top:24px">
           <div class="sec-icon">⚡</div>
-          <div><div class="sec-title">Agent-Status</div><div class="sec-sub">systemd user service: ahpt-elitebook</div></div>
+          <div>
+            <div class="sec-title">AHPT-Tunnel-Agent</div>
+            <div class="sec-sub">Fernzugriff via Relay (nicht nötig für lokalen Chat) — systemd user service: <span id="ahpt-service-name">…</span></div>
+          </div>
         </div>
         <div class="card">
           <div class="row">
@@ -699,7 +702,7 @@ async function loadAllData() {
   allData.custom   = custom.value || {};
   allData.ahpt     = ahpt.value || {};
   updateChips();
-  updateAhptStatus(allData.ahpt.status);
+  updateAhptStatus(allData.ahpt.status, allData.ahpt.service);
   renderAhptQr();
 }
 
@@ -1450,7 +1453,7 @@ function buildAllCards() {
   if (ahptRelayCard) ahptRelayCard.innerHTML = buildAhptCard().replace('<div class="card">','').replace(/<\/div>$/,'');
   toggleSyncRows();
   updateChips();
-  updateAhptStatus(allData.ahpt?.status);
+  updateAhptStatus(allData.ahpt?.status, allData.ahpt?.service);
   renderAhptQr();
 }
 
@@ -1753,21 +1756,26 @@ async function saveAhpt() {
 
 async function ahptControl(action) {
   const r = await post('/api/ahpt-control', {action});
-  updateAhptStatus(r.status);
+  updateAhptStatus(r.status, r.service);
+  if (r.message && !r.ok) toast(r.message);
 }
 
-function updateAhptStatus(status) {
+function updateAhptStatus(status, service) {
   const el = document.getElementById('ahpt-status-text');
   if (!el) return;
   const map = {
-    active:   ['🟢 Agent läuft (active)',   'var(--green)'],
-    inactive: ['⚫ Agent gestoppt',           'var(--tx3)'],
-    failed:   ['🔴 Agent fehlgeschlagen',     'var(--red)'],
-    unknown:  ['⚪ Status unbekannt',          'var(--tx3)'],
+    active:   ['🟢 AHPT-Tunnel läuft',                       'var(--green)'],
+    inactive: ['⚫ AHPT-Tunnel inaktiv (lokaler Chat funktioniert trotzdem)', 'var(--tx3)'],
+    failed:   ['🔴 AHPT-Tunnel fehlgeschlagen',              'var(--red)'],
+    'not-installed': ['⚪ AHPT-Tunnel nicht eingerichtet',     'var(--tx3)'],
+    unknown:  ['⚪ Status unbekannt',                         'var(--tx3)'],
   };
   const [text, color] = map[status] || ['⚪ ' + (status||'…'), 'var(--tx3)'];
   el.textContent = text;
   el.style.color = color;
+  // Service-Name in Sub-Headline aktualisieren (dynamisch pro Host)
+  const svcEl = document.getElementById('ahpt-service-name');
+  if (svcEl && service) svcEl.textContent = service;
 }
 
 // ── QR-Code Generierung ────────────────────────────────────────

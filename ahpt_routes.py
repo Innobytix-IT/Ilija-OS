@@ -1,20 +1,34 @@
 """
 ahpt_routes.py – AHPT-Einstellungen API für Ilija OS Web-Interface
-Verwaltet den AHPT-Agent auf dem EliteBook (systemd user service).
+Verwaltet den AHPT-Agent (systemd user service) des aktuellen Users.
+
+Pfade und Service-Name sind pro Installation dynamisch: HOME des aktiven
+Users + Hostname. Fruehere Hardcodes "/home/manuel/.ahpt" und
+"ahpt-elitebook" wurden auf Melanis Thin-Client zu Fehlern:
+"Unbekannter Benutzer manuel".
 """
 
 import os
 import re
+import socket
+import getpass
 import json
 import subprocess
 from flask import Blueprint, jsonify, request, render_template
 
-_AHPT_DIR   = os.environ.get("AHPT_DIR", "/home/manuel/.ahpt")
-_TOML_PATH = os.path.join(_AHPT_DIR, "agent_elitebook.toml")
-_KEY_PATH   = os.path.join(_AHPT_DIR, "agent_elitebook.key")
-_PUB_PATH   = os.path.join(_AHPT_DIR, "agent_elitebook.pub")
+_CURRENT_USER = getpass.getuser()
+_HOSTNAME     = socket.gethostname().lower().split(".")[0]  # z.B. "ilijaos-futros930"
+
+# Hostname-Suffix fuer Service- und Dateinamen (nur ASCII-Buchstaben,
+# Ziffern, "-" erlaubt – systemd-konform)
+_HOST_TAG = re.sub(r'[^a-z0-9-]', '-', _HOSTNAME).strip('-') or "agent"
+
+_AHPT_DIR   = os.environ.get("AHPT_DIR", os.path.expanduser("~/.ahpt"))
+_TOML_PATH  = os.path.join(_AHPT_DIR, f"agent_{_HOST_TAG}.toml")
+_KEY_PATH   = os.path.join(_AHPT_DIR, f"agent_{_HOST_TAG}.key")
+_PUB_PATH   = os.path.join(_AHPT_DIR, f"agent_{_HOST_TAG}.pub")
 _STAND_PATH = os.path.join(_AHPT_DIR, "einrichten_stand.json")
-_SERVICE    = "ahpt-elitebook"
+_SERVICE    = os.environ.get("AHPT_SERVICE", f"ahpt-{_HOST_TAG}")
 
 
 def _read_toml_field(path, field):
@@ -91,12 +105,26 @@ def _get_pubkey():
 
 
 def _service_status():
-    """Gibt den Status des AHPT-Agent-Prozesses zurück."""
+    """Gibt den Status des AHPT-Agent-systemd-user-services zurueck.
+    Unterscheidet 'active' / 'inactive' / 'failed' / 'not-installed' / 'unknown'."""
     try:
+        env = os.environ.copy()
+        env.setdefault("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
         r = subprocess.run(
+            ["systemctl", "--user", "is-active", _SERVICE],
+            capture_output=True, text=True, timeout=5, env=env)
+        state = (r.stdout or "").strip()
+        # systemctl liefert bei nicht-existenten Units "inactive" + stderr
+        # "Unit X.service could not be found." - das wollen wir unterscheiden.
+        if "could not be found" in (r.stderr or "").lower():
+            return "not-installed"
+        if state in ("active", "inactive", "failed", "activating", "deactivating"):
+            return state
+        # Fallback: Prozess-Scan nach relay_agent.py mit passender Host-Config
+        r2 = subprocess.run(
             ["pgrep", "-fa", "relay_agent.py"],
             capture_output=True, text=True, timeout=5)
-        if r.returncode == 0 and "agent_elitebook" in r.stdout:
+        if r2.returncode == 0 and f"agent_{_HOST_TAG}" in r2.stdout:
             return "active"
         return "inactive"
     except Exception:
@@ -116,6 +144,9 @@ def register_ahpt_routes(app):
             "clients":    _read_toml_clients(_TOML_PATH),
             "dienste":    _read_toml_dienste(_TOML_PATH),
             "status":     _service_status(),
+            "service":    _SERVICE,
+            "host":       _HOSTNAME,
+            "user":       _CURRENT_USER,
         })
 
     @bp.route("/api/ahpt-settings", methods=["POST"])
@@ -172,7 +203,13 @@ def register_ahpt_routes(app):
     @bp.route("/api/ahpt-status", methods=["GET"])
     def ahpt_status():
         state = _service_status()
-        return jsonify({"status": state, "running": state == "active"})
+        return jsonify({
+            "status":  state,
+            "running": state == "active",
+            "service": _SERVICE,
+            "host":    _HOSTNAME,
+            "user":    _CURRENT_USER,
+        })
 
     @bp.route("/api/ahpt-control", methods=["POST"])
     def ahpt_control():
@@ -181,11 +218,12 @@ def register_ahpt_routes(app):
         if action not in ("start", "stop", "restart"):
             return jsonify({"ok": False, "message": "Ungültige Aktion."}), 400
         try:
-            # systemctl --user muss als manuel-User laufen (XDG_RUNTIME_DIR setzen)
+            # systemctl --user laeuft als der User unter dem der Flask-Server
+            # auch laeuft (Ilija-Service). XDG_RUNTIME_DIR passend zur UID.
             env = os.environ.copy()
-            env["XDG_RUNTIME_DIR"] = "/run/user/1000"
+            env.setdefault("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
             r = subprocess.run(
-                ["sudo", "-u", "manuel", "systemctl", "--user", action, _SERVICE],
+                ["systemctl", "--user", action, _SERVICE],
                 capture_output=True, text=True, timeout=10, env=env)
             ok = r.returncode == 0
             status = _service_status()
@@ -193,6 +231,7 @@ def register_ahpt_routes(app):
                 "ok": ok,
                 "message": f"Service {action}: {'OK' if ok else (r.stderr.strip() or r.stdout.strip())}",
                 "status": status,
+                "service": _SERVICE,
             })
         except Exception as e:
             return jsonify({"ok": False, "message": str(e)}), 500
