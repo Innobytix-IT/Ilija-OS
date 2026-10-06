@@ -108,8 +108,9 @@ Type=simple
 User=$USER
 Group=$USER
 WorkingDirectory=$AI_PROXY_SRC
+Environment=port=8642
 EnvironmentFile=-$AI_PROXY_SRC/.env
-ExecStart=$AI_PROXY_VENV/bin/python -m uvicorn main:app --host 0.0.0.0 --port \${port:-8642}
+ExecStart=$AI_PROXY_VENV/bin/python -m uvicorn main:app --host 0.0.0.0 --port \${port}
 Restart=on-failure
 RestartSec=5
 
