@@ -611,21 +611,13 @@ input[type=number]{max-width:90px}
       <span style="font-size:1rem">🖥</span>
       <div style="flex:1">
         <div style="font-size:.77rem;font-weight:600;color:var(--tx2)">Desktop-Fernzugriff (noVNC)</div>
-        <div style="font-size:.72rem;color:var(--tx3);margin-top:1px">Du kannst diesen Server direkt im Browser steuern</div>
+        <div style="font-size:.72rem;color:var(--tx3);margin-top:1px">Desktopumgebung aktiv — du kannst diesen Server direkt im Browser steuern</div>
         <div style="font-size:.70rem;color:var(--green);margin-top:3px">🔓 Kein VNC-Passwort erforderlich</div>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-        <a id="novnc-link-desktop" href="#" target="_blank" rel="noopener"
-           title="Zeigt den echten LXQt-Desktop der laufenden Benutzersitzung"
-           style="display:none;font-size:.74rem;font-weight:600;color:var(--teal);border:1px solid rgba(45,212,191,.25);border-radius:6px;padding:5px 12px;text-decoration:none;white-space:nowrap;background:var(--tdim)">
-          🖥 Echter Desktop →
-        </a>
-        <a id="novnc-link" href="#" target="_blank" rel="noopener"
-           title="Minimales Openbox-Fenster – nur fuer App-Fenster wie den Proxy-Launcher"
-           style="font-size:.74rem;font-weight:600;color:var(--teal);border:1px solid rgba(45,212,191,.25);border-radius:6px;padding:5px 12px;text-decoration:none;white-space:nowrap;background:var(--tdim)">
-          ⚙ Headless-Fenster →
-        </a>
-      </div>
+      <a id="novnc-link" href="#" target="_blank" rel="noopener"
+         style="font-size:.75rem;font-weight:600;color:var(--teal);border:1px solid rgba(45,212,191,.25);border-radius:6px;padding:5px 12px;text-decoration:none;white-space:nowrap;background:var(--tdim)">
+        Im Browser öffnen →
+      </a>
     </div>
 
     <!-- SSH-Terminal-Zugang (nur wenn keine Desktopumgebung aktiv) -->
@@ -1852,19 +1844,12 @@ async function checkNovnc() {
   try {
     const r = await fetch('/api/novnc-info');
     const d = await r.json();
-    if (d.available || d.desktop_available) {
-      // Mindestens einer der beiden Streams verfuegbar -> Leiste zeigen
+    if (d.available) {
       const bar  = document.getElementById('novnc-bar');
       const link = document.getElementById('novnc-link');
-      const linkDesktop = document.getElementById('novnc-link-desktop');
-      if (bar) bar.style.display = 'flex';
-      if (link && d.available) { link.href = d.url; }
-      if (linkDesktop && d.desktop_available && d.url_desktop) {
-        linkDesktop.href = d.url_desktop;
-        linkDesktop.style.display = '';
-      }
+      if (bar)  { bar.style.display = 'flex'; }
+      if (link) { link.href = d.url; link.textContent = d.url.replace('http://','') + ' →'; }
     } else if (!d.has_desktop) {
-      // Kein noVNC UND kein Desktop -> SSH-Hinweis zeigen
       const bar = document.getElementById('ssh-bar');
       const cmd = document.getElementById('ssh-cmd');
       if (bar) { bar.style.display = 'flex'; }

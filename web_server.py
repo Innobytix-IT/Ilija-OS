@@ -611,28 +611,10 @@ def novnc_info():
     client_host = request.host.split(":")[0]
     host = client_host or "localhost"
     user = getpass.getuser()
-
-    # Prueft ob der zweite Stream (Live-Desktop) laeuft. Beide Schichten
-    # muessen bereit sein:
-    #   - 5901: x11vnc-desktop.service bindet an echten :0 (SDDM-Session)
-    #   - 6081: websockify macht's als noVNC verfuegbar
-    # Auf manchen Hardware-Kombos (z.B. AMD Mullins Thin-Clients mit SDDM)
-    # bindet x11vnc an :0 nicht; dann waere nur 6081 LISTEN und ein Klick
-    # auf den Button wuerde ins Leere laufen. Beide pruefen vermeidet das.
-    desktop_available = False
-    try:
-        with _sock.create_connection(("127.0.0.1", 6081), timeout=0.5):
-            with _sock.create_connection(("127.0.0.1", 5901), timeout=0.5):
-                desktop_available = True
-    except OSError:
-        pass
-
     return jsonify({
         "available": available,
         "has_desktop": has_desktop,
         "url": f"http://{host}:6080/vnc.html",
-        "url_desktop": f"http://{host}:6081/vnc.html",
-        "desktop_available": desktop_available,
         "ssh": f"ssh {user}@{host}",
         "host": host,
         "user": user,

@@ -501,7 +501,7 @@ X11VNC
 
     cat > /etc/systemd/system/novnc.service << 'NOVNC'
 [Unit]
-Description=noVNC WebSocket Proxy (Headless-Fallback)
+Description=noVNC WebSocket Proxy
 After=x11vnc.service
 Requires=x11vnc.service
 
@@ -515,48 +515,9 @@ RestartSec=3
 WantedBy=multi-user.target
 NOVNC
 
-    # x11vnc-desktop: zweiter VNC-Server fuer echten :0-Desktop
-    if [ -f "$ILIJA_DIR/system/x11vnc-desktop.sh" ]; then
-        cp "$ILIJA_DIR/system/x11vnc-desktop.sh" /opt/ilija-os/x11vnc-desktop.sh
-        chmod 755 /opt/ilija-os/x11vnc-desktop.sh
-    fi
-    cat > /etc/systemd/system/x11vnc-desktop.service << 'X11VNC_D'
-[Unit]
-Description=x11vnc VNC Server (User-Desktop :0)
-After=sddm.service graphical.target
-
-[Service]
-Type=simple
-User=root
-Environment=PORT=5901
-ExecStart=/opt/ilija-os/x11vnc-desktop.sh
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-X11VNC_D
-
-    cat > /etc/systemd/system/novnc-desktop.service << 'NOVNC_D'
-[Unit]
-Description=noVNC WebSocket Proxy (Echter Desktop)
-After=x11vnc-desktop.service
-Requires=x11vnc-desktop.service
-
-[Service]
-Type=simple
-ExecStart=/usr/bin/websockify --web=/usr/share/novnc 6081 localhost:5901
-Restart=on-failure
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-NOVNC_D
-
     systemctl daemon-reload >> "$LOG" 2>&1 || true
-    systemctl enable xvfb.service x11vnc.service novnc.service \
-                     x11vnc-desktop.service novnc-desktop.service >> "$LOG" 2>&1 || true
-    echo "noVNC-Services (6080 headless + 6081 echter Desktop) installiert" >> "$LOG"
+    systemctl enable xvfb.service x11vnc.service novnc.service >> "$LOG" 2>&1 || true
+    echo "noVNC-Services (xvfb, x11vnc, novnc) installiert" >> "$LOG"
 
     # AI-API-Proxy: venv + requirements + systemd-Service (nicht enabled)
     AI_PROXY_SRC="$ILIJA_DIR/vendor/ai-api-proxy"
