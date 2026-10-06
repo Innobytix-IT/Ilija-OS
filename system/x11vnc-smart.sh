@@ -17,9 +17,14 @@
 # Installer nach /opt/ilija-os/x11vnc-smart.sh kopiert. Updates ueber
 # das Web-UI aktualisieren die aktive Kopie beim naechsten Pull.
 
-# Versuche eine echte User-Session auf :0 zu finden
+# Versuche eine echte User-Session auf :0 zu finden.
+# WICHTIG: xdpyinfo ohne timeout kann unbegrenzt haengen (gesehen auf Futro-
+# Thin-Client mit AMD Mullins: X-Server da, aber xdpyinfo blockiert ewig).
+# Dadurch kommt x11vnc nie zum exec, Port 5900 bleibt frei, noVNC-Browser
+# bekommt "Verbindung fehlgeschlagen". Mit timeout 2 pro Versuch ist der
+# gesamte for-Loop auf max. 60s begrenzt und faellt dann sauber auf :1 zurueck.
 for i in $(seq 1 30); do
-    if DISPLAY=:0 xdpyinfo >/dev/null 2>&1; then
+    if timeout 2 bash -c 'DISPLAY=:0 xdpyinfo >/dev/null 2>&1'; then
         echo "[x11vnc] Verbinde mit :0 (Versuch $i)" | systemd-cat -t x11vnc
         exec /usr/bin/x11vnc -display :0 -auth guess \
              -forever -shared -nopw -listen localhost -rfbport 5900 \
