@@ -466,7 +466,7 @@ SUDOEOF
     fi
 
     # noVNC-Services (xvfb, x11vnc, novnc) als systemd-Units installieren
-    DEBIAN_FRONTEND=noninteractive apt-get install -y novnc x11vnc xvfb websockify openbox >> "$LOG" 2>&1 || true
+    DEBIAN_FRONTEND=noninteractive apt-get install -y novnc x11vnc xvfb websockify >> "$LOG" 2>&1 || true
 
     cat > /etc/systemd/system/xvfb.service << 'XVFB'
 [Unit]

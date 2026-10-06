@@ -737,7 +737,7 @@ fi
 # ----------------------------------------------------------------------- 7d. noVNC-Fernzugriff
 say "7d/8 noVNC-Fernzugriff einrichten (Browser-Remote-Desktop auf Port 6080)"
 
-run_quiet "noVNC + x11vnc + xvfb + openbox installieren" apt-get install -y -qq novnc x11vnc xvfb websockify openbox
+run_quiet "noVNC + x11vnc + xvfb installieren" apt-get install -y -qq novnc x11vnc xvfb websockify
 
 # Hybrid-Launcher aus Repo installieren (siehe system/x11vnc-smart.sh).
 # Script getrennt ins Repo gelegt, damit es bei Updates automatisch
