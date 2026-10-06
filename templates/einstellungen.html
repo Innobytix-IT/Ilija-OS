@@ -358,8 +358,14 @@ input[type=number]{max-width:90px}
         <div style="text-align:center;padding:40px 0">
           <div style="font-size:3rem;margin-bottom:16px">🎉</div>
           <div style="font-size:1.25rem;font-weight:700;color:var(--tx);margin-bottom:8px">Ilija ist einsatzbereit!</div>
-          <div style="font-size:.85rem;color:var(--tx3);margin-bottom:32px">Alle Einstellungen wurden gespeichert. Du kannst sie jederzeit in der Sidebar anpassen.</div>
-          <button class="btn btn-prim" style="font-size:.9rem;padding:11px 28px" onclick="showSettings()">Zu den Einstellungen →</button>
+          <div style="font-size:.85rem;color:var(--tx3);margin-bottom:24px">Alle Einstellungen wurden gespeichert. Du kannst sie jederzeit in der Sidebar anpassen.</div>
+          <label style="display:inline-flex;align-items:center;gap:10px;cursor:pointer;color:var(--tx2);font-size:.82rem;margin-bottom:24px;padding:10px 14px;border:1px solid var(--bdr);border-radius:8px">
+            <input type="checkbox" id="wizard-dismiss-checkbox" onchange="setWizardDismissed(this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--g)">
+            <span>Einrichtungsassistent ab sofort nicht mehr beim Start zeigen</span>
+          </label>
+          <div style="display:block">
+            <button class="btn btn-prim" style="font-size:.9rem;padding:11px 28px" onclick="showSettings()">Zu den Einstellungen →</button>
+          </div>
         </div>
       </div>
     </div>
@@ -725,7 +731,41 @@ function startWizard() {
   document.getElementById('sidebar').style.display = 'none';
   buildWizardContents();
   wizStep(0);
+  // Checkbox-Status aus Backend holen und spiegeln
+  fetch('/api/wizard/status').then(r => r.json()).then(d => {
+    const cb = document.getElementById('wizard-dismiss-checkbox');
+    if (cb) cb.checked = !!d.dismissed;
+  }).catch(() => {});
 }
+
+// Checkbox-Change im Wizard Step 5 "Fertig": State persistieren
+async function setWizardDismissed(dismissed) {
+  try {
+    const r = await fetch('/api/wizard/set-dismissed', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({dismissed: !!dismissed})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast(dismissed ? 'Assistent wird beim Start nicht mehr gezeigt' : 'Assistent wird beim Start wieder angezeigt');
+    } else {
+      toast('Fehler: ' + (d.error || 'konnte nicht gespeichert werden'));
+    }
+  } catch (e) {
+    toast('Fehler: ' + e.message);
+  }
+}
+
+// Beim Load: Wenn URL-Hash #wizard, direkt den Wizard oeffnen
+// (vom Autostart-Script benutzt: ...?/einstellungen#wizard)
+window.addEventListener('load', () => {
+  if (window.location.hash === '#wizard') {
+    // Daten muessen schon geladen sein - buildAllCards() laeuft als init.
+    // Kleiner Delay fuer Sicherheit, dann Wizard oeffnen.
+    setTimeout(() => startWizard(), 150);
+  }
+});
 
 function showSettings() {
   // Clear wizard content to avoid duplicate IDs in the DOM

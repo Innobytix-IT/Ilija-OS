@@ -81,6 +81,24 @@ if [ "$LOCAL" != "$REMOTE" ]; then
     }
 
     deploy_pair "system/ilija-update.sh"  "$UPDATE_SCRIPT"                 "Update-Skript"
+    deploy_pair "system/show-setup-wizard.sh" "/opt/ilija-os/show-setup-wizard.sh" "Setup-Wizard-Launcher"
+
+    # Setup-Wizard-Autostart im User-Home anlegen falls fehlt (ohne sudo)
+    WIZARD_AUTOSTART="$HOME/.config/autostart/ilija-setup-wizard.desktop"
+    if [ -f /opt/ilija-os/show-setup-wizard.sh ] && [ ! -f "$WIZARD_AUTOSTART" ]; then
+        mkdir -p "$(dirname "$WIZARD_AUTOSTART")" 2>/dev/null || true
+        cat > "$WIZARD_AUTOSTART" << 'WIZARD_AUTOSTART_EOF'
+[Desktop Entry]
+Type=Application
+Name=Ilija OS Einrichtungsassistent
+Comment=Oeffnet beim Login den Einrichtungsassistenten (deaktivierbar im Wizard)
+Exec=/opt/ilija-os/show-setup-wizard.sh
+NoDisplay=true
+X-LXQt-Need-Tray=false
+X-GNOME-Autostart-enabled=true
+WIZARD_AUTOSTART_EOF
+        echo "--- Setup-Wizard-Autostart installiert ---"
+    fi
 
     # Startsound deployen – WAV und Autostart-Eintrag, beides ohne sudo.
     # /opt/ilija-os/sounds/ gehoert laut Installer-Finaler-chown dem User.

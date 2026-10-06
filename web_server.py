@@ -621,6 +621,42 @@ def novnc_info():
     })
 
 
+# ── Einrichtungsassistent: Autostart-Steuerung ────────────────
+# Beim ersten Desktop-Login oeffnet ein XDG-Autostart-Eintrag den Browser
+# auf dem Wizard. Wer das nicht mehr will, hakt im Wizard "nicht mehr
+# zeigen" an - dann wird eine Flag-Datei angelegt, die das Autostart-Script
+# beim naechsten Login findet und sofort aussteigt. Flag kann hier auch
+# wieder zurueckgenommen werden (z.B. wenn man den Wizard neu zeigen will).
+def _wizard_flag_path():
+    """~/.config/ilija-os/wizard-dismissed – vom Autostart-Script gelesen."""
+    return os.path.join(
+        os.path.expanduser("~"), ".config", "ilija-os", "wizard-dismissed"
+    )
+
+
+@app.route("/api/wizard/status")
+def wizard_status():
+    return jsonify({"dismissed": os.path.exists(_wizard_flag_path())})
+
+
+@app.route("/api/wizard/set-dismissed", methods=["POST"])
+def wizard_set_dismissed():
+    body = request.get_json(silent=True) or {}
+    dismissed = bool(body.get("dismissed", False))
+    flag = _wizard_flag_path()
+    try:
+        if dismissed:
+            os.makedirs(os.path.dirname(flag), exist_ok=True)
+            with open(flag, "w", encoding="utf-8") as f:
+                f.write("dismissed\n")
+        else:
+            if os.path.exists(flag):
+                os.remove(flag)
+        return jsonify({"ok": True, "dismissed": dismissed})
+    except OSError as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 # ── Kalender-Einstellungen ────────────────────────────────────
 _KALENDER_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "kalender_einstellungen.json")
 _KALENDER_DEFAULTS = {

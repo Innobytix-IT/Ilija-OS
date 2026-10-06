@@ -452,6 +452,28 @@ ok "App-Launcher + 5 Ilija-Icons (Chat/DMS/Kalender/Workflow/Cloud) + Trust-Auto
 # Spielt beim ersten Erscheinen des LXQt-Desktops den Ilija-OS-Jingle.
 # Nicht beim Boot (da gibt es noch keinen Audio-Kontext) und nicht als Teil
 # des systemd-Services (der laeuft als Daemon ohne User-Session).
+# Einrichtungsassistent-Autostart: oeffnet beim Login den Browser auf dem
+# Wizard. User kann im Wizard Step 5 "nicht mehr zeigen" ankreuzen; das
+# schreibt eine Flag-Datei, die das Autostart-Script dann respektiert.
+WIZARD_SCRIPT_SRC="$ILIJA_DIR/system/show-setup-wizard.sh"
+WIZARD_SCRIPT_DST="/opt/ilija-os/show-setup-wizard.sh"
+if [ -f "$WIZARD_SCRIPT_SRC" ]; then
+    cp "$WIZARD_SCRIPT_SRC" "$WIZARD_SCRIPT_DST"
+    chmod 755 "$WIZARD_SCRIPT_DST"
+    cat > "$AUTOSTART_DIR/ilija-setup-wizard.desktop" << WIZARD
+[Desktop Entry]
+Type=Application
+Name=Ilija OS Einrichtungsassistent
+Comment=Oeffnet beim Login den Einrichtungsassistenten (deaktivierbar im Wizard)
+Exec=$WIZARD_SCRIPT_DST
+NoDisplay=true
+X-LXQt-Need-Tray=false
+X-GNOME-Autostart-enabled=true
+WIZARD
+    chown "$TARGET_USER:$TARGET_USER" "$AUTOSTART_DIR/ilija-setup-wizard.desktop"
+    ok "Einrichtungsassistent-Autostart installiert"
+fi
+
 SOUND_SRC="$ILIJA_DIR/sounds/Ilija_OS_Start_Sound.wav"
 if [ -f "$SOUND_SRC" ]; then
     SOUND_DST_DIR="/opt/ilija-os/sounds"

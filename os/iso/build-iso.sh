@@ -515,6 +515,28 @@ NOVNC
     systemctl enable xvfb.service x11vnc.service novnc.service >> "$LOG" 2>&1 || true
     echo "noVNC-Services (xvfb, x11vnc, novnc) installiert" >> "$LOG"
 
+    # Einrichtungsassistent-Autostart: oeffnet Browser beim Login auf dem
+    # Wizard. User kann es im Wizard Step 5 per Checkbox dauerhaft abschalten.
+    if [ -f "$ILIJA_DIR/system/show-setup-wizard.sh" ]; then
+        cp "$ILIJA_DIR/system/show-setup-wizard.sh" /opt/ilija-os/show-setup-wizard.sh
+        chmod 755 /opt/ilija-os/show-setup-wizard.sh
+        chown "$NEW_USER:$NEW_USER" /opt/ilija-os/show-setup-wizard.sh
+        WIZARD_AUTOSTART_DIR="$NEW_HOME/.config/autostart"
+        mkdir -p "$WIZARD_AUTOSTART_DIR"
+        cat > "$WIZARD_AUTOSTART_DIR/ilija-setup-wizard.desktop" << 'WIZARD'
+[Desktop Entry]
+Type=Application
+Name=Ilija OS Einrichtungsassistent
+Comment=Oeffnet beim Login den Einrichtungsassistenten (deaktivierbar im Wizard)
+Exec=/opt/ilija-os/show-setup-wizard.sh
+NoDisplay=true
+X-LXQt-Need-Tray=false
+X-GNOME-Autostart-enabled=true
+WIZARD
+        chown -R "$NEW_USER:$NEW_USER" "$NEW_HOME/.config"
+        echo "Einrichtungsassistent-Autostart installiert" >> "$LOG"
+    fi
+
     # Startsound: WAV nach /opt/ilija-os/sounds/startup.wav + XDG-Autostart
     SOUND_SRC="$ILIJA_DIR/sounds/Ilija_OS_Start_Sound.wav"
     SOUND_DST="/opt/ilija-os/sounds/startup.wav"
