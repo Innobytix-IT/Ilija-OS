@@ -358,12 +358,34 @@ def _write_env_file(updates: dict) -> bool:
 class ConfigPayload(BaseModel):
     gemini_api_key: str | None = None
     port: int | None = None
+    regenerate_secret: bool = False
+
+
+def _socket_local_lan_ip() -> str:
+    import socket as _sock
+    try:
+        s = _sock.socket(_sock.AF_INET, _sock.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+        finally:
+            s.close()
+    except OSError:
+        return "127.0.0.1"
 
 
 @app.get("/api/config/status")
 async def config_status():
+    import secrets as _sec
     env = _read_env_file()
     has_key = bool(env.get("gemini_api_key"))
+    # api_secret: wenn nicht gesetzt oder noch "change-me", einen frischen
+    # token erzeugen und persistieren – wie der Tkinter-Launcher.
+    secret = env.get("api_secret", "")
+    if secret in ("", "change-me", "change-me-to-a-random-string"):
+        secret = _sec.token_hex(16)
+        _write_env_file({"api_secret": secret})
+        get_settings.cache_clear()
     router = await get_router()
     models = []
     if router.api:
@@ -371,30 +393,34 @@ async def config_status():
             models = [m.name for m in router.api.models]
         except Exception:
             pass
+    port = int(env.get("port", 8642))
     return {
         "configured":   has_key,
-        "port":         int(env.get("port", 8642)),
+        "port":         port,
+        "api_secret":   secret,
         "api_active":   bool(router.api and router.api.models),
         "models_count": len(models),
-        "models":       models[:5],  # Top 5 reichen fuer Anzeige
+        "models":       models[:5],
+        "lan_ip":       _socket_local_lan_ip(),
     }
 
 
 @app.post("/api/config/save")
 async def config_save(payload: ConfigPayload):
     global _router
+    import secrets as _sec
     updates = {}
     if payload.gemini_api_key:
         updates["gemini_api_key"] = payload.gemini_api_key.strip()
     if payload.port:
         updates["port"] = str(int(payload.port))
+    if payload.regenerate_secret:
+        updates["api_secret"] = _sec.token_hex(16)
     if not updates:
         raise HTTPException(400, "Keine Aenderungen uebergeben")
     if not _write_env_file(updates):
         raise HTTPException(500, "Konnte .env nicht schreiben")
-    # Settings-Cache leeren damit die naechste Anfrage den neuen Key sieht
     get_settings.cache_clear()
-    # Router neu bauen damit Model-Discovery sofort passiert
     async with _router_lock:
         _router = _build_router(get_settings())
     env = _read_env_file()
@@ -402,6 +428,7 @@ async def config_save(payload: ConfigPayload):
     return {
         "ok":         True,
         "configured": bool(env.get("gemini_api_key")),
+        "api_secret": env.get("api_secret", ""),
         "api_active": bool(router.api and router.api.models),
         "models":     [m.name for m in (router.api.models if router.api else [])][:5],
     }
@@ -431,6 +458,7 @@ async def config_page():
     font-family:ui-monospace,monospace; font-size:.88rem; }
   input:focus { outline:none; border-color:var(--accent); }
   .row { display:grid; grid-template-columns:1fr 100px; gap:10px; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .hint { font-size:.72rem; color:var(--muted); margin-top:4px; }
   .hint a { color:var(--teal); text-decoration:none; }
   .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
@@ -438,6 +466,9 @@ async def config_page():
     font-size:.85rem; font-weight:600; transition:background .15s; }
   .btn-prim { background:var(--accent); color:#1a1a1a; }
   .btn-prim:hover { background:var(--accent-h); }
+  .btn-wide { width:100%; padding:12px; font-size:.9rem; }
+  .btn-ghost { background:transparent; color:var(--fg); border:1px solid var(--border); font-size:.78rem; }
+  .btn-ghost:hover { border-color:var(--accent); color:var(--accent); }
   .status { margin-top:20px; padding:12px 14px; border-radius:8px; font-size:.82rem;
     display:flex; align-items:center; gap:10px; }
   .status.ok { background:rgba(45,212,191,.1); color:var(--teal); border:1px solid rgba(45,212,191,.3); }
@@ -467,16 +498,24 @@ async def config_page():
   <input type="password" id="k" placeholder="AIzaSy…" autocomplete="off">
   <div class="hint">Hole dir einen kostenlosen Key auf <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></div>
 
-  <label>Port</label>
-  <div class="row">
-    <input type="number" id="p" value="8642" min="1024" max="65535">
-    <button class="btn btn-prim" onclick="save()">Speichern</button>
+  <div class="row2" style="margin-top:14px">
+    <div><label style="margin:0">Port</label><input type="number" id="p" value="8642" min="1024" max="65535"></div>
+    <div><label style="margin:0">LAN-IP</label><input type="text" id="lan" readonly style="color:var(--muted)"></div>
   </div>
+
+  <label>API-Secret <span style="font-weight:400;color:var(--muted);font-size:.7rem">(Token für Clients im Netzwerk)</span></label>
+  <div class="row">
+    <input type="text" id="sec" readonly style="font-size:.76rem">
+    <button class="btn btn-ghost" onclick="regenSecret()" title="Neuen zufälligen Token generieren">↻ Neu</button>
+  </div>
+
+  <button class="btn btn-prim btn-wide" onclick="save()" style="margin-top:16px">Speichern</button>
 
   <div id="status" class="status warn"><span class="dot warn"></span><span id="statusTxt">lädt…</span></div>
   <div id="models" class="models" style="display:none"></div>
 
-  <div class="endpoints" id="endpoints" style="display:none">
+  <div class="endpoints">
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:8px;font-weight:600;letter-spacing:.05em;text-transform:uppercase">Netzwerk-Endpunkt-URLs</div>
     <div class="endpoint">
       <span class="endpoint-label">Base</span>
       <code id="urlBase">—</code>
@@ -514,13 +553,12 @@ async function load() {
       txt.textContent = 'Noch nicht konfiguriert – Key eintragen und speichern';
     }
     document.getElementById('p').value = d.port;
-    // Endpunkte zeigen falls aktiv
-    if (d.api_active) {
-      document.getElementById('endpoints').style.display = 'block';
-      const host = location.hostname;
-      document.getElementById('urlBase').textContent = `http://${host}:${d.port}`;
-      document.getElementById('urlV1').textContent = `http://${host}:${d.port}/v1`;
-    }
+    document.getElementById('lan').value = d.lan_ip || location.hostname;
+    document.getElementById('sec').value = d.api_secret || '';
+    // Endpunkte immer anzeigen (nicht erst wenn Modelle da sind)
+    const host = d.lan_ip || location.hostname;
+    document.getElementById('urlBase').textContent = `http://${host}:${d.port}`;
+    document.getElementById('urlV1').textContent = `http://${host}:${d.port}/v1`;
   } catch(e) { toast('Fehler: ' + e.message); }
 }
 
@@ -544,8 +582,22 @@ async function save() {
   } catch(e) { toast('Fehler: ' + e.message); }
 }
 
+async function regenSecret() {
+  if (!confirm('Neuen API-Secret-Token generieren? Bestehende Clients müssen den neuen eintragen.')) return;
+  try {
+    const r = await fetch('/api/config/save', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({regenerate_secret: true})
+    });
+    const d = await r.json();
+    if (d.ok) { toast('✓ Neuer Secret generiert'); load(); }
+    else toast('Fehler');
+  } catch(e) { toast('Fehler: ' + e.message); }
+}
+
 function copy(id) {
-  const t = document.getElementById(id).textContent;
+  const el = document.getElementById(id);
+  const t = el.tagName === 'INPUT' ? el.value : el.textContent;
   navigator.clipboard?.writeText(t).then(() => toast('In Zwischenablage'));
 }
 
