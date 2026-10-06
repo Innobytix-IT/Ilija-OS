@@ -83,6 +83,51 @@ if [ "$LOCAL" != "$REMOTE" ]; then
     deploy_pair "system/ilija-update.sh"  "$UPDATE_SCRIPT"                 "Update-Skript"
     deploy_pair "system/show-setup-wizard.sh" "/opt/ilija-os/show-setup-wizard.sh" "Setup-Wizard-Launcher"
 
+    # AI-API-Proxy: venv + requirements + Service-File nachinstallieren falls fehlt
+    AI_PROXY_SRC="$ILIJA_DIR/vendor/ai-api-proxy"
+    if [ -d "$AI_PROXY_SRC" ]; then
+        AI_PROXY_VENV="$AI_PROXY_SRC/venv"
+        if [ ! -d "$AI_PROXY_VENV" ]; then
+            echo "--- AI-Proxy venv anlegen ---"
+            python3 -m venv "$AI_PROXY_VENV" 2>&1 | tail -3
+            "$AI_PROXY_VENV/bin/pip" install --quiet -r "$AI_PROXY_SRC/requirements.txt" 2>&1 | tail -3
+            echo "--- AI-Proxy Deps installiert ---"
+        fi
+        # Service-File-Deployment (idempotent)
+        AI_PROXY_SERVICE=/etc/systemd/system/ai-api-proxy.service
+        AI_PROXY_SERVICE_NEW=/tmp/ai-api-proxy.service.new
+        cat > "$AI_PROXY_SERVICE_NEW" << AIPROXY
+[Unit]
+Description=Ilija AI-API-Proxy (OpenAI-kompatibler Gemini-Proxy)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=$USER
+Group=$USER
+WorkingDirectory=$AI_PROXY_SRC
+EnvironmentFile=-$AI_PROXY_SRC/.env
+ExecStart=$AI_PROXY_VENV/bin/python -m uvicorn main:app --host 0.0.0.0 --port \${port:-8642}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+AIPROXY
+        if ! cmp -s "$AI_PROXY_SERVICE_NEW" "$AI_PROXY_SERVICE" 2>/dev/null; then
+            echo "--- AI-Proxy Service installieren ---"
+            if sudo cp "$AI_PROXY_SERVICE_NEW" "$AI_PROXY_SERVICE" 2>/dev/null; then
+                sudo systemctl daemon-reload 2>/dev/null || true
+                echo "--- AI-Proxy Service installiert ---"
+            else
+                echo "WARNUNG: AI-Proxy Service nicht installierbar (sudo cp fehlt in sudoers)"
+                echo "         Workaround: einmal sudo cp $AI_PROXY_SERVICE_NEW $AI_PROXY_SERVICE"
+            fi
+        fi
+        rm -f "$AI_PROXY_SERVICE_NEW"
+    fi
+
     # Setup-Wizard-Autostart im User-Home anlegen falls fehlt (ohne sudo)
     WIZARD_AUTOSTART="$HOME/.config/autostart/ilija-setup-wizard.desktop"
     if [ -f /opt/ilija-os/show-setup-wizard.sh ] && [ ! -f "$WIZARD_AUTOSTART" ]; then

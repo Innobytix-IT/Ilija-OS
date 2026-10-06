@@ -621,6 +621,137 @@ def novnc_info():
     })
 
 
+# ── Ilija AI-API-Proxy: Konfiguration & Dienst-Steuerung ──────
+# Vendored unter /opt/ilija-os/ilija/vendor/ai-api-proxy. OpenAI-kompatibler
+# Proxy fuer Google Gemini auf Port 8642 (default). Config in dessen .env.
+# Systemd-Service "ai-api-proxy" wird vom Installer angelegt (disabled),
+# erst wenn Nutzer hier einen API-Key eintraegt, wird er enabled + gestartet.
+_AI_PROXY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor", "ai-api-proxy")
+_AI_PROXY_ENV = os.path.join(_AI_PROXY_DIR, ".env")
+_AI_PROXY_DEFAULT_PORT = 8642
+
+
+def _ai_proxy_read_env() -> dict:
+    data = {}
+    if not os.path.exists(_AI_PROXY_ENV):
+        return data
+    try:
+        with open(_AI_PROXY_ENV, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                data[k.strip()] = v.strip()
+    except OSError:
+        pass
+    return data
+
+
+def _ai_proxy_write_env(updates: dict) -> bool:
+    """Merge updates in .env – vorhandene Keys werden ueberschrieben, neue angehaengt."""
+    try:
+        current = _ai_proxy_read_env()
+        current.update({k: str(v) for k, v in updates.items()})
+        os.makedirs(_AI_PROXY_DIR, exist_ok=True)
+        tmp = _AI_PROXY_ENV + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            for k, v in current.items():
+                f.write(f"{k}={v}\n")
+        os.replace(tmp, _AI_PROXY_ENV)
+        return True
+    except OSError:
+        return False
+
+
+def _ai_proxy_port() -> int:
+    try:
+        return int(_ai_proxy_read_env().get("port", _AI_PROXY_DEFAULT_PORT))
+    except ValueError:
+        return _AI_PROXY_DEFAULT_PORT
+
+
+def _ai_proxy_running() -> bool:
+    import socket as _sock
+    try:
+        with _sock.create_connection(("127.0.0.1", _ai_proxy_port()), timeout=0.5):
+            return True
+    except OSError:
+        return False
+
+
+@app.route("/api/ai-proxy/status")
+def ai_proxy_status():
+    env = _ai_proxy_read_env()
+    has_key = bool(env.get("gemini_api_key"))
+    port = _ai_proxy_port()
+    import subprocess as _sp
+    try:
+        r = _sp.run(
+            ["systemctl", "is-enabled", "ai-api-proxy.service"],
+            capture_output=True, text=True, timeout=2,
+        )
+        enabled = r.stdout.strip() == "enabled"
+    except Exception:
+        enabled = False
+    return jsonify({
+        "configured":   has_key,
+        "running":      _ai_proxy_running(),
+        "autostart":    enabled,
+        "port":         port,
+        "url":          f"http://localhost:{port}/v1",
+        "service_installed": os.path.exists("/etc/systemd/system/ai-api-proxy.service"),
+    })
+
+
+@app.route("/api/ai-proxy/configure", methods=["POST"])
+def ai_proxy_configure():
+    """Speichert API-Key + Port in .env und (re)startet den Service."""
+    body = request.get_json(silent=True) or {}
+    api_key = (body.get("api_key") or "").strip()
+    try:
+        port = int(body.get("port") or _AI_PROXY_DEFAULT_PORT)
+    except (ValueError, TypeError):
+        port = _AI_PROXY_DEFAULT_PORT
+    if not api_key:
+        return jsonify({"ok": False, "error": "API-Key fehlt"}), 400
+    updates = {
+        "gemini_api_key": api_key,
+        "port": str(port),
+        "host": "0.0.0.0",
+    }
+    # api_secret einmalig setzen (nicht bei jedem configure neu – sonst
+    # werden bestehende Clients abgehaengt)
+    if not _ai_proxy_read_env().get("api_secret"):
+        import secrets as _sec
+        updates["api_secret"] = _sec.token_urlsafe(24)
+    if not _ai_proxy_write_env(updates):
+        return jsonify({"ok": False, "error": "Konnte .env nicht schreiben"}), 500
+    # Service enable + (re)start
+    import subprocess as _sp
+    try:
+        _sp.run(["sudo", "-n", "systemctl", "enable", "ai-api-proxy.service"],
+                capture_output=True, timeout=5)
+        _sp.run(["sudo", "-n", "systemctl", "restart", "ai-api-proxy.service"],
+                capture_output=True, timeout=5)
+    except Exception as e:
+        return jsonify({"ok": True, "note": f"Config gespeichert, Service-Start fehlgeschlagen: {e}"}), 200
+    return jsonify({"ok": True, "port": port, "url": f"http://localhost:{port}/v1"})
+
+
+@app.route("/api/ai-proxy/stop", methods=["POST"])
+def ai_proxy_stop():
+    import subprocess as _sp
+    try:
+        _sp.run(["sudo", "-n", "systemctl", "disable", "ai-api-proxy.service"],
+                capture_output=True, timeout=5)
+        _sp.run(["sudo", "-n", "systemctl", "stop", "ai-api-proxy.service"],
+                capture_output=True, timeout=5)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 # ── Einrichtungsassistent: Autostart-Steuerung ────────────────
 # Beim ersten Desktop-Login oeffnet ein XDG-Autostart-Eintrag den Browser
 # auf dem Wizard. Wer das nicht mehr will, hakt im Wizard "nicht mehr

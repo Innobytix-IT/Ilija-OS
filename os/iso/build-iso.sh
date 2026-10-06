@@ -515,6 +515,42 @@ NOVNC
     systemctl enable xvfb.service x11vnc.service novnc.service >> "$LOG" 2>&1 || true
     echo "noVNC-Services (xvfb, x11vnc, novnc) installiert" >> "$LOG"
 
+    # AI-API-Proxy: venv + requirements + systemd-Service (nicht enabled)
+    AI_PROXY_SRC="$ILIJA_DIR/vendor/ai-api-proxy"
+    if [ -d "$AI_PROXY_SRC" ]; then
+        AI_PROXY_VENV="$AI_PROXY_SRC/venv"
+        python3 -m venv "$AI_PROXY_VENV" 2>&1 >> "$LOG" || true
+        "$AI_PROXY_VENV/bin/pip" install --quiet -r "$AI_PROXY_SRC/requirements.txt" 2>&1 >> "$LOG" || true
+        chown -R "$NEW_USER:$NEW_USER" "$AI_PROXY_SRC"
+        cat > /etc/systemd/system/ai-api-proxy.service << AIPROXY
+[Unit]
+Description=Ilija AI-API-Proxy (OpenAI-kompatibler Gemini-Proxy)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=$NEW_USER
+Group=$NEW_USER
+WorkingDirectory=$AI_PROXY_SRC
+EnvironmentFile=-$AI_PROXY_SRC/.env
+ExecStart=$AI_PROXY_VENV/bin/python -m uvicorn main:app --host 0.0.0.0 --port \${port:-8642}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+AIPROXY
+        systemctl daemon-reload >> "$LOG" 2>&1 || true
+        echo "ai-api-proxy.service installiert (nicht enabled)" >> "$LOG"
+    fi
+
+    # Sudoers erweitern um ai-api-proxy Service-Steuerung (zusaetzlich zu Base-Regeln)
+    cat >> /etc/sudoers.d/ilija-update-rules << AIPSUDO
+$NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl enable ai-api-proxy, /usr/bin/systemctl enable ai-api-proxy.service, /usr/bin/systemctl disable ai-api-proxy, /usr/bin/systemctl disable ai-api-proxy.service, /usr/bin/systemctl restart ai-api-proxy, /usr/bin/systemctl restart ai-api-proxy.service, /usr/bin/systemctl stop ai-api-proxy, /usr/bin/systemctl stop ai-api-proxy.service, /usr/bin/systemctl start ai-api-proxy, /usr/bin/systemctl start ai-api-proxy.service
+$NEW_USER ALL=(ALL) NOPASSWD: /bin/systemctl enable ai-api-proxy, /bin/systemctl enable ai-api-proxy.service, /bin/systemctl disable ai-api-proxy, /bin/systemctl disable ai-api-proxy.service, /bin/systemctl restart ai-api-proxy, /bin/systemctl restart ai-api-proxy.service, /bin/systemctl stop ai-api-proxy, /bin/systemctl stop ai-api-proxy.service, /bin/systemctl start ai-api-proxy, /bin/systemctl start ai-api-proxy.service
+AIPSUDO
+
     # Einrichtungsassistent-Autostart: oeffnet Browser beim Login auf dem
     # Wizard. User kann es im Wizard Step 5 per Checkbox dauerhaft abschalten.
     if [ -f "$ILIJA_DIR/system/show-setup-wizard.sh" ]; then

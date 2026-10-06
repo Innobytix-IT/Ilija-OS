@@ -276,6 +276,45 @@ systemctl daemon-reload
 systemctl enable ilija.service >/dev/null 2>&1
 ok "ilija.service enabled (startet automatisch beim Boot)"
 
+# ----------------------------------------------------------------------- AI-API-Proxy (optional)
+# Mitgelieferter OpenAI-kompatibler Proxy fuer Google Gemini. Eigenes venv
+# damit Dependencies nicht mit Ilijas kollidieren. Service wird angelegt
+# aber NICHT enabled; erst wenn der User in der Web-UI einen Gemini-API-Key
+# eintraegt, enabled Flask ihn + startet ihn.
+AI_PROXY_SRC="$ILIJA_DIR/vendor/ai-api-proxy"
+if [ -d "$AI_PROXY_SRC" ]; then
+    say "6b/8 Ilija AI-API-Proxy einrichten (Gemini-Proxy, Port 8642)"
+    AI_PROXY_VENV="$AI_PROXY_SRC/venv"
+    if [ ! -d "$AI_PROXY_VENV" ]; then
+        run_quiet "AI-Proxy venv anlegen" python3 -m venv "$AI_PROXY_VENV"
+    fi
+    run_quiet "AI-Proxy Python-Deps installieren" \
+        "$AI_PROXY_VENV/bin/pip" install --quiet -r "$AI_PROXY_SRC/requirements.txt"
+
+    cat > /etc/systemd/system/ai-api-proxy.service << AIPROXY
+[Unit]
+Description=Ilija AI-API-Proxy (OpenAI-kompatibler Gemini-Proxy)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=$TARGET_USER
+Group=$TARGET_USER
+WorkingDirectory=$AI_PROXY_SRC
+EnvironmentFile=-$AI_PROXY_SRC/.env
+ExecStart=$AI_PROXY_VENV/bin/python -m uvicorn main:app --host 0.0.0.0 --port \${port:-8642}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+AIPROXY
+    systemctl daemon-reload
+    # Default: nicht enabled - User muss erst Config in Web-UI machen
+    ok "ai-api-proxy.service installiert (nicht aktiv – in Web-UI konfigurieren)"
+fi
+
 # ----------------------------------------------------------------------- 7. Update-Script + sudoers
 say "7/8 Update-System einrichten (Cron + Web-UI-Button)"
 if [ -f "$ILIJA_DIR/system/ilija-update.sh" ]; then
@@ -291,6 +330,8 @@ cat > /etc/sudoers.d/ilija-update-rules << SUDO
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/apt-get
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ilija, /usr/bin/systemctl restart x11vnc, /usr/bin/systemctl restart x11vnc.service, /usr/bin/systemctl restart xvfb, /usr/bin/systemctl restart xvfb.service, /usr/bin/systemctl restart novnc, /usr/bin/systemctl restart novnc.service
 $TARGET_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija, /bin/systemctl restart x11vnc, /bin/systemctl restart x11vnc.service, /bin/systemctl restart xvfb, /bin/systemctl restart xvfb.service, /bin/systemctl restart novnc, /bin/systemctl restart novnc.service
+$TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl enable ai-api-proxy, /usr/bin/systemctl enable ai-api-proxy.service, /usr/bin/systemctl disable ai-api-proxy, /usr/bin/systemctl disable ai-api-proxy.service, /usr/bin/systemctl restart ai-api-proxy, /usr/bin/systemctl restart ai-api-proxy.service, /usr/bin/systemctl stop ai-api-proxy, /usr/bin/systemctl stop ai-api-proxy.service, /usr/bin/systemctl start ai-api-proxy, /usr/bin/systemctl start ai-api-proxy.service
+$TARGET_USER ALL=(ALL) NOPASSWD: /bin/systemctl enable ai-api-proxy, /bin/systemctl enable ai-api-proxy.service, /bin/systemctl disable ai-api-proxy, /bin/systemctl disable ai-api-proxy.service, /bin/systemctl restart ai-api-proxy, /bin/systemctl restart ai-api-proxy.service, /bin/systemctl stop ai-api-proxy, /bin/systemctl stop ai-api-proxy.service, /bin/systemctl start ai-api-proxy, /bin/systemctl start ai-api-proxy.service
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/sbin/update-initramfs
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/update-alternatives
 SUDO
