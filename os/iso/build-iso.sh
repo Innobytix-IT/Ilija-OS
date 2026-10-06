@@ -118,7 +118,11 @@ EXCLUDES=(
   "home/*/.ahpt/*.key" "home/*/.ahpt/geheimnis*" "home/*/.ahpt/client*.key"
   "home/*/.ahpt/*.toml"
   "opt/ilija-os/.ahpt/*"
-  "home/*/.config/ilija-os/web-auth"
+  # Ilija: Session-Secret (24 Byte, fuer Flask-Session-Cookies) + Legacy-Name
+  "home/*/.config/ilija-os/web-secret" "home/*/.config/ilija-os/web-auth"
+  "opt/ilija-os/.config/ilija-os/web-secret" "opt/ilija-os/.config/ilija-os/web-auth"
+  # GitHub-CLI: config.yml harmlos, aber hosts.yml enthaelt oauth_token!
+  "home/*/.config/gh/hosts.yml" "root/.config/gh/hosts.yml"
   # Ilija: .env (API-Keys) – Home-Pfad UND /opt-Pfad
   "home/*/Ilija-AI-Agent-Public-Edition/*/.env"
   "opt/ilija-os/ilija/.env"
@@ -738,5 +742,5 @@ ls -lh "$OUT"
 echo
 echo "NÄCHSTER SCHRITT (PFLICHT vor Verteilung):"
 echo "  1) In einer Wegwerf-VM booten (BIOS UND UEFI) und wirklich INSTALLIEREN."
-echo "  2) Sanitize prüfen:  unsquashfs -l '$SFS' | grep -Ei '\\.env|\\.key|\\.db|Ilija-Ablage|web-auth' || echo OK"
+echo "  2) Sanitize prüfen:  unsquashfs -l '$SFS' | grep -Ei '\\.env|\\.key|\\.db|Ilija-Ablage|web-secret|web-auth|gh/hosts\\.yml' || echo OK"
 echo "  3) Erst danach hochladen (bei > 2 GB in Teile splitten – siehe README)."
