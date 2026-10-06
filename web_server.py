@@ -612,13 +612,18 @@ def novnc_info():
     host = client_host or "localhost"
     user = getpass.getuser()
 
-    # Prueft ob der zweite Stream (Live-Desktop auf Port 6080+1=6081) laeuft.
-    # Dieser dockt direkt an den SDDM-X-Server auf :0 an, zeigt den echten
-    # LXQt-Desktop, nicht den Openbox-Fallback von Port 6080.
+    # Prueft ob der zweite Stream (Live-Desktop) laeuft. Beide Schichten
+    # muessen bereit sein:
+    #   - 5901: x11vnc-desktop.service bindet an echten :0 (SDDM-Session)
+    #   - 6081: websockify macht's als noVNC verfuegbar
+    # Auf manchen Hardware-Kombos (z.B. AMD Mullins Thin-Clients mit SDDM)
+    # bindet x11vnc an :0 nicht; dann waere nur 6081 LISTEN und ein Klick
+    # auf den Button wuerde ins Leere laufen. Beide pruefen vermeidet das.
     desktop_available = False
     try:
         with _sock.create_connection(("127.0.0.1", 6081), timeout=0.5):
-            desktop_available = True
+            with _sock.create_connection(("127.0.0.1", 5901), timeout=0.5):
+                desktop_available = True
     except OSError:
         pass
 
