@@ -6,7 +6,9 @@
 # Installer bzw. Update-Script nach /opt/ilija-os/x11vnc-smart.sh kopiert.
 
 for i in $(seq 1 60); do
-    if DISPLAY=:0 xdpyinfo >/dev/null 2>&1; then
+    # timeout 2 verhindert dass xdpyinfo auf headless-Systemen (Thin-Clients
+    # ohne Monitor) ewig in poll() haengt und den gesamten Loop blockiert.
+    if timeout 2 bash -c 'DISPLAY=:0 xdpyinfo >/dev/null 2>&1'; then
         echo "[x11vnc] Verbinde mit :0 (Versuch $i)" | systemd-cat -t x11vnc
         exec /usr/bin/x11vnc -display :0 -forever -nopw -listen localhost -rfbport 5900
     fi
