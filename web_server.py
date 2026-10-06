@@ -703,34 +703,10 @@ def ai_proxy_status():
     env = _ai_proxy_read_env()
     has_key = bool(env.get("gemini_api_key"))
     port = _ai_proxy_port()
-    import subprocess as _sp
-    try:
-        r = _sp.run(
-            ["systemctl", "is-enabled", "ai-api-proxy.service"],
-            capture_output=True, text=True, timeout=2,
-        )
-        enabled = r.stdout.strip() == "enabled"
-    except Exception:
-        enabled = False
-
-    # Self-healing: Wenn der Proxy konfiguriert ist (API-Key da) aber der
-    # Service noch nicht enabled, einmal enablen – damit er beim naechsten
-    # Boot automatisch startet. Idempotent: tut nichts, falls bereits enabled
-    # oder nicht konfiguriert.
-    if has_key and not enabled and os.path.exists("/etc/systemd/system/ai-api-proxy.service"):
-        try:
-            _sp.run(["sudo", "-n", "systemctl", "enable", "ai-api-proxy.service"],
-                    capture_output=True, timeout=3)
-            r = _sp.run(["systemctl", "is-enabled", "ai-api-proxy.service"],
-                        capture_output=True, text=True, timeout=2)
-            enabled = r.stdout.strip() == "enabled"
-        except Exception:
-            pass
-
     return jsonify({
         "configured":   has_key,
         "running":      _ai_proxy_running(),
-        "autostart":    enabled,
+        "autostart":    True,  # Service immer enabled; Web-UI selbst ist Autostart
         "port":         port,
         "url":          f"http://localhost:{port}/v1",
         "service_installed": os.path.exists("/etc/systemd/system/ai-api-proxy.service"),
@@ -739,32 +715,33 @@ def ai_proxy_status():
 
 @app.route("/api/ai-proxy/launch-config", methods=["POST"])
 def ai_proxy_launch_config():
-    """Startet den Tkinter-Launcher des AI-API-Proxy auf dem Desktop.
-    User konfiguriert dort API-Key und Port. Beim naechsten Status-Call wird
-    der systemd-Service automatisch enabled (Self-Healing in /status)."""
-    import subprocess as _sp
-    launcher = os.path.join(_AI_PROXY_DIR, "app.py")
-    venv_py = os.path.join(_AI_PROXY_DIR, "venv", "bin", "python")
-    if not os.path.exists(launcher):
-        return jsonify({"ok": False, "error": f"Launcher fehlt: {launcher}"}), 500
-    if not os.path.exists(venv_py):
-        venv_py = "python3"
-    env = os.environ.copy()
-    # Ilija-Service laeuft mit DISPLAY=:0 oder :1 (siehe start.sh); diesen
-    # DISPLAY vererben wir an den Tkinter-Launcher.
-    if "DISPLAY" not in env:
-        env["DISPLAY"] = ":0"
-    try:
-        _sp.Popen(
-            [venv_py, launcher],
-            cwd=_AI_PROXY_DIR,
-            env=env,
-            stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
-            start_new_session=True,
-        )
-        return jsonify({"ok": True, "display": env.get("DISPLAY")})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    """Liefert die URL der Web-Config-UI. Der Proxy-Service laeuft dauerhaft
+    im Hintergrund (auch ohne API-Key - zeigt dann nur die Config-UI an).
+    Frontend oeffnet die URL als Popup. Loest den frueheren Tkinter-Launcher
+    ab - funktioniert damit auch komplett remote ohne X-Display."""
+    port = _ai_proxy_port()
+    # Falls der Service aus irgendeinem Grund nicht laeuft, kurz starten
+    if not _ai_proxy_running():
+        import subprocess as _sp, socket as _sock, time as _time
+        try:
+            _sp.run(["sudo", "-n", "systemctl", "restart", "ai-api-proxy.service"],
+                    capture_output=True, timeout=5)
+        except Exception:
+            pass
+        for _ in range(20):
+            try:
+                with _sock.create_connection(("127.0.0.1", port), timeout=0.5):
+                    break
+            except OSError:
+                _time.sleep(0.5)
+    # URL mit dem Host den der User gerade verwendet – damit's auch bei
+    # Remote-Zugriff im LAN funktioniert.
+    client_host = request.host.split(":")[0] or "localhost"
+    return jsonify({
+        "ok":  True,
+        "url": f"http://{client_host}:{port}/",
+        "port": port,
+    })
 
 
 @app.route("/api/ai-proxy/configure", methods=["POST"])

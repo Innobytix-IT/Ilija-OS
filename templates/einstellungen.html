@@ -770,13 +770,20 @@ async function launchAiProxyConfig() {
   try {
     const r = await fetch('/api/ai-proxy/launch-config', {method: 'POST'});
     const d = await r.json();
-    if (d.ok) {
-      toast('Konfigurations-Fenster wird auf dem Desktop geöffnet');
-      // Status in 10 Sekunden neu laden – User hat dann vermutlich gespeichert
-      setTimeout(loadAiProxyStatus, 10000);
-    } else {
-      toast('Fehler: ' + (d.error || 'Launcher konnte nicht gestartet werden'));
+    if (!d.ok) {
+      toast('Fehler: ' + (d.error || 'Proxy konnte nicht gestartet werden'));
+      return;
     }
+    // Popup oeffnen – groesse passt zur Config-Karte des Proxy-UIs
+    const popup = window.open(d.url, 'ai-proxy-config',
+      'width=560,height=640,menubar=no,toolbar=no,location=no');
+    if (!popup) {
+      // Popup-Blocker – fallback: direkt im neuen Tab
+      toast('Popup-Blocker verhindert Fenster – öffne in neuem Tab');
+      window.open(d.url, '_blank');
+    }
+    // Status in 10 Sekunden neu laden – User hat dann vermutlich gespeichert
+    setTimeout(loadAiProxyStatus, 10000);
   } catch (e) {
     toast('Fehler: ' + e.message);
   }

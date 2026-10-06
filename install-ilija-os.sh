@@ -311,8 +311,10 @@ RestartSec=5
 WantedBy=multi-user.target
 AIPROXY
     systemctl daemon-reload
-    # Default: nicht enabled - User muss erst Config in Web-UI machen
-    ok "ai-api-proxy.service installiert (nicht aktiv – in Web-UI konfigurieren)"
+    # Default: enabled – Web-Config-UI soll von Anfang an erreichbar sein.
+    # Server toleriert fehlenden API-Key (zeigt dann nur die Config-UI).
+    systemctl enable ai-api-proxy.service >/dev/null 2>&1
+    ok "ai-api-proxy.service enabled (startet beim Boot; Config via Web-UI)"
 fi
 
 # ----------------------------------------------------------------------- 7. Update-Script + sudoers
