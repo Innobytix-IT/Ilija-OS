@@ -111,7 +111,7 @@ run_quiet "Paketlisten aktualisieren (apt-get update)" apt-get update -qq
 
 run_quiet "Basis-Pakete installieren (python3, git, plymouth, tesseract-ocr, ca. 15 Pakete)" \
     apt-get install -y -qq \
-        python3 python3-venv python3-pip python3-dev build-essential \
+        python3 python3-venv python3-pip python3-dev python3-tk build-essential \
         git curl wget \
         plymouth plymouth-themes \
         tesseract-ocr tesseract-ocr-deu \

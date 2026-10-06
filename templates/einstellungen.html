@@ -739,92 +739,38 @@ function startWizard() {
 }
 
 // ── Ilija AI-API-Proxy ──────────────────────────────────────────
+// Button neben "Eigener Endpunkt" oeffnet den Tkinter-Launcher des Proxys
+// auf dem Desktop. User konfiguriert dort API-Key + Port und startet den
+// Server. Ilija merkt im Hintergrund, sobald der Proxy konfiguriert ist,
+// und enabled den systemd-Service fuer Autostart bei jedem Boot.
 async function loadAiProxyStatus() {
-  const badge = document.getElementById('ai-proxy-status-badge');
-  const stopBtn = document.getElementById('ai-proxy-stop-btn');
-  const useBtn = document.getElementById('ai-proxy-use-btn');
-  const info = document.getElementById('ai-proxy-url-info');
-  if (!badge) return;
+  const dot = document.getElementById('ai-proxy-run-dot');
+  if (!dot) return;
   try {
     const r = await fetch('/api/ai-proxy/status');
     const d = await r.json();
-    if (!d.service_installed) {
-      badge.textContent = 'nicht installiert';
-      badge.className = 'sb-chip chip-warn';
-      if (info) { info.style.display = 'block'; info.textContent = 'Proxy-Service noch nicht installiert. Installer neu laufen lassen oder Update ziehen.'; }
-      return;
-    }
-    if (d.running) {
-      badge.textContent = '✓ läuft';
-      badge.className = 'sb-chip chip-ok';
-      stopBtn.style.display = '';
-      useBtn.style.display = '';
-      info.style.display = 'block';
-      info.innerHTML = `Endpunkt: <code style="background:var(--s1);padding:1px 6px;border-radius:3px">${d.url}</code> — Autostart beim Boot: ${d.autostart ? '✓ aktiv' : 'inaktiv'}`;
-    } else if (d.configured) {
-      badge.textContent = 'konfiguriert, gestoppt';
-      badge.className = 'sb-chip chip-warn';
-      stopBtn.style.display = 'none';
-      useBtn.style.display = 'none';
-      info.style.display = 'none';
-    } else {
-      badge.textContent = 'nicht konfiguriert';
-      badge.className = 'sb-chip chip-warn';
-      stopBtn.style.display = 'none';
-      useBtn.style.display = 'none';
-      info.style.display = 'none';
-    }
-    if (d.port) document.getElementById('ai-proxy-port').value = d.port;
-  } catch (e) {
-    badge.textContent = 'Status unbekannt';
-    badge.className = 'sb-chip chip-warn';
+    dot.style.display = d.running ? '' : 'none';
+    dot.title = d.running
+      ? `Proxy läuft auf ${d.url}` + (d.autostart ? ' (Autostart aktiv)' : '')
+      : 'Proxy nicht aktiv';
+  } catch (_) {
+    dot.style.display = 'none';
   }
 }
 
-async function saveAiProxy() {
-  const key = document.getElementById('ai-proxy-key').value.trim();
-  const port = parseInt(document.getElementById('ai-proxy-port').value) || 8642;
-  if (!key) { toast('Bitte Gemini API-Key eintragen'); return; }
+async function launchAiProxyConfig() {
   try {
-    const r = await fetch('/api/ai-proxy/configure', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({api_key: key, port})
-    });
+    const r = await fetch('/api/ai-proxy/launch-config', {method: 'POST'});
     const d = await r.json();
     if (d.ok) {
-      toast('✓ Proxy konfiguriert — startet automatisch');
-      document.getElementById('ai-proxy-key').value = '';
-      setTimeout(loadAiProxyStatus, 1500);
+      toast('Konfigurations-Fenster wird auf dem Desktop geöffnet');
+      // Status in 10 Sekunden neu laden – User hat dann vermutlich gespeichert
+      setTimeout(loadAiProxyStatus, 10000);
     } else {
-      toast('Fehler: ' + (d.error || 'unbekannt'));
+      toast('Fehler: ' + (d.error || 'Launcher konnte nicht gestartet werden'));
     }
   } catch (e) {
     toast('Fehler: ' + e.message);
-  }
-}
-
-async function stopAiProxy() {
-  if (!confirm('Proxy stoppen und Autostart deaktivieren?')) return;
-  try {
-    const r = await fetch('/api/ai-proxy/stop', {method: 'POST'});
-    const d = await r.json();
-    if (d.ok) { toast('Proxy gestoppt'); setTimeout(loadAiProxyStatus, 1000); }
-    else toast('Fehler: ' + (d.error || 'unbekannt'));
-  } catch (e) {
-    toast('Fehler: ' + e.message);
-  }
-}
-
-function useAiProxyUrl() {
-  const port = parseInt(document.getElementById('ai-proxy-port').value) || 8642;
-  const urlField = document.getElementById('custom-url');
-  if (urlField) {
-    urlField.value = `http://localhost:${port}/v1`;
-    // Dropdown auf 'custom' setzen und Provider wechseln
-    const prov = document.getElementById('ki-provider');
-    if (prov) { prov.value = 'custom'; prov.dispatchEvent(new Event('change')); }
-    toast('URL eingetragen — oben noch Speichern klicken');
   }
 }
 
@@ -1012,26 +958,11 @@ function buildKiCard() {
         </div>
         <div class="row-hint">OpenAI-kompatibler Server — Ollama im Netzwerk, LM Studio, vLLM, eigener VPS&hellip;</div>
       </div>
-    </div>
-    <div class="row row-wide" style="background:var(--s1)">
-      <div id="ai-proxy-panel" style="padding:4px 0">
-        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px">
-          <div style="flex:1">
-            <div class="row-label" style="margin-bottom:2px">🚀 Ilija AI-API-Proxy</div>
-            <div class="row-hint">Mitgelieferter OpenAI-kompatibler Proxy für Google Gemini. Trage einen Gemini-API-Key ein, dann startet er bei jedem Boot automatisch — und du kannst ihn oben als „Eigener Endpunkt" nutzen.</div>
-          </div>
-          <span id="ai-proxy-status-badge" class="sb-chip chip-warn" style="font-size:.68rem;white-space:nowrap">lädt…</span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 100px;gap:8px;margin-bottom:8px">
-          <input type="password" id="ai-proxy-key" placeholder="Gemini API-Key (aistudio.google.com/apikey)">
-          <input type="number" id="ai-proxy-port" placeholder="8642" value="8642" min="1024" max="65535">
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button onclick="saveAiProxy()" class="btn btn-prim btn-sm">Konfigurieren & Starten</button>
-          <button onclick="stopAiProxy()" class="btn btn-ghost btn-sm" id="ai-proxy-stop-btn" style="display:none">Stoppen</button>
-          <button onclick="useAiProxyUrl()" class="btn btn-ghost btn-sm" id="ai-proxy-use-btn" style="display:none">URL oben eintragen</button>
-        </div>
-        <div id="ai-proxy-url-info" style="font-size:.72rem;color:var(--tx3);margin-top:6px;display:none"></div>
+      <div class="row-control" style="align-items:center">
+        <button onclick="launchAiProxyConfig()" class="btn btn-ghost btn-sm" title="Startet den mitgelieferten Proxy zum Konfigurieren – Fenster oeffnet sich auf dem Desktop">
+          ⚙️ Gemini API-Proxy einrichten
+          <span id="ai-proxy-run-dot" style="display:none;width:7px;height:7px;border-radius:50%;background:var(--teal,#2dd4bf);margin-left:6px" title="Proxy läuft"></span>
+        </button>
       </div>
     </div>
     <div class="row row-wide">

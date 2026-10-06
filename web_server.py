@@ -694,6 +694,21 @@ def ai_proxy_status():
         enabled = r.stdout.strip() == "enabled"
     except Exception:
         enabled = False
+
+    # Self-healing: Wenn der Proxy konfiguriert ist (API-Key da) aber der
+    # Service noch nicht enabled, einmal enablen – damit er beim naechsten
+    # Boot automatisch startet. Idempotent: tut nichts, falls bereits enabled
+    # oder nicht konfiguriert.
+    if has_key and not enabled and os.path.exists("/etc/systemd/system/ai-api-proxy.service"):
+        try:
+            _sp.run(["sudo", "-n", "systemctl", "enable", "ai-api-proxy.service"],
+                    capture_output=True, timeout=3)
+            r = _sp.run(["systemctl", "is-enabled", "ai-api-proxy.service"],
+                        capture_output=True, text=True, timeout=2)
+            enabled = r.stdout.strip() == "enabled"
+        except Exception:
+            pass
+
     return jsonify({
         "configured":   has_key,
         "running":      _ai_proxy_running(),
@@ -702,6 +717,36 @@ def ai_proxy_status():
         "url":          f"http://localhost:{port}/v1",
         "service_installed": os.path.exists("/etc/systemd/system/ai-api-proxy.service"),
     })
+
+
+@app.route("/api/ai-proxy/launch-config", methods=["POST"])
+def ai_proxy_launch_config():
+    """Startet den Tkinter-Launcher des AI-API-Proxy auf dem Desktop.
+    User konfiguriert dort API-Key und Port. Beim naechsten Status-Call wird
+    der systemd-Service automatisch enabled (Self-Healing in /status)."""
+    import subprocess as _sp
+    launcher = os.path.join(_AI_PROXY_DIR, "app.py")
+    venv_py = os.path.join(_AI_PROXY_DIR, "venv", "bin", "python")
+    if not os.path.exists(launcher):
+        return jsonify({"ok": False, "error": f"Launcher fehlt: {launcher}"}), 500
+    if not os.path.exists(venv_py):
+        venv_py = "python3"
+    env = os.environ.copy()
+    # Ilija-Service laeuft mit DISPLAY=:0 oder :1 (siehe start.sh); diesen
+    # DISPLAY vererben wir an den Tkinter-Launcher.
+    if "DISPLAY" not in env:
+        env["DISPLAY"] = ":0"
+    try:
+        _sp.Popen(
+            [venv_py, launcher],
+            cwd=_AI_PROXY_DIR,
+            env=env,
+            stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
+            start_new_session=True,
+        )
+        return jsonify({"ok": True, "display": env.get("DISPLAY")})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @app.route("/api/ai-proxy/configure", methods=["POST"])
