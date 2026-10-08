@@ -985,6 +985,12 @@ def register_fristen_routes(app, get_kernel_func=None, kernel_lock=None):
                 os.remove(fp)
         vorlagen = [x for x in vorlagen if x["id"] != vid]
         _save(vorlagen)
+        # Pending-Stichtag-Eintrag aufraeumen, damit kein verwaister
+        # "Ilija hat vorbereitet"-Banner stehen bleibt.
+        pending = _load_pending_stichtag()
+        pending_neu = [p for p in pending if p.get("vid") != vid]
+        if len(pending_neu) != len(pending):
+            _save_pending_stichtag(pending_neu)
         return jsonify({"ok": True})
 
     @app.route("/api/fristen/<vid>/upload", methods=["POST"])
@@ -1885,8 +1891,17 @@ Wichtig: Nur echte, offizielle Adressen. Keine erfundenen Daten."""
 
     @app.route("/api/fristen/pending-stichtag", methods=["GET"])
     def fristen_pending_stichtag():
-        """Gibt offene ki_pruefen-Stichtag-Einträge zurück (für Chat-Anzeige)."""
-        return jsonify({"ok": True, "pending": _load_pending_stichtag()})
+        """Gibt offene ki_pruefen-Stichtag-Einträge zurück (für Chat-Anzeige).
+        Filtert dabei Eintraege zu Vorlagen aus, die es nicht mehr gibt
+        (verwaiste Banner nach Loeschung), und schreibt die bereinigte Liste
+        gleich auf Disk zurueck."""
+        pending   = _load_pending_stichtag()
+        vorlagen  = _load()
+        vorhanden = {v["id"] for v in vorlagen}
+        aktuell   = [p for p in pending if p.get("vid") in vorhanden]
+        if len(aktuell) != len(pending):
+            _save_pending_stichtag(aktuell)
+        return jsonify({"ok": True, "pending": aktuell})
 
     @app.route("/api/fristen/<vid>/stichtag-senden", methods=["POST"])
     def fristen_stichtag_senden(vid):
