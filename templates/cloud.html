@@ -62,7 +62,8 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
 .ic{font-size:20px;width:26px;text-align:center;flex-shrink:0}
 .nm{flex:1;font-size:.86rem;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .meta{font-size:.7rem;color:var(--tx3);font-family:var(--m);flex-shrink:0}
-.row-act{display:flex;gap:4px;flex-shrink:0;opacity:0;transition:opacity .12s}
+/* Aktionen immer sichtbar (sonst auf Touch-Geraeten unerreichbar) */
+.row-act{display:flex;gap:4px;flex-shrink:0;opacity:.55;transition:opacity .12s}
 .row:hover .row-act{opacity:1}
 .iact{width:28px;height:28px;border-radius:6px;border:none;background:transparent;color:var(--tx3);cursor:pointer;display:grid;place-items:center;font-size:13px}
 .iact:hover{background:var(--s3);color:var(--tx)}
@@ -200,6 +201,7 @@ function render(){
       <div class="meta">${meta}</div>
       <div class="row-act">
         ${e.typ==='datei'?`<button class="iact" title="Herunterladen" onclick="event.stopPropagation();dl('${esc(e.pfad)}')">⬇</button>`:''}
+        <button class="iact" title="Umbenennen" onclick="event.stopPropagation();umbenennen('${esc(e.pfad)}','${esc(e.name)}')">✏️</button>
         <button class="iact del" title="Löschen" onclick="event.stopPropagation();loeschen('${esc(e.pfad)}','${esc(e.name)}')">🗑</button>
       </div></div>`;
   }).join('');
@@ -225,6 +227,14 @@ async function neuerOrdner(){
   const d=await (await fetch('/api/cloud/mkdir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:pfad,name})})).json();
   if(d.error){toast(d.error);return;}
   toast('Ordner erstellt'); lade(pfad);
+}
+
+async function umbenennen(p,alt){
+  const neu=prompt('Neuer Name:', alt);
+  if(!neu || neu===alt) return;
+  const d=await (await fetch('/api/cloud/rename',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:p,name:neu})})).json();
+  if(d.error){toast(d.error);return;}
+  toast('Umbenannt'); lade(pfad);
 }
 
 async function hochladen(files){

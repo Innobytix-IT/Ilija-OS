@@ -177,6 +177,27 @@ def register_cloud_routes(app):
             return jsonify({"error": "Nicht gefunden"}), 404
         return jsonify({"ok": True})
 
+    @app.route("/api/cloud/rename", methods=["POST"])
+    def cloud_rename():
+        data = request.get_json() or {}
+        full = _safe(data.get("path", ""))
+        neu  = (data.get("name") or "").strip()
+        if full == os.path.realpath(_root()):
+            return jsonify({"error": "Wurzel kann nicht umbenannt werden"}), 400
+        if not os.path.exists(full):
+            return jsonify({"error": "Nicht gefunden"}), 404
+        if not neu or "/" in neu or "\\" in neu or neu in (".", ".."):
+            return jsonify({"error": "Ungueltiger Name"}), 400
+        ziel = os.path.join(os.path.dirname(full), neu)
+        if os.path.exists(ziel):
+            return jsonify({"error": "Name bereits vergeben"}), 400
+        # ziel darf nicht ausserhalb der Wurzel landen (zusaetzliche Sicherung)
+        ziel_real = os.path.realpath(ziel)
+        if not ziel_real.startswith(os.path.realpath(_root())):
+            return jsonify({"error": "Pfad ausserhalb der Wurzel"}), 400
+        os.rename(full, ziel)
+        return jsonify({"ok": True})
+
     @app.route("/api/cloud/root")
     def cloud_root():
         return jsonify({"root": _root()})
