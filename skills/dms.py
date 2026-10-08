@@ -658,12 +658,29 @@ def dms_archiv_baum() -> list:
     """
     Gibt die vollständige Ordnerstruktur des DMS-Archivs als verschachtelte Liste zurück.
     Nützlich um alle Kategorien und Unterkategorien auf einen Blick zu sehen.
+
+    Leere Kategorie-Ordner werden ebenfalls aufgefuehrt (mit count=0), damit
+    der User seine Struktur auch dann sieht, wenn noch keine Dokumente drin
+    liegen. Ordner die mit "_" oder "." beginnen (z.B. "_Posteingang" als
+    Import-Ablage, versteckte Systemordner) werden ausgeblendet.
+
     Beispiel: dms_archiv_baum()
     """
     _init_dirs()
     archiv_dir = _get_archiv_dir()
     baum       = {}
 
+    # Erst alle Top-Level-Ordner einsammeln (auch leere), ausser Posteingang/versteckt
+    try:
+        for eintrag in sorted(os.listdir(archiv_dir)):
+            if eintrag.startswith(("_", ".")):
+                continue
+            if os.path.isdir(os.path.join(archiv_dir, eintrag)):
+                baum[eintrag] = {}
+    except FileNotFoundError:
+        pass
+
+    # Dann die Dateien einfuellen
     for root, _, files in os.walk(archiv_dir):
         for f in files:
             if Path(f).suffix.lower() in SUPPORTED_EXTS:
@@ -671,6 +688,10 @@ def dms_archiv_baum() -> list:
                 rel     = os.path.relpath(voll, archiv_dir)
                 teile   = rel.split(os.sep)
                 kat     = teile[0] if len(teile) > 0 else "Unsortiert"
+                # Posteingang nicht als Kategorie zeigen – wird separat
+                # ueber den Import-Scan dargestellt
+                if kat.startswith(("_", ".")):
+                    continue
                 sub     = teile[1] if len(teile) > 1 else ""
                 jahr    = teile[2] if len(teile) > 2 else ""
                 groesse = os.path.getsize(voll)
