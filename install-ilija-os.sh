@@ -338,6 +338,7 @@ $TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl enable ai-api-proxy, /usr/bi
 $TARGET_USER ALL=(ALL) NOPASSWD: /bin/systemctl enable ai-api-proxy, /bin/systemctl enable ai-api-proxy.service, /bin/systemctl disable ai-api-proxy, /bin/systemctl disable ai-api-proxy.service, /bin/systemctl restart ai-api-proxy, /bin/systemctl restart ai-api-proxy.service, /bin/systemctl stop ai-api-proxy, /bin/systemctl stop ai-api-proxy.service, /bin/systemctl start ai-api-proxy, /bin/systemctl start ai-api-proxy.service
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/sbin/update-initramfs
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/update-alternatives
+$TARGET_USER ALL=(ALL) NOPASSWD: /bin/mount /mnt/ilija-ablage, /bin/umount /mnt/ilija-ablage, /usr/bin/mount /mnt/ilija-ablage, /usr/bin/umount /mnt/ilija-ablage
 SUDO
 chmod 440 /etc/sudoers.d/ilija-update-rules
 ok "sudoers-Regeln für passwortloses Update installiert"

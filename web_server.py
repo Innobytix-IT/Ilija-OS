@@ -975,6 +975,95 @@ def update_log():
     return jsonify({"running": _update_running, "log": content})
 
 
+# ── Externe Festplatte (DMS + AHPT gemeinsamer Mountpunkt) ────
+# Standard-Mountpoint fuer die abziehbare NTFS/ext4-Platte, auf die
+# DMS-Archiv und AHPT-Hauptfreigabe zeigen. UI zeigt Status an und
+# bietet einen "sicher auswerfen"-Button, damit User die Platte vor
+# dem Abziehen nicht uebers Terminal unmounten muessen.
+_MOUNTPOINT_PLATTE = os.environ.get("ILIJA_PLATTE_MOUNT", "/mnt/ilija-ablage")
+
+def _platte_info(mp=_MOUNTPOINT_PLATTE):
+    info = {"mountpoint": mp, "eingehaengt": False, "device": None,
+            "fs": None, "frei_gb": None, "gesamt_gb": None,
+            "fstab_eingetragen": False}
+    try:
+        if os.path.exists("/etc/fstab"):
+            with open("/etc/fstab") as f:
+                for line in f:
+                    s = line.strip()
+                    if s and not s.startswith("#") and f" {mp} " in f" {s} ":
+                        info["fstab_eingetragen"] = True
+                        break
+        if os.path.ismount(mp):
+            info["eingehaengt"] = True
+            try:
+                with open("/proc/mounts") as f:
+                    for line in f:
+                        parts = line.split()
+                        if len(parts) >= 3 and parts[1] == mp:
+                            info["device"] = parts[0]
+                            info["fs"]     = parts[2]
+                            break
+            except Exception:
+                pass
+            import shutil as _sh
+            total, _used, free = _sh.disk_usage(mp)
+            info["gesamt_gb"] = round(total / (1024**3), 1)
+            info["frei_gb"]   = round(free  / (1024**3), 1)
+    except Exception as e:
+        info["error"] = str(e)
+    return info
+
+@app.route("/api/platte/status", methods=["GET"])
+def platte_status():
+    return jsonify(_platte_info())
+
+@app.route("/api/platte/auswerfen", methods=["POST"])
+def platte_auswerfen():
+    """Fuehrt sync + umount aus. Braucht sudoers-Eintrag fuer
+    /bin/umount <mountpoint> ohne Passwort (install-ilija-os.sh)."""
+    import subprocess as _sp
+    mp = _MOUNTPOINT_PLATTE
+    if not os.path.ismount(mp):
+        return jsonify({"ok": False,
+                        "message": f"Keine Platte an {mp} eingehaengt."})
+    try:
+        _sp.run(["sync"], timeout=15)
+        r = _sp.run(["sudo", "-n", "umount", mp],
+                    capture_output=True, text=True, timeout=20)
+        if r.returncode == 0:
+            return jsonify({"ok": True,
+                            "message": "Platte sicher ausgeworfen – "
+                                       "du kannst sie jetzt abziehen."})
+        err = ((r.stderr or "") + (r.stdout or "")).strip() or "Unbekannter Fehler"
+        if "busy" in err.lower() or "beschäftigt" in err.lower() or "besch" in err.lower():
+            return jsonify({"ok": False,
+                            "message": "Platte ist belegt – schliesse "
+                                       "zuerst alle Programme/Fenster, "
+                                       "die darauf zugreifen."})
+        return jsonify({"ok": False, "message": f"Auswerfen fehlgeschlagen: {err}"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)})
+
+@app.route("/api/platte/einhaengen", methods=["POST"])
+def platte_einhaengen():
+    """Mountet die Platte wieder (nach dem Wiedereinstecken, falls
+    udev sie nicht automatisch gemountet hat)."""
+    import subprocess as _sp
+    mp = _MOUNTPOINT_PLATTE
+    if os.path.ismount(mp):
+        return jsonify({"ok": True, "message": "Platte ist bereits eingehaengt."})
+    try:
+        r = _sp.run(["sudo", "-n", "mount", mp],
+                    capture_output=True, text=True, timeout=20)
+        if r.returncode == 0:
+            return jsonify({"ok": True, "message": "Platte eingehaengt."})
+        err = ((r.stderr or "") + (r.stdout or "")).strip() or "Unbekannter Fehler"
+        return jsonify({"ok": False, "message": f"Einhaengen fehlgeschlagen: {err}"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)})
+
+
 # ── Setup-Status (Wizard / Settings Erkennung) ───────────────
 @app.route("/api/setup-status")
 def setup_status():

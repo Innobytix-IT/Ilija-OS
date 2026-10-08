@@ -267,6 +267,9 @@ input[type=number]{max-width:90px}
     <button class="sb-item" onclick="scrollToSection('sec-ahpt')" id="sb-ahpt">
       <span class="sb-icon">🔗</span> AHPT
     </button>
+    <button class="sb-item" onclick="scrollToSection('sec-platte')" id="sb-platte">
+      <span class="sb-icon">💾</span> Externe Platte
+    </button>
     <button class="sb-item" onclick="scrollToSection('sec-update')">
       <span class="sb-icon">🔄</span> Auto-Update
     </button>
@@ -568,6 +571,33 @@ input[type=number]{max-width:90px}
               <button id="ahpt-btn-stop"    class="btn btn-danger btn-sm" onclick="ahptControl('stop')">⏹ Stop</button>
               <button id="ahpt-btn-restart" class="btn btn-ghost btn-sm"  onclick="ahptControl('restart')">🔄 Restart</button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Externe Festplatte ───────────────────────────────── -->
+      <div class="section" id="sec-platte">
+        <div class="sec-head">
+          <div class="sec-icon">💾</div>
+          <div>
+            <div class="sec-title">Externe Festplatte</div>
+            <div class="sec-sub">Gemeinsamer Speicher für DMS und AHPT – vor dem Abziehen sicher auswerfen</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="row-left">
+              <div class="row-label" id="platte-label">Status wird geladen …</div>
+              <div class="row-hint" id="platte-hint"></div>
+            </div>
+            <div class="row-control" style="gap:8px;flex-wrap:wrap">
+              <button class="btn btn-prim btn-sm" id="platte-btn-eject" onclick="plateAuswerfen()" style="display:none">⏏ Sicher auswerfen</button>
+              <button class="btn btn-teal btn-sm" id="platte-btn-mount" onclick="plateEinhaengen()" style="display:none">⟲ Einhängen</button>
+              <button class="btn btn-sm" onclick="loadPlatteStatus()" title="Status neu laden">⟳</button>
+            </div>
+          </div>
+          <div class="save-bar" style="padding-top:4px">
+            <span class="save-msg" id="platte-msg"></span>
           </div>
         </div>
       </div>
@@ -1874,6 +1904,73 @@ async function checkNovnc() {
   } catch(_) {}
 }
 
+// ── Externe Festplatte ────────────────────────────────────────
+async function loadPlatteStatus() {
+  const label = document.getElementById('platte-label');
+  const hint  = document.getElementById('platte-hint');
+  const bEj   = document.getElementById('platte-btn-eject');
+  const bMo   = document.getElementById('platte-btn-mount');
+  try {
+    const d = await api('/api/platte/status');
+    if (d.eingehaengt) {
+      label.textContent = `✅ Platte eingehängt (${d.frei_gb} GB frei von ${d.gesamt_gb} GB)`;
+      hint.textContent  = `${d.mountpoint} · ${d.device || ''} · ${d.fs || ''}`;
+      bEj.style.display = ''; bMo.style.display = 'none';
+    } else if (d.fstab_eingetragen) {
+      label.textContent = '⏏ Keine Platte angesteckt';
+      hint.textContent  = `Mountpunkt ${d.mountpoint} konfiguriert, aber nichts eingehängt.`;
+      bEj.style.display = 'none'; bMo.style.display = '';
+    } else {
+      label.textContent = 'ℹ️ Keine externe Platte eingerichtet';
+      hint.textContent  = `Platte wird erwartet unter ${d.mountpoint}. In /etc/fstab eintragen oder manuell mounten.`;
+      bEj.style.display = 'none'; bMo.style.display = 'none';
+    }
+  } catch(_) {
+    label.textContent = '❌ Status nicht verfügbar';
+    hint.textContent  = '';
+  }
+}
+
+async function plateAuswerfen() {
+  const btn = document.getElementById('platte-btn-eject');
+  const msg = document.getElementById('platte-msg');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Werfe aus …'; }
+  if (msg) { msg.textContent = ''; }
+  try {
+    const r = await fetch('/api/platte/auswerfen', {method: 'POST'});
+    const j = await r.json();
+    if (msg) {
+      msg.textContent = j.message || '';
+      msg.style.color = j.ok ? 'var(--g)' : 'var(--red)';
+    }
+  } catch(_) {
+    if (msg) { msg.textContent = 'Verbindungsfehler'; msg.style.color = 'var(--red)'; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⏏ Sicher auswerfen'; }
+    loadPlatteStatus();
+  }
+}
+
+async function plateEinhaengen() {
+  const btn = document.getElementById('platte-btn-mount');
+  const msg = document.getElementById('platte-msg');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Hänge ein …'; }
+  if (msg) { msg.textContent = ''; }
+  try {
+    const r = await fetch('/api/platte/einhaengen', {method: 'POST'});
+    const j = await r.json();
+    if (msg) {
+      msg.textContent = j.message || '';
+      msg.style.color = j.ok ? 'var(--g)' : 'var(--red)';
+    }
+  } catch(_) {
+    if (msg) { msg.textContent = 'Verbindungsfehler'; msg.style.color = 'var(--red)'; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⟲ Einhängen'; }
+    loadPlatteStatus();
+  }
+}
+
 // ── Auto-Update ───────────────────────────────────────────────
 async function loadUpdateSettings() {
   try {
@@ -1969,6 +2066,7 @@ async function _pollUpdateLog() {
 init();
 checkNovnc();
 loadUpdateSettings();
+loadPlatteStatus();
 {% endraw %}
 </script>
 </body>

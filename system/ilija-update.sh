@@ -186,6 +186,21 @@ SOUND_AUTOSTART
         echo "--- Startsound-Autostart installiert (greift beim naechsten Login) ---"
     fi
 
+    # Sudoers-Regel fuer Platten-Mount/Unmount (DMS+AHPT-Button im Web-UI)
+    # Idempotent: nur hinzufuegen falls Zeile noch nicht in der sudoers-Datei
+    # steht. Datei existiert seit Installation (siehe install-ilija-os.sh).
+    SUDOERS_FILE=/etc/sudoers.d/ilija-update-rules
+    PLATTE_LINE="$USER ALL=(ALL) NOPASSWD: /bin/mount /mnt/ilija-ablage, /bin/umount /mnt/ilija-ablage, /usr/bin/mount /mnt/ilija-ablage, /usr/bin/umount /mnt/ilija-ablage"
+    if [ -f "$SUDOERS_FILE" ] && ! sudo grep -q "/mnt/ilija-ablage" "$SUDOERS_FILE" 2>/dev/null; then
+        echo "--- sudoers-Regel fuer Platten-Auswerfen nachtragen ---"
+        if echo "$PLATTE_LINE" | sudo tee -a "$SUDOERS_FILE" >/dev/null 2>&1; then
+            sudo chmod 440 "$SUDOERS_FILE" 2>/dev/null || true
+            echo "--- sudoers-Regel installiert ---"
+        else
+            echo "WARNUNG: sudoers-Regel konnte nicht nachgetragen werden."
+        fi
+    fi
+
     if deploy_pair "system/x11vnc-smart.sh" "/opt/ilija-os/x11vnc-smart.sh" "noVNC-Launcher"; then
         # Wenn das noVNC-Script neu ist, den VNC-Dienst neu starten damit
         # die neue Logik sofort greift (ohne Reboot).

@@ -380,6 +380,7 @@ $NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ilija, /usr/bin/systemc
 $NEW_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart ilija, /bin/systemctl restart x11vnc, /bin/systemctl restart x11vnc.service, /bin/systemctl restart xvfb, /bin/systemctl restart xvfb.service, /bin/systemctl restart novnc, /bin/systemctl restart novnc.service
 $NEW_USER ALL=(ALL) NOPASSWD: /usr/sbin/update-initramfs
 $NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/update-alternatives
+$NEW_USER ALL=(ALL) NOPASSWD: /bin/mount /mnt/ilija-ablage, /bin/umount /mnt/ilija-ablage, /usr/bin/mount /mnt/ilija-ablage, /usr/bin/umount /mnt/ilija-ablage
 SUDOEOF
     chmod 440 /etc/sudoers.d/ilija-update-rules
     echo "Sudoers eingerichtet für $NEW_USER (ilija + x11vnc + xvfb + novnc)" >> "$LOG"
