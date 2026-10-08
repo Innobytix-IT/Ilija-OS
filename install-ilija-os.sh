@@ -163,6 +163,24 @@ else
     ok ".env existiert bereits oder keine .env.example vorhanden"
 fi
 
+# User-Config-Dateien aus den example-Vorlagen anlegen, falls fehlen.
+# Diese Dateien liegen pro Installation (DMS-Pfad, SMTP, Telegram-Token,
+# WhatsApp-Prompt) und sind deshalb seit a3a... in .gitignore. Beim Erst-
+# Install existieren im frisch geklonten Repo deshalb nur die .example-Dateien.
+for pair in \
+    "data/dms/dms_config.json:data/dms/dms_config.example.json" \
+    "data/email/email_config.json:data/email/email_config.example.json" \
+    "data/telegram/telegram_config.json:data/telegram/telegram_config.example.json" \
+    "data/whatsapp/whatsapp_config.json:data/whatsapp/whatsapp_config.example.json" \
+; do
+    real="${pair%%:*}"
+    example="${pair##*:}"
+    if [ ! -f "$real" ] && [ -f "$example" ]; then
+        sudo -u "$TARGET_USER" cp "$example" "$real"
+        ok "$real angelegt (aus Vorlage)"
+    fi
+done
+
 # ----------------------------------------------------------------------- 4. Plymouth-Theme
 say "4/8 Plymouth-Boot-Theme 'ilija' installieren"
 PLYMOUTH_SRC="$ILIJA_DIR/system/plymouth"

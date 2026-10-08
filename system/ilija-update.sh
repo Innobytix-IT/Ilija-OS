@@ -17,6 +17,33 @@ echo "--- System-Update abgeschlossen ---"
 echo "--- Ilija OS Update (GitHub) ---"
 git config --global --add safe.directory "$ILIJA_DIR" 2>/dev/null || true
 cd "$ILIJA_DIR"
+
+# User-spezifische Config-Dateien vor einem Pull schuetzen. Sie liegen pro
+# Installation (DMS-Pfad, SMTP-Passwort, Telegram-Token, WhatsApp-Prompt).
+# Mit skip-worktree ignoriert git lokale Modifikationen UND zieht eine
+# Deletion (seit sie in .gitignore stehen) nicht lokal durch.
+# Erzeugt die Dateien beim ersten Lauf aus der example-Vorlage.
+USER_CONFIGS=(
+    "data/dms/dms_config.json:data/dms/dms_config.example.json"
+    "data/email/email_config.json:data/email/email_config.example.json"
+    "data/telegram/telegram_config.json:data/telegram/telegram_config.example.json"
+    "data/whatsapp/whatsapp_config.json:data/whatsapp/whatsapp_config.example.json"
+)
+for pair in "${USER_CONFIGS[@]}"; do
+    real="${pair%%:*}"
+    example="${pair##*:}"
+    # Fehlt die echte Datei aber die Vorlage ist da? Dann aus Vorlage anlegen.
+    if [ ! -f "$real" ] && [ -f "$example" ]; then
+        cp "$example" "$real"
+        echo "--- $real aus Vorlage angelegt ---"
+    fi
+    # Falls git die Datei noch als tracked kennt (Altinstallation vor der
+    # .gitignore-Umstellung), vor dem Pull auf skip-worktree setzen.
+    if git ls-files --error-unmatch -- "$real" >/dev/null 2>&1; then
+        git update-index --skip-worktree -- "$real" 2>/dev/null || true
+    fi
+done
+
 BEFORE=$(git rev-parse HEAD 2>/dev/null || echo "")
 git fetch origin main --quiet
 LOCAL=$(git rev-parse HEAD)

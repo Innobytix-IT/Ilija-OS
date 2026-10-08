@@ -12,3 +12,13 @@ venv/
 memory/
 /ISO/
 *Testreport*.md
+
+# User-spezifische Configs mit Credentials / lokalen Pfaden.
+# Jede Installation hat eigene. Vorlagen daneben als *_config.example.json;
+# fehlt die echte Datei beim Start, kopiert install-ilija-os.sh / ilija-update.sh
+# die example-Variante. Lokale Aenderungen werden ueber skip-worktree
+# geschuetzt (siehe ilija-update.sh).
+data/dms/dms_config.json
+data/email/email_config.json
+data/telegram/telegram_config.json
+data/whatsapp/whatsapp_config.json
