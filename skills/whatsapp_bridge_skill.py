@@ -127,7 +127,7 @@ def _system_prompt(name: str, früherer_log: str, model_info: str = "") -> str:
         f"2. Frage IMMER nach dem vollständigen Namen des Kunden, bevor du buchst.\n"
         f"3. Prüfe Verfügbarkeit: Schreibe genau 'TERMIN_SUCHEN:[datum]' in deine Antwort, Datum im Format TT.MM.JJJJ (Beispiel: TERMIN_SUCHEN:[23.09.2026]). Das System antwortet dir mit freien Slots.\n"
         f"4. Nenne dem Kunden die freien Zeiten und warte auf seine Auswahl.\n"
-        f"5. Erst nach ausdrücklicher Bestätigung des Kunden: Schreibe genau 'TERMIN_EINTRAGEN:[datum]|[HH:MM]|[HH:MM]|[titel]|[kontaktname]' in deine Antwort, Datum im Format TT.MM.JJJJ (Beispiel: TERMIN_EINTRAGEN:[23.09.2026]|[16:30]|[17:30]|[Selbstaendigkeit]|[Manuel]).\n"
+        f"5. Erst nach ausdrücklicher Bestätigung des Kunden: Schreibe genau 'TERMIN_EINTRAGEN:[datum]|[HH:MM]|[HH:MM]|[titel]|[kontaktname]' in deine Antwort, Datum im Format TT.MM.JJJJ (Beispiel: TERMIN_EINTRAGEN:[23.09.2026]|[16:30]|[17:30]|[Beratung]|[Max Mustermann]).\n"
         f"   Ende-Uhrzeit = Start + 1 Stunde, außer der Kunde wünscht etwas anderes.\n"
         f"6. Sage danach kurz: 'Termin eingetragen für [name]: [datum] [uhrzeit] – [thema].'\n"
         f"WICHTIG: Du darfst NIEMALS sagen 'habe ich eingetragen' ohne vorher den TERMIN_EINTRAGEN-Befehl ausgegeben zu haben. Ohne den Befehl wird KEIN Termin gespeichert.\n"

@@ -42,7 +42,7 @@ def _init():
 def gedaechtnis_speichern(information: str, kategorie: str = "allgemein") -> str:
     """
     Speichert eine Information dauerhaft im Langzeitgedächtnis.
-    Beispiel: gedaechtnis_speichern(information="Mein Name ist Manuel", kategorie="persoenlich")
+    Beispiel: gedaechtnis_speichern(information="Lieblingsfarbe ist blau", kategorie="persoenlich")
     """
     _init()
     try:

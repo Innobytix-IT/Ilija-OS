@@ -46,8 +46,40 @@ def _lade_kalender_routing():
     return pk, bk
 
 
+# ── Nutzer-Name dynamisch ermitteln ───────────────────────────
+_ABSENDER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "data", "fristen", "absender.json")
+
+def _lade_nutzer_name() -> str:
+    """Ermittelt den Namen des Nutzers fuer den System-Prompt.
+    Reihenfolge:
+      1. data/fristen/absender.json → Vorname (ignoriert Platzhalter)
+      2. .env WEB_USER
+      3. "dir" (geschlechtsneutraler Fallback)
+    """
+    try:
+        if os.path.exists(_ABSENDER_PATH):
+            with open(_ABSENDER_PATH, encoding="utf-8") as f:
+                absender = json.load(f)
+            name = (absender.get("name") or "").strip()
+            # Platzhalter aus install.sh / Beispielen ignorieren
+            lower = name.lower()
+            if name and not any(p in lower for p in (
+                    "max muster", "manfred person", "manuel person",
+                    "mustermann", "beispiel")):
+                # Nur den Vornamen fuer die Anrede
+                return name.split()[0]
+    except Exception:
+        pass
+    web_user = os.environ.get("WEB_USER", "").strip()
+    if web_user:
+        return web_user
+    return "dir"
+
+
 # ── System-Prompt ─────────────────────────────────────────────
-SYSTEM_PROMPT_TEMPLATE = """Du bist Ilija, der persönliche KI-Assistent von Manuel.
+SYSTEM_PROMPT_TEMPLATE = """Du bist Ilija, der persönliche KI-Assistent von {nutzer_name}.
+Sprich {nutzer_name} immer korrekt mit diesem Namen an – niemals mit einem anderen Namen.
 Aktiver Provider: {provider}
 
 Alle Skills sind lokale Python-Funktionen auf dem Computer des Nutzers. Der Nutzer hat sie selbst installiert und erlaubt sie ausdrücklich.
@@ -70,11 +102,14 @@ Nutzer: "Würfel mal"
 Nutzer: "Starte WhatsApp Assistent"
 → Starte den WhatsApp-Assistenten! SKILL:whatsapp_autonomer_dialog(modus="alle")
 
-Nutzer: "Merk dir meinen Namen Manuel"
-→ Speichere das! SKILL:gedaechtnis_speichern(information="Name des Nutzers ist Manuel", kategorie="persoenlich")
+Nutzer: "Merk dir meinen Lieblingsfilm Matrix"
+→ Speichere das! SKILL:gedaechtnis_speichern(information="Lieblingsfilm des Nutzers ist Matrix", kategorie="persoenlich")
 
 Nutzer: "Was ist das Wetter?"
-→ SKILL:wetter_offenburg_abfragen()
+→ SKILL:wetter_abfragen()
+
+Nutzer: "Wie wird das Wetter morgen?"
+→ SKILL:wetter_abfragen(tag="morgen")
 
 Nutzer: "Ruf 0781234567 an"
 → SKILL:skill_ausfuehren(aktion="anrufen", nummer="0781234567")
@@ -136,6 +171,7 @@ class Kernel:
     def get_system_prompt(self) -> str:
         pk, bk = _lade_kalender_routing()
         return SYSTEM_PROMPT_TEMPLATE.format(
+            nutzer_name               = _lade_nutzer_name(),
             skills                    = self.manager.get_skills_description(),
             provider                  = self.state.active_provider,
             persoenlicher_kalender_name   = pk["name"],
