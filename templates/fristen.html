@@ -545,7 +545,10 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
 </div>
 
 <!-- ════ Absender-Modal ════ -->
-<div class="modal-bg" id="absenderModal" onclick="if(event.target===this)closeAbsenderModal()">
+<!-- Kein Backdrop-Close: beim Eintippen von Adressen koennen Autofill-Overlays,
+     Softkeyboard-Resizes oder versehentliche Taps das Modal sonst mitten in der
+     Eingabe schliessen. User schliesst explizit ueber ✕ oder "Abbrechen". -->
+<div class="modal-bg" id="absenderModal">
   <div class="modal">
     <div class="modal-title">
       <span>👤 Meine Absender-Daten</span>
