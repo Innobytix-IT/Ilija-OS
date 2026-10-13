@@ -49,6 +49,23 @@ git fetch origin main --quiet
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)
 
+# ---- Pre-Update-Selbsttest -------------------------------------
+# Prueft ob Ilija AKTUELL (vor dem Update) gesund ist. Wenn nicht,
+# Rollback-Automatik ausschalten -- sonst steckt der User fuer immer
+# in einer kaputten Version fest (jedes Update wuerde zurueckgerollt
+# werden auf eine Version, die den Selbsttest auch nicht besteht).
+ROLLBACK_SCHUTZ="an"
+if [ -f "$ILIJA_DIR/system/update_selbsttest.py" ]; then
+    echo "--- Pre-Update-Selbsttest ---"
+    if ! python3 "$ILIJA_DIR/system/update_selbsttest.py" pre; then
+        echo "WARNUNG: System war bereits VOR dem Update defekt."
+        echo "         Update wird dennoch ausgefuehrt, aber ohne"
+        echo "         automatischen Rollback -- sonst steckt die"
+        echo "         Installation fest in einer kaputten Version."
+        ROLLBACK_SCHUTZ="aus"
+    fi
+fi
+
 if [ "$LOCAL" != "$REMOTE" ]; then
     git pull origin main --quiet
     AFTER=$(git rev-parse HEAD)
@@ -57,8 +74,10 @@ if [ "$LOCAL" != "$REMOTE" ]; then
     SHORT_AFTER=$(git rev-parse --short "$AFTER")
     echo "--- git pull: $SHORT_BEFORE -> $SHORT_AFTER ---"
     # Liste der neuen Commits (max. 10) als Mini-Changelog
+    CHANGELOG=""
     if [ -n "$BEFORE" ]; then
-        git log --oneline "$BEFORE..$AFTER" 2>/dev/null | head -10 | sed 's/^/    /'
+        CHANGELOG=$(git log --oneline "$BEFORE..$AFTER" 2>/dev/null | head -10)
+        echo "$CHANGELOG" | sed 's/^/    /'
     fi
 
     # Python-Abhängigkeiten
@@ -238,12 +257,47 @@ SOUND_AUTOSTART
         fi
     fi
 
-    # WICHTIG: Erst Abschluss-Meldung ausgeben, dann Service neustarten.
-    # Der Restart killt die SSE-Verbindung zum Web-UI; alles was danach
-    # kommt, sieht der User nicht mehr.
+    # WICHTIG: Erst Abschluss-Meldung ausgeben, dann Service neustarten
+    # und Selbsttest fahren. Der Restart killt die SSE-Verbindung zum
+    # Web-UI; was DANACH noch im Log steht, sieht der User im Log-Modal
+    # nicht mehr (sondern erst nach erneutem Oeffnen).
     echo "--- Ilija OS aktualisiert auf $SHORT_AFTER ---"
     echo "=== Fertig ==="
     sudo systemctl restart ilija 2>/dev/null || true
+
+    # ---- Post-Update-Selbsttest + Rollback-Automatik ----------
+    if [ "$ROLLBACK_SCHUTZ" = "an" ] && \
+       [ -f "$ILIJA_DIR/system/update_selbsttest.py" ]; then
+        echo "--- Post-Update-Selbsttest ---"
+        if python3 "$ILIJA_DIR/system/update_selbsttest.py" post; then
+            echo "--- Selbsttest bestanden – Update bleibt aktiv ---"
+            python3 "$ILIJA_DIR/system/update_history_eintrag.py" \
+                --von "$BEFORE" --nach "$AFTER" --status ok \
+                --changelog "$CHANGELOG" 2>/dev/null || true
+        else
+            GRUND=$(cat /tmp/ilija_selbsttest_grund.txt 2>/dev/null || echo "unbekannt")
+            echo "!!! ROLLBACK !!! Selbsttest fehlgeschlagen:"
+            echo "$GRUND" | sed 's/^/    /'
+            # Alte Version wiederherstellen
+            git -C "$ILIJA_DIR" reset --hard "$BEFORE" --quiet
+            # Alte Deps wiederherstellen
+            source "$ILIJA_DIR/venv/bin/activate"
+            pip install -r "$ILIJA_DIR/requirements.txt" --quiet 2>&1 | tail -3
+            # Service nochmal durchstarten
+            sudo systemctl restart ilija 2>/dev/null || true
+            # In History schreiben + Benachrichtigung erzeugen
+            python3 "$ILIJA_DIR/system/update_history_eintrag.py" \
+                --von "$BEFORE" --nach "$AFTER" --status rollback \
+                --grund "$GRUND" --changelog "$CHANGELOG" 2>/dev/null || true
+            echo "--- Rollback abgeschlossen, zurueck auf $SHORT_BEFORE ---"
+        fi
+    else
+        # Entweder Selbsttest-Script fehlt oder Pre-Check hatte den Schutz
+        # ausgeschaltet (System war schon vorher kaputt).
+        python3 "$ILIJA_DIR/system/update_history_eintrag.py" \
+            --von "$BEFORE" --nach "$AFTER" --status ok \
+            --changelog "$CHANGELOG" 2>/dev/null || true
+    fi
     exit 0
 else
     echo "--- Ilija OS ist aktuell (kein Update noetig) ---"

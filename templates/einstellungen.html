@@ -273,6 +273,9 @@ input[type=number]{max-width:90px}
     <button class="sb-item" onclick="scrollToSection('sec-update')">
       <span class="sb-icon">🔄</span> Auto-Update
     </button>
+    <button class="sb-item" onclick="scrollToSection('sec-update-history')">
+      <span class="sb-icon">📜</span> Update-Verlauf
+    </button>
     <div style="margin-top:auto;padding-top:16px">
       <button class="sb-item" onclick="startWizard()" style="color:var(--g)">
         <span class="sb-icon">✨</span> Einrichtungsassistent
@@ -635,6 +638,17 @@ input[type=number]{max-width:90px}
           <button class="btn btn-prim btn-sm" onclick="saveUpdateSettings()">Speichern</button>
           <button class="btn btn-teal btn-sm" onclick="updateNow()" id="upd-now-btn">⬇ Jetzt Update starten</button>
           <span class="save-msg" id="upd-msg"></span>
+        </div>
+      </div>
+
+      <!-- ─── Update-Verlauf ─────────────────────────────────────── -->
+      <div class="section" id="sec-update-history">
+        <div class="sec-head">
+          <div class="sec-icon">📜</div>
+          <div><div class="sec-title">Update-Verlauf</div><div class="sec-sub">Letzte Updates einsehen oder auf eine frühere Version zurücksetzen</div></div>
+        </div>
+        <div class="card">
+          <div id="upd-hist-list" style="font-family:var(--m);font-size:.8rem">Wird geladen …</div>
         </div>
       </div>
     </div>
@@ -2067,7 +2081,74 @@ init();
 checkNovnc();
 loadUpdateSettings();
 loadPlatteStatus();
+loadUpdateHistory();
+
+// ── Update-Verlauf ───────────────────────────────────────────
+async function loadUpdateHistory() {
+  const el = document.getElementById('upd-hist-list');
+  if (!el) return;
+  try {
+    const r = await fetch('/api/update-history');
+    const items = await r.json();
+    if (!Array.isArray(items) || !items.length) {
+      el.innerHTML = '<div style="color:var(--tx3);padding:8px 0">Noch keine Updates aufgezeichnet.</div>';
+      return;
+    }
+    el.innerHTML = items.map(h => {
+      const statusBadge =
+        h.status === 'ok'       ? '<span style="color:var(--g)">✓ erfolgreich</span>' :
+        h.status === 'rollback' ? '<span style="color:var(--red)">✗ zurückgerollt</span>' :
+                                  '<span style="color:var(--yellow)">⚠ Fehler</span>';
+      const kurzVon  = (h.von||'').slice(0,7);
+      const kurzNach = (h.nach||'').slice(0,7);
+      const changelog = h.changelog
+        ? `<pre style="margin:4px 0 0;font-size:.72rem;color:var(--tx3);white-space:pre-wrap;max-height:120px;overflow:auto">${h.changelog.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</pre>`
+        : '';
+      const grund = h.grund
+        ? `<div style="margin-top:4px;color:var(--red);font-size:.75rem">Grund: ${h.grund.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])).slice(0,300)}</div>`
+        : '';
+      // Rollback-Button: zu `von` wechseln (die VOR-Update-Version)
+      const rollbackBtn = h.von
+        ? `<button class="btn btn-sm" style="margin-top:6px" onclick="updateRollback('${h.von}')">↶ Zurück zu ${kurzVon}</button>`
+        : '';
+      return `
+        <div style="padding:10px;border-bottom:1px solid var(--bdr2)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <div><strong>${kurzVon} → ${kurzNach}</strong> &nbsp; ${statusBadge}</div>
+            <div style="font-size:.72rem;color:var(--tx3)">${h.zeit||''}</div>
+          </div>
+          ${grund}
+          ${changelog}
+          ${rollbackBtn}
+        </div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--red)">Verlauf nicht lesbar: ' + e.message + '</div>';
+  }
+}
+
+async function updateRollback(sha) {
+  if (!confirm('Wirklich auf ' + sha.slice(0,7) + ' zurückrollen? Ilija wird neugestartet.')) return;
+  try {
+    const r = await fetch('/api/update-rollback', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({sha}),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      alert('Rollback zu ' + sha.slice(0,7) + ' läuft. Ilija startet gleich neu.');
+      setTimeout(() => location.reload(), 3000);
+    } else {
+      alert('Fehler: ' + (d.message || 'unbekannt'));
+    }
+  } catch (e) {
+    alert('Verbindungsfehler: ' + e.message);
+  }
+}
 {% endraw %}
 </script>
+  <link rel="stylesheet" href="/static/sysnot.css">
+  <script src="/static/sysnot.js" defer></script>
 </body>
 </html>

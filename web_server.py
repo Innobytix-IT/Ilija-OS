@@ -975,6 +975,74 @@ def update_log():
     return jsonify({"running": _update_running, "log": content})
 
 
+# ── System-Notifications (persistente Hinweise) ──────────────
+# Fuer Dinge die der User UNBEDINGT sehen muss: Rollback-Grund,
+# Platte voll, AHPT down, neue Updates verfuegbar. Siehe
+# system_notifications.py.
+import system_notifications as _sysnot
+
+@app.route("/api/system-notifications", methods=["GET"])
+def system_notifications_list():
+    return jsonify(_sysnot.get_offene())
+
+@app.route("/api/system-notifications/<nid>/resolve", methods=["POST"])
+def system_notifications_resolve(nid):
+    ok = _sysnot.resolve_by_id(nid)
+    return jsonify({"ok": ok})
+
+
+# ── Update-Historie + manueller Rollback-Endpoint ────────────
+_UPDATE_HISTORY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                     "data", "update_history.json")
+
+def _load_update_history():
+    try:
+        with open(_UPDATE_HISTORY_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else []
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+@app.route("/api/update-history", methods=["GET"])
+def update_history():
+    return jsonify(_load_update_history())
+
+@app.route("/api/update-rollback", methods=["POST"])
+def update_rollback():
+    """Manueller Rollback zu einer frueheren Version per Git-SHA."""
+    import subprocess as _sp
+    data = request.get_json(force=True) or {}
+    sha = (data.get("sha") or "").strip()
+    if not sha or not all(c in "0123456789abcdef" for c in sha.lower()):
+        return jsonify({"ok": False, "message": "Ungueltige SHA."}), 400
+    repo = os.path.dirname(os.path.abspath(__file__))
+    try:
+        r = _sp.run(["git", "-C", repo, "reset", "--hard", sha],
+                    capture_output=True, text=True, timeout=30)
+        if r.returncode != 0:
+            return jsonify({"ok": False,
+                            "message": f"git reset fehlgeschlagen: {r.stderr.strip()}"}), 500
+        # pip install nochmal um alte Deps zu haben
+        venv_pip = os.path.join(repo, "venv", "bin", "pip")
+        if os.path.exists(venv_pip):
+            _sp.run([venv_pip, "install", "-q", "-r",
+                     os.path.join(repo, "requirements.txt")],
+                    capture_output=True, timeout=180)
+        # Service restart
+        _sp.run(["sudo", "-n", "systemctl", "restart", "ilija"],
+                capture_output=True, timeout=20)
+        _sysnot.notify(
+            _sysnot.LEVEL_WARNUNG,
+            "Manueller Rollback ausgefuehrt",
+            f"Zurueckgesetzt auf {sha[:7]} auf Wunsch des Nutzers.",
+            typ="manueller_rollback",
+            meta={"sha": sha},
+        )
+        return jsonify({"ok": True, "sha": sha})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)}), 500
+
+
 # ── Externe Festplatte (DMS + AHPT gemeinsamer Mountpunkt) ────
 # Standard-Mountpoint fuer die abziehbare NTFS/ext4-Platte, auf die
 # DMS-Archiv und AHPT-Hauptfreigabe zeigen. UI zeigt Status an und
@@ -1707,6 +1775,144 @@ def whatsapp_bridge():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e), "reply": ""}), 500
+
+
+# ── Hintergrund-Checks + Auto-Resolve-Register ───────────────
+# Siehe system_notifications.py. Checks werden alle 10 Minuten gefahren;
+# erzeugen oder bestaetigen Notifications, Auto-Resolve passiert
+# zusaetzlich bei jedem GET /api/system-notifications.
+
+def _check_platte_voll(meta: dict) -> bool:
+    """True = Problem besteht noch. Schwelle: < 1 GB frei."""
+    mp = meta.get("mountpoint", _MOUNTPOINT_PLATTE)
+    try:
+        if not os.path.ismount(mp):
+            return False  # Platte weg -> Notification faellt auto
+        import shutil as _sh
+        _total, _used, free = _sh.disk_usage(mp)
+        return free < 1024 ** 3  # noch unter 1 GB frei -> Problem besteht
+    except Exception:
+        return False
+
+def _check_ahpt_down(meta: dict) -> bool:
+    import subprocess as _sp
+    svc = meta.get("service", "")
+    if not svc:
+        return False
+    try:
+        r = _sp.run(["systemctl", "--user", "is-active", svc],
+                    capture_output=True, text=True, timeout=5)
+        return (r.stdout.strip() != "active")
+    except Exception:
+        return False
+
+def _check_updates_verfuegbar(meta: dict) -> bool:
+    """Prueft ob der Zustand aus meta noch zutrifft:
+    - updates existieren noch (origin/main != HEAD)
+    - und Auto-Update ist AUS (sonst holt der Cron sie eh)
+    """
+    cfg = _load_update_settings()
+    if cfg.get("auto_update_enabled"):
+        return False  # Auto-Update an -> Hinweis unnoetig
+    import subprocess as _sp
+    repo = os.path.dirname(os.path.abspath(__file__))
+    try:
+        local  = _sp.run(["git", "-C", repo, "rev-parse", "HEAD"],
+                        capture_output=True, text=True, timeout=10).stdout.strip()
+        remote = _sp.run(["git", "-C", repo, "rev-parse", "origin/main"],
+                        capture_output=True, text=True, timeout=10).stdout.strip()
+        return bool(local) and bool(remote) and (local != remote)
+    except Exception:
+        return False
+
+_sysnot.register_check("platte_voll",         _check_platte_voll)
+_sysnot.register_check("ahpt_nicht_erreichbar", _check_ahpt_down)
+_sysnot.register_check("updates_verfuegbar",  _check_updates_verfuegbar)
+# "update_rollback" + "manueller_rollback" haben BEWUSST keinen Check:
+# der Grund bleibt in der Welt bis der User manuell "Erledigt" klickt.
+
+def _system_checks_scheduler():
+    """Hintergrund-Thread: prueft alle 10min die Bedingungen und erzeugt
+    bei Bedarf Notifications (mit dedupe_key, damit nichts stapelt)."""
+    import time as _time
+    import subprocess as _sp
+    while True:
+        _time.sleep(600)
+        try:
+            # Platte
+            mp = _MOUNTPOINT_PLATTE
+            if os.path.ismount(mp):
+                import shutil as _sh
+                total, _used, free = _sh.disk_usage(mp)
+                if free < 1024 ** 3 and total > 0:
+                    frei_gb   = round(free / (1024 ** 3), 1)
+                    gesamt_gb = round(total / (1024 ** 3), 1)
+                    _sysnot.notify(
+                        _sysnot.LEVEL_WARNUNG,
+                        "Externe Platte fast voll",
+                        f"Nur noch {frei_gb} GB von {gesamt_gb} GB frei auf "
+                        f"{mp}. Datei(en) loeschen oder groessere Platte "
+                        "anschliessen.",
+                        typ="platte_voll",
+                        meta={"mountpoint": mp, "frei_gb": frei_gb,
+                              "gesamt_gb": gesamt_gb},
+                        dedupe_key=f"platte_voll:{mp}",
+                    )
+            # AHPT-Agent (User-Service, Hostname-basiert)
+            try:
+                import socket as _s, re as _re
+                host_tag = _re.sub(r"[^a-z0-9-]", "-",
+                                   _s.gethostname().lower().split(".")[0]).strip("-")
+                svc = f"ahpt-{host_tag}"
+                r = _sp.run(["systemctl", "--user", "is-active", svc],
+                            capture_output=True, text=True, timeout=5)
+                state = r.stdout.strip()
+                # list-unit-files pruefen damit nicht schon fehlende Services melden
+                r2 = _sp.run(["systemctl", "--user", "list-unit-files",
+                              f"{svc}.service", "--no-legend"],
+                             capture_output=True, text=True, timeout=5)
+                if (r2.stdout or "").strip() and state != "active":
+                    _sysnot.notify(
+                        _sysnot.LEVEL_WARNUNG,
+                        "AHPT-Agent laeuft nicht",
+                        f"Der AHPT-Agent ({svc}) ist nicht aktiv – "
+                        "Fernzugriff auf Dateien geht gerade nicht. "
+                        "Status unter Einstellungen → AHPT.",
+                        typ="ahpt_nicht_erreichbar",
+                        meta={"service": svc, "status": state},
+                        dedupe_key=f"ahpt:{svc}",
+                    )
+            except Exception:
+                pass
+            # Updates verfuegbar (nur wenn Auto-Update AUS)
+            cfg = _load_update_settings()
+            if not cfg.get("auto_update_enabled"):
+                try:
+                    repo = os.path.dirname(os.path.abspath(__file__))
+                    _sp.run(["git", "-C", repo, "fetch", "origin", "main",
+                             "--quiet"], capture_output=True, timeout=30)
+                    local  = _sp.run(["git", "-C", repo, "rev-parse", "HEAD"],
+                                    capture_output=True, text=True, timeout=10).stdout.strip()
+                    remote = _sp.run(["git", "-C", repo, "rev-parse", "origin/main"],
+                                    capture_output=True, text=True, timeout=10).stdout.strip()
+                    if local and remote and local != remote:
+                        _sysnot.notify(
+                            _sysnot.LEVEL_INFO,
+                            "Neue Updates verfuegbar",
+                            "Auto-Update ist ausgeschaltet. Du kannst "
+                            "unter Einstellungen → Auto-Update manuell "
+                            "aktualisieren.",
+                            typ="updates_verfuegbar",
+                            meta={"local": local, "remote": remote},
+                            dedupe_key="updates_verfuegbar",
+                        )
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"[SystemChecks] Fehler: {e}")
+
+__import__("threading").Thread(target=_system_checks_scheduler,
+                                daemon=True, name="system-checks").start()
 
 
 if __name__ == "__main__":
