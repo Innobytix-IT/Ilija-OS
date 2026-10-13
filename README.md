@@ -150,6 +150,8 @@ Weg 1 (ISO) läuft auf jeder BIOS/UEFI-fähigen x86-64-Hardware. Weg 2 ist auf L
 
 **Headless-Betrieb (ohne angeschlossenen Monitor)**: Standard-Use-Case für Thin-Clients. Der Installer legt dafür einen Dummy-Xorg-Treiber als Fallback an (`/etc/X11/xorg.conf.d/10-headless-dummy.conf`). Damit kommt Xorg auch dann hoch, wenn kein echter Monitor erkannt wird — nötig weil manche Grafikchips (alte AMD-APUs wie Mullins/Jaguar) sich sonst beim Boot aufhängen. noVNC zeigt dann einen virtuellen 1280×1024-Desktop.
 
+**AHPT-Fernzugriff (optional)**: Ilija bringt den [AHPT-Agent](https://github.com/Innobytix-IT/AHPT-Cloud) als `vendor/ahpt/` mit und installiert ihn nach `/opt/ilija-os/ahpt-agent/`. Einrichtung über **Einstellungen → AHPT → „🔧 Assistent starten"** — der mitgelieferte Einrichtungs-Assistent führt durch Webspace-Setup, Krypto-Keys und Pairing deiner Android-App. Danach kannst du von unterwegs Dokumente in Ilijas DMS-Importordner hochladen, ohne Portfreigabe/DynDNS. Braucht einen beliebigen PHP-Webspace (Ionos-Subpath, InfinityFree, AwardSpace o.ä.).
+
 Wer dauerhaft **einen echten Monitor** anschließt und direkt davor arbeitet, sollte die Datei entfernen, damit der echte Grafiktreiber die native Auflösung nutzen kann:
 ```bash
 sudo rm /etc/X11/xorg.conf.d/10-headless-dummy.conf

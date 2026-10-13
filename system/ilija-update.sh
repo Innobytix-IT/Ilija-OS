@@ -175,6 +175,59 @@ AIPROXY
         rm -f "$AI_PROXY_SERVICE_NEW"
     fi
 
+    # AHPT-Agent-Dateien aus vendor/ nach /opt/ilija-os/ahpt-agent/ syncen.
+    # Idempotent: Nur kopieren wenn Datei neuer ist. Melanies Odyssee vom
+    # 08.10.2026 soll kein User mehr durchmachen – Ilija bringt die Dateien
+    # out-of-the-box mit, Einrichtung ueber die UI.
+    AHPT_SRC="$ILIJA_DIR/vendor/ahpt"
+    AHPT_DST="/opt/ilija-os/ahpt-agent"
+    if [ -d "$AHPT_SRC" ]; then
+        AHPT_UPDATED=0
+        mkdir -p "$AHPT_DST/handler" "$AHPT_DST/portal"
+        for f in "$AHPT_SRC"/*.py "$AHPT_SRC"/relay.php \
+                 "$AHPT_SRC"/htaccess-beispiel "$AHPT_SRC"/htaccess-ablage-beispiel \
+                 "$AHPT_SRC"/config-beispiel.toml "$AHPT_SRC"/README.md ; do
+            [ -f "$f" ] || continue
+            base=$(basename "$f")
+            if ! cmp -s "$f" "$AHPT_DST/$base" 2>/dev/null; then
+                cp "$f" "$AHPT_DST/$base" && AHPT_UPDATED=1
+            fi
+        done
+        for f in "$AHPT_SRC"/handler/*.py ; do
+            [ -f "$f" ] || continue
+            base=$(basename "$f")
+            if ! cmp -s "$f" "$AHPT_DST/handler/$base" 2>/dev/null; then
+                cp "$f" "$AHPT_DST/handler/$base" && AHPT_UPDATED=1
+            fi
+        done
+        for f in "$AHPT_SRC"/portal/*.html "$AHPT_SRC"/portal/*.js "$AHPT_SRC"/portal/*.py ; do
+            [ -f "$f" ] || continue
+            base=$(basename "$f")
+            if ! cmp -s "$f" "$AHPT_DST/portal/$base" 2>/dev/null; then
+                cp "$f" "$AHPT_DST/portal/$base" && AHPT_UPDATED=1
+            fi
+        done
+        if [ "$AHPT_UPDATED" = "1" ]; then
+            chmod +x "$AHPT_DST"/*.py 2>/dev/null || true
+            echo "--- AHPT-Agent-Dateien aktualisiert ---"
+        fi
+        # cryptography-Lib (fuer noise_ik) sicherstellen – nur beim ersten Mal
+        if ! "$ILIJA_DIR/venv/bin/python" -c "import cryptography" 2>/dev/null; then
+            echo "--- AHPT: cryptography installieren ---"
+            "$ILIJA_DIR/venv/bin/pip" install --quiet cryptography 2>&1 | tail -3
+        fi
+        # Falls ein laufender AHPT-Agent-User-Service existiert, nach dem
+        # Dateien-Sync neustarten damit er die neue Version nutzt.
+        if [ "$AHPT_UPDATED" = "1" ]; then
+            HOST_TAG=$(hostname -s | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g; s/^-*//; s/-*$//')
+            SVC="ahpt-${HOST_TAG:-agent}"
+            if systemctl --user list-unit-files "${SVC}.service" --no-legend 2>/dev/null | grep -q "$SVC"; then
+                systemctl --user restart "$SVC" 2>/dev/null || true
+                echo "--- $SVC neugestartet (neue Agent-Version aktiv) ---"
+            fi
+        fi
+    fi
+
     # Setup-Wizard-Autostart im User-Home anlegen falls fehlt (ohne sudo)
     WIZARD_AUTOSTART="$HOME/.config/autostart/ilija-setup-wizard.desktop"
     if [ -f /opt/ilija-os/show-setup-wizard.sh ] && [ ! -f "$WIZARD_AUTOSTART" ]; then

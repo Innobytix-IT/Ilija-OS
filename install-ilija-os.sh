@@ -337,6 +337,31 @@ AIPROXY
     ok "ai-api-proxy.service enabled (startet beim Boot; Config via Web-UI)"
 fi
 
+# ----------------------------------------------------------------------- AHPT-Agent (optional)
+# Mitgelieferter AHPT (Asymmetric HTTP Polling Tunnel) Agent + Einrichtungs-
+# Assistent. Ermoeglicht Fernzugriff auf lokale Dateien ueber einen beliebigen
+# Webspace (ohne Portfreigabe, ohne DynDNS). Siehe
+# https://github.com/Innobytix-IT/AHPT-Cloud fuer Details.
+AHPT_SRC="$ILIJA_DIR/vendor/ahpt"
+AHPT_DST="/opt/ilija-os/ahpt-agent"
+if [ -d "$AHPT_SRC" ]; then
+    say "6c/8 AHPT-Agent einrichten (optionaler Fernzugriff via Webspace)"
+    mkdir -p "$AHPT_DST/handler" "$AHPT_DST/portal"
+    cp "$AHPT_SRC"/*.py "$AHPT_DST/" 2>/dev/null || true
+    cp "$AHPT_SRC"/relay.php "$AHPT_SRC"/htaccess-beispiel \
+       "$AHPT_SRC"/htaccess-ablage-beispiel "$AHPT_SRC"/config-beispiel.toml \
+       "$AHPT_SRC"/README.md "$AHPT_DST/" 2>/dev/null || true
+    cp "$AHPT_SRC"/handler/*.py "$AHPT_DST/handler/" 2>/dev/null || true
+    cp "$AHPT_SRC"/portal/*.html "$AHPT_SRC"/portal/*.js \
+       "$AHPT_SRC"/portal/*.py "$AHPT_DST/portal/" 2>/dev/null || true
+    chown -R "$TARGET_USER:$TARGET_USER" "$AHPT_DST"
+    chmod +x "$AHPT_DST"/*.py 2>/dev/null || true
+    # Noise-IK braucht cryptography (nicht in Ilijas requirements.txt)
+    run_quiet "AHPT: cryptography-Lib in Ilija-venv" \
+        sudo -u "$TARGET_USER" "$ILIJA_DIR/venv/bin/pip" install --quiet cryptography
+    ok "AHPT-Agent nach $AHPT_DST installiert (Einrichtung ueber Ilija-UI)"
+fi
+
 # ----------------------------------------------------------------------- 7. Update-Script + sudoers
 say "7/8 Update-System einrichten (Cron + Web-UI-Button)"
 if [ -f "$ILIJA_DIR/system/ilija-update.sh" ]; then

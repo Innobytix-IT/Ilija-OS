@@ -1,0 +1,2328 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>AHPT Cloud (lokal)</title>
+<!-- Terminal-Chevron, als PNG eingebettet -- kein Fremdinhalt.
+     Mit Pillow gezeichnet, nicht per Hand als Zeichenkette
+     abgetippt (das ging beim ersten Versuch schief -- abgeschnittene
+     Base64-Daten, "Incorrect padding"). Zwei Groessen: klein fuer
+     den Browser-Tab, groesser fuer den Startbildschirm. Auf Wunsch
+     vom 03.09.2026. -->
+<link rel="icon" type="image/png" href="data:image/png;base64,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YiOAgcYtbMVel3TrhWtkA8yTHtwgzOXE14SRRpLOC0uoUFeD4d5etmk9AyjkxJilzuCJZVgvYykudSS1oJBiDwO9u0njarw1SmaLSx0YJuIkIoPcAiI4Lhba3CqAuluou4SCABq5VRQLbRg4SiOhiGgunI58YOkjUlcxMZjFjkqtroXgEbBctduDoBCAQjBsr6SumQPizmgQWHTkc+FUWI398bB9cU35asfVIwCipJbbpjuyod7ZxHWNDqE44WZulxNO7GCPhYRcuOotk0UrV2CleutU+2JzeC4IwQEnxq0byF13jwwJgaC3egQQEMOSWNfI7ErGbdMdxIZmljTV3j9df2VJZ/WkaKYTt01deXHBKw90DrKxeieuVbhWAYSoCVRvR1tYoLul130JYk9sZMh+nmkXez94sGimWT1RfuQny52pD83kjbRYywYlbktSuilzAobFsBgGyz1uIY64G4GENjXxdGXyrv2Lp+aJUHmB73KbN9ID9x/OVjt5PSVPIeG1XtT3hE3XhEAEvdz1u6HPiUgIArZj4unKgQcOLz03X6xlpNV779fCe/Hny3vq99T/AB2e5iGf7N8vAAAAAElFTkSuQmCC">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<style>
+:root {
+  /* Terminal-Palette, absichtlich EINE einzige Erscheinung, kein Hell/
+   * Dunkel-Umschalten. Ein Hacker-Terminal in Schwarz-auf-Weiss waere
+   * keines mehr -- das ist hier eine bewusste Entscheidung, keine
+   * vergessene Fallunterscheidung. Gewuenscht am 03.09.2026.
+   *
+   * Kein Webfont -- das Portal laedt bewusst NICHTS von aussen, das
+   * gehoert zum selben Grundsatz wie "kein Fremdinhalt beim Vermittler".
+   * System-Monospace traegt den Terminal-Look trotzdem gut. */
+  --grund: #070b08;
+  --grund-tief: #040604;
+  --flaeche: #0c130d;
+  --flaeche-hoch: #10190f;
+  --rand: #1d3a24;
+  --rand-hell: #2f6a3c;
+  --text: #c9f7d6;
+  --leise: #5fa876;
+  --akzent: #3cff77;
+  --akzent-glut: #8dffb0;
+  --akzent-hell: #0f2717;
+  --warn: #ffb84d;
+  --warn-hell: #2b2109;
+  --fehler: #ff4d6a;
+  --fehler-hell: #2b0c14;
+  --schatten: 0 0 0 1px rgba(60,255,119,.06), 0 10px 30px rgba(0,0,0,.6);
+  --gluehen: 0 0 8px rgba(60,255,119,.55), 0 0 24px rgba(60,255,119,.16);
+  --radius: 3px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--grund); color: var(--text);
+  font: 15px/1.55 ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono",
+        Consolas, "Fira Code", Menlo, monospace;
+  position: relative;
+}
+::selection { background: var(--akzent); color: #04140a; }
+
+/* Feine, sich wiederholende Linien wie bei einem alten Roehrenbildschirm.
+ * Bewusst schwach (der Text muss weiterhin klar lesbar bleiben) -- ein
+ * Aromastoff, keine Wand. */
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  background: repeating-linear-gradient(to bottom,
+    rgba(60,255,119,.05) 0px, rgba(60,255,119,.05) 1px,
+    transparent 1px, transparent 3px);
+  mix-blend-mode: overlay;
+}
+#matrix-hintergrund {
+  position: fixed; inset: 0; z-index: 0; opacity: .14;
+}
+header, main, #ablegezone, dialog { position: relative; z-index: 2; }
+
+/* Header und Fortschrittsblock haengen zusammen in EINEM feststehenden
+ * Block, statt einzeln sticky zu sein -- so bleibt der Fortschritt immer
+ * direkt unter dem Header sichtbar, egal wie hoch der Header gerade ist
+ * (er kann auf schmalen Bildschirmen umbrechen). Auf Wunsch vom
+ * 06.09.2026. */
+#kopfbereich { position: sticky; top: 0; z-index: 20; }
+
+header {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 14px 20px; background: var(--flaeche);
+  border-bottom: 1px solid var(--rand-hell);
+}
+.dropdown {
+  position: absolute; right: 0; top: calc(100% + 6px);
+  background: var(--flaeche-hoch); border: 1px solid var(--rand-hell);
+  border-radius: var(--radius); box-shadow: var(--schatten);
+  padding: 6px; display: flex; flex-direction: column; gap: 2px;
+  min-width: 160px; z-index: 30;
+}
+/* Ohne diese Zeile sticht das "display: flex" oben das hidden-Attribut
+ * aus (beide gehoeren zur selben CSS-Herkunft, "display: flex" gewinnt
+ * einfach als das author-seitig gesetzte). Ergebnis waere ein Menue, das
+ * immer offen ist. Gefunden am 06.09.2026, direkt beim ersten Test. */
+.dropdown[hidden] { display: none; }
+.dropdown button { width: 100%; text-align: left; }
+#fortschritt {
+  background: var(--flaeche); border-bottom: 1px solid var(--rand-hell);
+  padding: 10px 20px;
+}
+#fortschritt-text { margin-bottom: 5px; }
+header h1 {
+  font-size: 17px; margin: 0; font-weight: 700; letter-spacing: .4px;
+  color: var(--akzent); text-shadow: var(--gluehen);
+}
+header h1::before { content: '> '; opacity: .65; }
+/* Pulsiert nur, WAEHREND wirklich verbunden ist -- gesetzt in zustand()
+ * unten, nicht dauerhaft. Auf Wunsch vom 03.09.2026. */
+header h1.verbunden { animation: titel-pulsieren 2.6s ease-in-out infinite; }
+@keyframes titel-pulsieren {
+  0%, 100% { text-shadow: var(--gluehen); filter: brightness(1); }
+  50% {
+    text-shadow: 0 0 4px rgba(60,255,119,.35), 0 0 12px rgba(60,255,119,.10);
+    filter: brightness(.72);
+  }
+}
+@media (prefers-reduced-motion: reduce) { header h1.verbunden { animation: none; } }
+header .luecke { flex: 1; }
+.punkt {
+  width: 9px; height: 9px; border-radius: 50%; display: inline-block;
+  background: var(--leise); flex: none;
+}
+.punkt.gut {
+  background: var(--akzent); box-shadow: var(--gluehen);
+  animation: punkt-pulsieren 2.2s ease-in-out infinite;
+}
+.punkt.schlecht { background: var(--fehler); box-shadow: 0 0 8px rgba(255,77,106,.6); }
+@keyframes punkt-pulsieren { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .punkt.gut { animation: none; } }
+#zustand { color: var(--leise); font-size: 13px; }
+
+main { max-width: 1000px; margin: 22px auto; padding: 0 20px 60px; }
+
+.karte {
+  background: var(--flaeche); border: 1px solid var(--rand);
+  border-radius: var(--radius); box-shadow: var(--schatten);
+  padding: 18px 20px; margin-bottom: 18px;
+}
+.karte h2 {
+  margin: 0 0 4px; font-size: 15px; font-weight: 700;
+  color: var(--akzent); letter-spacing: .3px;
+}
+.karte h2::before { content: '# '; opacity: .55; }
+.karte p.hinweis { margin: 0 0 14px; color: var(--leise); font-size: 13px; }
+
+button, .knopf {
+  font: inherit; font-size: 14px; padding: 8px 14px; border-radius: var(--radius);
+  border: 1px solid var(--rand-hell); background: var(--flaeche-hoch); color: var(--text);
+  cursor: pointer; transition: background .12s, border-color .12s, box-shadow .12s;
+}
+button:hover:not(:disabled) {
+  border-color: var(--akzent); color: var(--akzent-glut); box-shadow: var(--gluehen);
+}
+button:disabled { opacity: .4; cursor: default; }
+button.haupt {
+  background: var(--akzent); border-color: var(--akzent); color: #04140a;
+  font-weight: 700; box-shadow: var(--gluehen);
+}
+button.haupt:hover:not(:disabled) { filter: brightness(1.15); color: #04140a; }
+button.gefahr { border-color: var(--warn); color: var(--warn); }
+button.gefahr:hover:not(:disabled) {
+  background: var(--warn-hell); border-color: var(--warn); color: var(--warn);
+  box-shadow: 0 0 10px rgba(255,184,77,.35);
+}
+/* "Aktualisieren" und "Neuer Ordner" gleich breit -- 14ch fasst das
+ * laengere Wort ("Aktualisieren", 13 Zeichen) mit etwas Luft; bei der
+ * Monospace-Schrift ergibt das bei beiden exakt dieselbe Breite,
+ * unabhaengig vom Text. "Dateien hochladen" bleibt bewusst aussen vor.
+ * Auf Wunsch vom 06.09.2026. */
+.btn-gleich { min-width: 14ch; text-align: center; }
+
+input[type=text], input[type=password], textarea {
+  font: inherit; font-size: 14px; width: 100%; padding: 8px 10px;
+  border: 1px solid var(--rand-hell); border-radius: var(--radius);
+  background: var(--grund-tief); color: var(--akzent-glut);
+}
+input:focus, textarea:focus {
+  outline: none; border-color: var(--akzent); box-shadow: var(--gluehen);
+}
+textarea { font-family: inherit; font-size: 12.5px; resize: vertical; }
+label { display: block; font-size: 13px; color: var(--leise); margin: 12px 0 5px; }
+label::before { content: '$ '; opacity: .5; }
+code, .hex {
+  font-family: inherit;
+  font-size: 12.5px; word-break: break-all; color: var(--akzent-glut);
+}
+
+/* Das hidden-ATTRIBUT muss staerker sein als jede Klasse, die display
+   setzt. Der Browser bringt zwar `[hidden] { display: none }` mit, aber das
+   steht in SEINEM Stilblatt -- jede Regel hier schlaegt es, und `.leiste`
+   setzt display:flex. Am 08.09.2026 genau so passiert: Die Kopplungsknoepfe
+   standen von Anfang an da, obwohl sie erst nach einem Klick erscheinen
+   sollten. */
+[hidden] { display: none !important; }
+.leiste { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.brotkrumen { display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+              font-size: 14px; }
+.brotkrumen a { color: var(--akzent); cursor: pointer; text-decoration: none; }
+.brotkrumen a:hover { text-decoration: underline; text-shadow: var(--gluehen); }
+.brotkrumen span.trenner { color: var(--leise); }
+
+#liste { overflow-x: auto; }   /* Sicherheitsnetz -- soll durch die Zeile
+                                   darunter ohnehin nie noetig werden. */
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left; font-size: 12px; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--leise); font-weight: 600;
+  padding: 6px 10px; border-bottom: 1px solid var(--rand);
+}
+td { padding: 9px 10px; border-bottom: 1px solid var(--rand); font-size: 14px; }
+tr:last-child td { border-bottom: none; }
+tr.zeile:hover { background: var(--akzent-hell); }
+td.rechts { text-align: right; color: var(--leise); white-space: nowrap; }
+td.name { cursor: pointer; }
+td.name .sym {
+  display: inline-block; min-width: 52px; color: var(--leise);
+  font-size: 12px; letter-spacing: .02em;
+}
+.aktionen { display: flex; gap: 6px; justify-content: flex-end; }
+.aktionen button { padding: 4px 10px; font-size: 13px; }
+
+/* Auf schmalen Bildschirmen wird aus der Tabelle eine Liste gestapelter
+ * Zeilen -- die Groesse steht als kleine Zeile unter dem Namen statt in
+ * einer eigenen Spalte. Kein seitliches Schieben mehr noetig: eine
+ * Dateiliste ist etwas, das man auf dem Handy dauernd anschaut, das darf
+ * nicht abgeschnitten aussehen. Am 03.09.2026 auf dem eigenen Handy
+ * gefunden -- die Groesse-Spalte lief rechts aus dem Bildschirm.
+ */
+@media (max-width: 560px) {
+  table thead { display: none; }
+  table, table tbody, table tr, table td { display: block; width: auto; }
+  table tr.zeile {
+    padding: 10px 4px; border-bottom: 1px solid var(--rand);
+  }
+  table tr:last-child { border-bottom: none; }
+  table td { border-bottom: none; padding: 2px 0; }
+  table td.rechts {
+    text-align: left; font-size: 12.5px; white-space: normal;
+  }
+  table td.rechts:empty { display: none; padding: 0; }
+  table .aktionen { justify-content: flex-start; margin-top: 6px; }
+}
+
+.meldung {
+  padding: 11px 40px 11px 14px; border-radius: var(--radius); font-size: 13.5px;
+  margin-bottom: 14px; border: 1px solid transparent; position: relative;
+}
+.meldung.warn { background: var(--warn-hell); border-color: var(--warn); color: var(--warn); }
+.meldung.fehler { background: var(--fehler-hell); border-color: var(--fehler); color: var(--fehler); }
+.meldung.gut { background: var(--akzent-hell); border-color: var(--akzent); color: var(--akzent); }
+.meldung b { font-weight: 700; }
+.meldung .zu {
+  position: absolute; top: 6px; right: 10px; cursor: pointer;
+  background: none; border: 0; color: inherit; opacity: .6;
+  font-size: 18px; line-height: 1; padding: 4px 6px;
+}
+.meldung .zu:hover { opacity: 1; }
+
+#ablegezone {
+  position: fixed; inset: 0; background: rgba(60,255,119,.10);
+  border: 3px dashed var(--akzent); z-index: 50;
+  display: none; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 700; color: var(--akzent);
+  text-shadow: var(--gluehen); backdrop-filter: blur(2px);
+}
+#ablegezone.an { display: flex; }
+
+.balken { height: 4px; background: var(--rand); border-radius: 2px; overflow: hidden; }
+.balken i {
+  display: block; height: 100%; background: var(--akzent); width: 0;
+  box-shadow: var(--gluehen); transition: width .2s;
+}
+
+.leer { text-align: center; color: var(--leise); padding: 34px 10px; font-size: 14px; }
+.klein { font-size: 12.5px; color: var(--leise); }
+.reihe { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.reihe > * { flex: 1; min-width: 200px; }
+.reihe > button { flex: none; }
+dialog {
+  border: 1px solid var(--rand-hell); border-radius: var(--radius);
+  background: var(--flaeche); color: var(--text); max-width: 620px; width: 92%;
+  box-shadow: var(--schatten); padding: 20px;
+}
+dialog::backdrop { background: rgba(0,0,0,.7); }
+#vorschau img, #vorschau iframe { max-width: 100%; border-radius: var(--radius); border: 1px solid var(--rand); }
+#vorschau pre {
+  background: var(--grund-tief); border: 1px solid var(--rand); border-radius: var(--radius);
+  padding: 12px; overflow: auto; max-height: 60vh; font-size: 12.5px;
+}
+</style>
+</head>
+<body>
+
+<canvas id="matrix-hintergrund" aria-hidden="true"></canvas>
+
+<div id="kopfbereich">
+<header>
+  <span class="punkt" id="punkt"></span>
+  <h1 id="titel">AHPT Cloud</h1>
+  <span id="zustand">wird geprueft …</span>
+  <span class="luecke"></span>
+  <button id="btn-menu" title="Men&uuml;" aria-haspopup="true" aria-expanded="false">&hellip;</button>
+  <!-- Am Header verankert, nicht am Knopf: Bricht der Knopf bei schmalem
+       Fenster in eine eigene Zeile um, rutscht er nach LINKS (die
+       Luecke wirkt nur innerhalb derselben Zeile). Ein Menue, das sich
+       am Knopf ausrichtet, liefe dann links aus dem Bildschirm.
+       Am Header bleibt die Ecke immer die tatsaechliche rechte
+       Bildschirmkante. Gefunden und behoben am 06.09.2026. -->
+  <div id="menu-dropdown" class="dropdown" hidden>
+    <button id="btn-verbindung">Verbindung pr&uuml;fen</button>
+    <button id="btn-einrichten">Einrichtung</button>
+  </div>
+</header>
+
+<!-- Direkt unter dem Header, im selben feststehenden Block -- damit der
+     Fortschritt sichtbar bleibt, auch wenn man weit unten in einer langen
+     Dateiliste unterwegs ist. Vorher stand er zwischen Werkzeugleiste und
+     Liste und scrollte mit weg. Auf Wunsch vom 06.09.2026. -->
+<div id="fortschritt" hidden>
+  <div class="klein" id="fortschritt-text"></div>
+  <div class="balken"><i id="fortschritt-balken"></i></div>
+</div>
+</div>
+
+<main>
+  <div id="meldungen"></div>
+
+  <!-- ------------------------------------------------ Einrichtung ---- -->
+  <section class="karte" id="karte-einrichtung" hidden>
+    <h2>Einrichtung</h2>
+    <p class="hinweis">
+      Dieses Geraet braucht ein eigenes Schluesselpaar und den oeffentlichen
+      Schluessel deines Agenten. Beides bleibt in diesem Browser.
+    </p>
+
+    <!-- Der bequeme Weg zuerst: Er nimmt BEIDE Richtungen ab. Die
+         Verbindungsdatei darunter kann nur die eine, und die Handeingabe
+         ganz unten keine. -->
+    <div id="kasten-kopplung"
+         style="border:1px solid var(--rand-hell);border-radius:var(--radius);
+                background:var(--flaeche-hoch);padding:14px;margin-bottom:16px">
+      <b>Mit dem Assistenten koppeln</b>
+      <p class="klein" style="margin:6px 0 12px">
+        Der Einrichtungs-Assistent zeigt unter &bdquo;Weiteres Ger&auml;t
+        hinzuf&uuml;gen&ldquo; einen Kopplungscode. Damit richtet sich dieses
+        Portal selbst ein <b>und meldet seinen Schl&uuml;ssel zur&uuml;ck</b>
+        &ndash; in beide Richtungen nichts abzutippen.
+      </p>
+      <div class="leiste">
+        <button id="btn-kopplung-kamera" hidden>Code abfotografieren</button>
+        <button id="btn-kopplung-text">Kopplungstext einf&uuml;gen</button>
+      </div>
+      <video id="kopplung-video" hidden playsinline muted
+             style="width:100%;max-width:320px;margin-top:10px;border-radius:var(--radius);
+                    border:1px solid var(--rand-hell)"></video>
+      <textarea id="feld-kopplungstext" rows="3" hidden
+                style="margin-top:10px"
+                placeholder="Den Text aus dem Assistenten hier einf&uuml;gen"></textarea>
+      <div class="leiste" id="leiste-kopplungstext" hidden style="margin-top:8px">
+        <button class="haupt" id="btn-kopplung-los">Koppeln</button>
+        <button id="btn-kopplung-abbruch">Abbrechen</button>
+      </div>
+      <div class="klein" id="kopplung-stand" style="margin-top:8px"></div>
+    </div>
+
+    <div class="reihe">
+      <button id="btn-verbindungsdatei">Verbindungsdatei laden</button>
+      <span class="klein">f&uuml;llt die zwei Felder unten aus dem
+        Assistenten aus &ndash; erspart Abtippen, meldet aber nichts
+        zur&uuml;ck</span>
+    </div>
+    <input type="file" id="feld-verbindungsdatei" accept="application/json,.json" hidden>
+
+    <label>Adresse des Vermittlers (Verzeichnis mit <code>relay.php</code>)</label>
+    <input type="text" id="feld-basis" placeholder="https://example.de/privat  (volle Adresse, diese Seite liegt ja woanders)">
+
+    <label>Oeffentlicher Schluessel dieses Geraets
+      &mdash; in die <code>clients</code>-Liste des Agenten eintragen</label>
+    <div class="reihe">
+      <textarea id="feld-eigen" rows="2" readonly
+                placeholder="noch keiner &ndash; unten erzeugen"></textarea>
+      <button id="btn-kopieren">Kopieren</button>
+      <button id="btn-schluessel">Schluessel erzeugen</button>
+    </div>
+    <div class="klein" id="schluessel-hinweis" style="margin-top:6px"></div>
+
+    <label>Oeffentlicher Schluessel des Agenten
+      &mdash; er steht in dessen Startausgabe</label>
+    <textarea id="feld-agent" rows="2"
+              placeholder="64 Hexzeichen"></textarea>
+
+    <div class="leiste" style="margin-top:16px">
+      <button class="haupt" id="btn-speichern">Speichern und verbinden</button>
+      <button id="btn-vergessen">Alles auf diesem Geraet vergessen</button>
+    </div>
+
+    <div class="meldung warn" style="margin-top:18px">
+      <b>Was das schuetzt und was nicht.</b>
+      Ohne Verschluesselung koennte jeder im Internet die Warteschlange
+      abrufen und deine Dateien mitlesen. Das ist damit zu.
+      Auch gegen den <b>Hoster selbst</b> bist du geschuetzt, solange diese
+      Seite von deinem eigenen Geraet kommt und nicht von seinem Server:
+      dann kann er sie nicht austauschen, und der Webspace ist nur noch
+      Briefkasten. Genau deshalb liegt hier nichts mehr auf dem Webspace
+      &ndash; das Portal dort wurde am 03.09.2026 geloescht. Laedst du diese
+      Seite je von einer fremden Adresse, gilt der Satz nicht mehr.
+      <br><br>
+      Der private Schluessel liegt im Speicher dieses Browsers
+      (<code>localStorage</code>). Auf einem fremden Rechner also besser
+      nicht einrichten.
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------- Dateien ------- -->
+  <section class="karte" id="karte-dateien" hidden>
+    <div class="leiste" style="margin-bottom:14px">
+      <div class="brotkrumen" id="brotkrumen"></div>
+      <span class="luecke" style="flex:1"></span>
+      <input type="text" id="feld-filter" placeholder="Filtern …"
+             style="width:170px">
+      <button class="btn-gleich" id="btn-aktualisieren" title="Neu laden">Aktualisieren</button>
+      <button class="btn-gleich" id="btn-ordner">Neuer Ordner</button>
+      <button class="haupt" id="btn-hoch">Dateien hochladen</button>
+      <input type="file" id="feld-datei" multiple hidden>
+    </div>
+
+    <div id="liste"></div>
+  </section>
+</main>
+
+<div id="ablegezone">Dateien hier ablegen zum Hochladen</div>
+
+<dialog id="vorschau-dialog">
+  <div class="leiste" style="margin-bottom:12px">
+    <b id="vorschau-titel"></b>
+    <span class="luecke" style="flex:1"></span>
+    <button onclick="document.getElementById('vorschau-dialog').close()">Schliessen</button>
+  </div>
+  <div id="vorschau"></div>
+</dialog>
+
+<script>
+/* --- noise.js --- */
+/*
+ * noise.js -- Noise IK im Browser, nur mit WebCrypto
+ *
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * Copyright (C) 2026 Manuel Person, InnoBytix-IT
+ *
+ * WOZU
+ * ----
+ * Das Gegenstueck zu krypto.py, damit das Portal dieselbe Sprache spricht
+ * wie der Kommandozeilen-Client. Ohne Bibliothek, ohne Bauschritt -- eine
+ * Datei, die der Browser direkt laedt.
+ *
+ * WARUM AES-GCM UND NICHT ChaCha20-Poly1305
+ * ------------------------------------------
+ * WebCrypto kennt kein ChaCha20-Poly1305. Es gaebe zwei Auswege: eine
+ * WASM-Bibliothek einbinden (eine Abhaengigkeit, die man pruefen muesste)
+ * oder die andere Suite nehmen, die WebCrypto beherrscht.
+ *
+ * Hier steht die zweite: `Noise_IK_25519_AESGCM_SHA256`. Das ist eine
+ * regulaere Noise-Suite, gegen dieselben offiziellen Testvektoren geprueft
+ * wie die ChaCha-Variante -- siehe `pruefe_noise.html`, die genau das im
+ * Browser nachrechnet.
+ *
+ * Der Agent nimmt beide an und antwortet in derselben, die er bekommen hat.
+ *
+ * WAS DIESE DATEI NICHT LEISTET -- BITTE LESEN
+ * ---------------------------------------------
+ * Sie kommt vom Webspace. Der Hoster koennte sie austauschen und damit auch
+ * den Schluessel, gegen den verschluesselt wird. Gegen einen BOESWILLIGEN
+ * HOSTER schuetzt ein Portal auf seinem eigenen Server also nicht -- das
+ * kann es nicht, egal wie gut die Kryptografie ist.
+ *
+ * Wogegen es sehr wohl schuetzt, und das ist der eigentliche Zweck: gegen
+ * JEDEN ANDEREN. Ohne Verschluesselung kann jeder im Internet die
+ * Warteschlange abrufen, die Marken nehmen und Fragen wie Antworten
+ * mitlesen. Genau das ist damit zu.
+ *
+ * Wer auch dem Hoster nicht traut, nimmt den Kommandozeilen-Client oder
+ * legt diese Seite als Datei auf den eigenen Rechner. Dann ist der Webspace
+ * nur noch Briefkasten.
+ *
+ * DIE ENGLISCHEN NAMEN
+ * --------------------
+ * MixKey, MixHash, EncryptAndHash, Split heissen wie in der Spezifikation,
+ * damit man Zeile fuer Zeile vergleichen kann. Uebersetzte Namen waeren
+ * hier keine Sorgfalt, sondern eine zusaetzliche Fehlerquelle.
+ */
+
+'use strict';
+
+const AHPT_PROLOG = new TextEncoder().encode('AHPT-Privat/1');
+
+/* ---------------------------------------------------------- Werkzeug */
+
+function hexZuBytes(h) {
+  h = (h || '').trim().toLowerCase().replace(/[^0-9a-f]/g, '');
+  if (h.length % 2) throw new Error('Hexwert hat ungerade Laenge');
+  const b = new Uint8Array(h.length / 2);
+  for (let i = 0; i < b.length; i++) b[i] = parseInt(h.substr(i * 2, 2), 16);
+  return b;
+}
+
+function bytesZuHex(b) {
+  return Array.from(b).map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+function bytesZuB64(b) {
+  let s = '';
+  const CH = 0x8000;                       // in Haeppchen, sonst Stapelfehler
+  for (let i = 0; i < b.length; i += CH) {
+    s += String.fromCharCode.apply(null, b.subarray(i, i + CH));
+  }
+  return btoa(s);
+}
+
+function b64ZuBytes(s) {
+  const roh = atob(s);
+  const b = new Uint8Array(roh.length);
+  for (let i = 0; i < roh.length; i++) b[i] = roh.charCodeAt(i);
+  return b;
+}
+
+function verkette(...teile) {
+  let n = 0;
+  for (const t of teile) n += t.length;
+  const r = new Uint8Array(n);
+  let i = 0;
+  for (const t of teile) { r.set(t, i); i += t.length; }
+  return r;
+}
+
+function gleich(a, b) {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a[i] ^ b[i];
+  return d === 0;
+}
+
+/* ------------------------------------------------------- Grundrechnung */
+
+async function sha256(daten) {
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', daten));
+}
+
+async function hmacSha256(schluessel, daten) {
+  const k = await crypto.subtle.importKey(
+    'raw', schluessel, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', k, daten));
+}
+
+/*
+ * Die HKDF-Variante der NOISE-Spezifikation.
+ *
+ * ACHTUNG: Das ist NICHT WebCryptos HKDF. Noise verkettet HMAC-Aufrufe in
+ * einer eigenen Form (jeder Ausgang geht in den naechsten ein), ohne
+ * `info`-Feld. Wer hier die eingebaute HKDF benutzt, bekommt andere
+ * Schluessel -- und merkt es erst, wenn die Testvektoren nicht mehr stimmen.
+ * Genau dafuer gibt es sie.
+ */
+async function noiseHkdf(ck, ikm, anzahl) {
+  const temp = await hmacSha256(ck, ikm);
+  const o1 = await hmacSha256(temp, new Uint8Array([1]));
+  if (anzahl === 1) return [o1];
+  const o2 = await hmacSha256(temp, verkette(o1, new Uint8Array([2])));
+  if (anzahl === 2) return [o1, o2];
+  const o3 = await hmacSha256(temp, verkette(o2, new Uint8Array([3])));
+  return [o1, o2, o3];
+}
+
+/* ------------------------------------------------------------- X25519 */
+
+// WebCrypto nimmt einen privaten X25519-Schluessel nicht als 32 rohe Bytes
+// entgegen -- nur als PKCS8 oder JWK. Diese 16 Bytes sind der feste
+// PKCS8-Rahmen fuer X25519; danach folgt der rohe Schluessel.
+const PKCS8_X25519 = new Uint8Array([
+  0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06,
+  0x03, 0x2b, 0x65, 0x6e, 0x04, 0x22, 0x04, 0x20]);
+
+async function privatImportieren(rohe32) {
+  if (rohe32.length !== 32) throw new Error('privater Schluessel: 32 Bytes erwartet');
+  return crypto.subtle.importKey(
+    'pkcs8', verkette(PKCS8_X25519, rohe32),
+    { name: 'X25519' }, false, ['deriveBits']);
+}
+
+async function oeffentlichImportieren(rohe32) {
+  if (rohe32.length !== 32) throw new Error('oeffentlicher Schluessel: 32 Bytes erwartet');
+  return crypto.subtle.importKey('raw', rohe32, { name: 'X25519' }, true, []);
+}
+
+async function dh(privatKey, oeffentlichRoh) {
+  const pub = await oeffentlichImportieren(oeffentlichRoh);
+  return new Uint8Array(await crypto.subtle.deriveBits(
+    { name: 'X25519', public: pub }, privatKey, 256));
+}
+
+/** Neues Schluesselpaar. Rueckgabe: {privat: CryptoKey, roh, oeffentlich}. */
+async function schluesselpaar() {
+  const p = await crypto.subtle.generateKey({ name: 'X25519' }, true,
+                                            ['deriveBits']);
+  const oeff = new Uint8Array(await crypto.subtle.exportKey('raw', p.publicKey));
+  const pkcs8 = new Uint8Array(await crypto.subtle.exportKey('pkcs8', p.privateKey));
+  return {
+    privat: p.privateKey,
+    roh: pkcs8.slice(PKCS8_X25519.length),   // die 32 Bytes am Ende
+    oeffentlich: oeff
+  };
+}
+
+/** Zu einem privaten Rohschluessel den oeffentlichen Teil bestimmen. */
+async function oeffentlichZu(rohe32) {
+  // WebCrypto kann aus einem PKCS8-Import den oeffentlichen Teil nicht
+  // herausgeben. Der Umweg: als JWK importieren geht nur mit bekanntem `x`.
+  // Also rechnen wir ihn: X25519 mit dem Basispunkt.
+  const BASIS = new Uint8Array(32); BASIS[0] = 9;
+  const k = await privatImportieren(rohe32);
+  return dh(k, BASIS);
+}
+
+/* --------------------------------------------------------- CipherState */
+
+class CipherState {
+  constructor() { this.k = null; this.n = 0n; }
+
+  InitializeKey(k) { this.k = k; this.n = 0n; }
+  HasKey() { return this.k !== null; }
+
+  // 96 Bit: 32 Bit Null, dann der Zaehler.
+  //
+  // AES-GCM verlangt BIG ENDIAN -- ChaCha20-Poly1305 verlangt little.
+  // Das ist keine Schlamperei der Spezifikation, sondern folgt den
+  // jeweiligen Originalarbeiten. Wer beides gleich behandelt, baut etwas,
+  // das mit sich selbst funktioniert und mit keiner anderen Umsetzung. Der
+  // Fehler faellt erst bei der ZWEITEN Nachricht je Richtung auf, weil
+  // null in beiden Reihenfolgen dasselbe ist.
+  _nonce() {
+    const iv = new Uint8Array(12);
+    const dv = new DataView(iv.buffer);
+    dv.setBigUint64(4, this.n, false);      // false = big endian
+    return iv;
+  }
+
+  async _key() {
+    return crypto.subtle.importKey('raw', this.k, { name: 'AES-GCM' },
+                                   false, ['encrypt', 'decrypt']);
+  }
+
+  async EncryptWithAd(ad, klartext) {
+    if (this.k === null) return klartext;
+    const c = new Uint8Array(await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: this._nonce(), additionalData: ad, tagLength: 128 },
+      await this._key(), klartext));
+    this.n += 1n;
+    return c;
+  }
+
+  async DecryptWithAd(ad, geheim) {
+    if (this.k === null) return geheim;
+    let p;
+    try {
+      p = new Uint8Array(await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: this._nonce(), additionalData: ad, tagLength: 128 },
+        await this._key(), geheim));
+    } catch (e) {
+      // Absichtlich wortkarg: Eine Meldung, die zwischen "falscher
+      // Schluessel" und "veraendert" unterscheidet, ist ein Auskunftsdienst
+      // fuer den, der es versucht.
+      throw new Error('Entschluesselung fehlgeschlagen');
+    }
+    this.n += 1n;
+    return p;
+  }
+}
+
+/* ------------------------------------------------------ SymmetricState */
+
+class SymmetricState {
+  static async neu(protokollName) {
+    const s = new SymmetricState();
+    const name = new TextEncoder().encode(protokollName);
+    // Ist der Name hoechstens so lang wie der Hash, wird er mit Nullen
+    // aufgefuellt statt gehasht. Unserer ist genau 28 Zeichen lang.
+    if (name.length <= 32) {
+      s.h = new Uint8Array(32);
+      s.h.set(name, 0);
+    } else {
+      s.h = await sha256(name);
+    }
+    s.ck = s.h.slice();
+    s.cs = new CipherState();
+    return s;
+  }
+
+  async MixKey(ikm) {
+    const [ck, tempK] = await noiseHkdf(this.ck, ikm, 2);
+    this.ck = ck;
+    this.cs.InitializeKey(tempK);
+  }
+
+  async MixHash(daten) { this.h = await sha256(verkette(this.h, daten)); }
+
+  async EncryptAndHash(klartext) {
+    const c = await this.cs.EncryptWithAd(this.h, klartext);
+    await this.MixHash(c);
+    return c;
+  }
+
+  async DecryptAndHash(geheim) {
+    // Gehasht wird der GEHEIMTEXT, nicht der Klartext -- sonst haetten beide
+    // Seiten verschiedene Hashes, sobald ein Feld unverschluesselt bleibt.
+    const p = await this.cs.DecryptWithAd(this.h, geheim);
+    await this.MixHash(geheim);
+    return p;
+  }
+
+  async Split() {
+    const [t1, t2] = await noiseHkdf(this.ck, new Uint8Array(0), 2);
+    const c1 = new CipherState(); c1.InitializeKey(t1);
+    const c2 = new CipherState(); c2.InitializeKey(t2);
+    return [c1, c2];
+  }
+}
+
+/* ---------------------------------------------------------- HandshakeIK
+ *
+ *   IK:
+ *     <- s
+ *     ...
+ *     -> e, es, s, ss
+ *     <- e, ee, se
+ *
+ * Der Browser ist immer der Initiator: Er kennt den statischen Schluessel
+ * des Agenten, weil du ihn von Hand eingetragen hast.
+ */
+
+const PROTOKOLL_NAME = 'Noise_IK_25519_AESGCM_SHA256';
+
+class HandshakeIK {
+  /**
+   * @param prologue  bindet den Handshake an dieses Protokoll
+   * @param sRoh      eigener privater Schluessel, 32 rohe Bytes
+   * @param rs        oeffentlicher Schluessel des Agenten, 32 rohe Bytes
+   * @param eRoh      fluechtiger Schluessel -- nur fuer Testvektoren
+   */
+  static async neu(prologue, sRoh, rs, eRoh) {
+    const h = new HandshakeIK();
+    h.ss = await SymmetricState.neu(PROTOKOLL_NAME);
+    await h.ss.MixHash(prologue);
+    h.sRoh = sRoh;
+    h.s = await privatImportieren(sRoh);
+    h.sPub = await oeffentlichZu(sRoh);
+    h.rs = rs;
+    h.re = null;
+    h.fertig = false;
+    if (eRoh) {
+      h.eRoh = eRoh;
+      h.e = await privatImportieren(eRoh);
+      h.ePub = await oeffentlichZu(eRoh);
+    }
+    // Vornachricht "<- s": Der statische Schluessel des Antwortenden ist dem
+    // Initiator schon bekannt und geht in den Hash ein.
+    await h.ss.MixHash(rs);
+    return h;
+  }
+
+  async schreibeNachricht1(nutzlast) {
+    if (!this.e) {
+      const p = await schluesselpaar();
+      this.e = p.privat; this.ePub = p.oeffentlich; this.eRoh = p.roh;
+    }
+    let puffer = this.ePub;
+    await this.ss.MixHash(this.ePub);                       // e
+    await this.ss.MixKey(await dh(this.e, this.rs));        // es
+    puffer = verkette(puffer, await this.ss.EncryptAndHash(this.sPub));  // s
+    await this.ss.MixKey(await dh(this.s, this.rs));        // ss
+    puffer = verkette(puffer, await this.ss.EncryptAndHash(nutzlast));
+    return puffer;
+  }
+
+  async liesNachricht2(nachricht) {
+    if (nachricht.length < 32 + 16) throw new Error('Nachricht 2 zu kurz');
+    this.re = nachricht.slice(0, 32);
+    await this.ss.MixHash(this.re);                         // e
+    await this.ss.MixKey(await dh(this.e, this.re));        // ee
+    await this.ss.MixKey(await dh(this.s, this.re));        // se
+    const klartext = await this.ss.DecryptAndHash(nachricht.slice(32));
+    this.fertig = true;
+    return klartext;
+  }
+
+  handshakeHash() { return this.ss.h; }
+
+  async transportschluessel() {
+    if (!this.fertig) throw new Error('Handshake noch nicht abgeschlossen');
+    return this.ss.Split();
+  }
+}
+
+/* --------------------------------------------------------- Verfuegbarkeit */
+
+/**
+ * Kann dieser Browser, was wir brauchen?
+ *
+ * X25519 in WebCrypto ist noch nicht ueberall da. Lieber EINMAL klar sagen,
+ * dass es nicht geht, als bei jedem Klick eine unverstaendliche Fehlermeldung
+ * zu erzeugen.
+ */
+async function kryptoVerfuegbar() {
+  if (typeof window !== 'undefined' && !window.isSecureContext) {
+    return { ok: false, grund: 'Die Seite laeuft nicht in einem sicheren ' +
+             'Kontext. WebCrypto gibt es nur ueber https oder auf localhost.' };
+  }
+  if (typeof crypto === 'undefined' || !crypto.subtle) {
+    return { ok: false, grund: 'Dieser Browser hat kein WebCrypto.' };
+  }
+  try {
+    await crypto.subtle.generateKey({ name: 'X25519' }, true, ['deriveBits']);
+  } catch (e) {
+    return { ok: false, grund: 'Dieser Browser kann kein X25519. ' +
+             'Noetig sind Chrome 133+, Firefox 132+ oder Safari 17.4+.' };
+  }
+  return { ok: true };
+}
+
+/* --------------------------------------------------------------------
+ * Fuer die Pruefung ausserhalb des Browsers.
+ *
+ * `tests/pruefe_noise_js.cjs` rechnet diese Datei gegen dieselben
+ * offiziellen Testvektoren nach wie krypto.py. Ohne diesen Block muesste
+ * der Test den Quelltext auswerten -- und dann prueft er eine Kopie, nicht
+ * das Original.
+ *
+ * Im Browser ist `module` nicht definiert; der Block tut dort nichts.
+ * -------------------------------------------------------------------- */
+
+</script>
+<script>
+/* --- ahpt.js --- */
+/*
+ * ahpt.js -- die Besucherseite von AHPT Cloud, fuer den Browser
+ *
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * Copyright (C) 2026 Manuel Person, InnoBytix-IT
+ *
+ * Das Gegenstueck zu ahpt_client.py, mit denselben Schranken:
+ *
+ *   * keine Weiterleitungen (mod_speling hat am 02.09.2026 eine Abfrage
+ *     stillschweigend auf eine fremde Datei umgeleitet)
+ *   * Marke und Stuecknummer werden IM INHALT nachgeprueft
+ *   * Dateinamen von Stuecken werden GELESEN, nie gebaut
+ *   * ein Rueckfall auf Klartext wird abgewiesen, nicht hingenommen
+ *
+ * Alles Warten laeuft ueber statische Dateien -- kein PHP. Genau daran
+ * haengt das Kostenmodell: Auf billigem Webspace ist Lesen unbegrenzt und
+ * Ausfuehren scharf gedeckelt.
+ */
+
+'use strict';
+
+function zufallHex(bytes) {
+  // Marke fuer eine Blockuebertragung. Nur der Absender muss sie
+  // unterscheiden koennen -- 16 Byte reichen sehr breit dafuer aus.
+  const b = new Uint8Array(bytes);
+  crypto.getRandomValues(b);
+  return bytesZuHex(b);
+}
+
+const AHPT_VERSION = 1;
+const AHPT_VERFAHREN = 'noise_ik_aes';   // WebCrypto kann kein ChaCha20
+
+// Muessen zu relay.php passen.
+const MAX_FRAGE = 4096;
+const MAX_STUECK = 49152;
+const MAX_FRAGE_TEILE = 160;
+
+// Groesse eines Blocks beim Hochladen (Rohdaten, VOR base64 und Noise).
+//
+// Der Vermittler laesst je Frage MAX_FRAGE_TEILE * MAX_STUECK ~ 7,5 MiB
+// Base64. Base64 blaeht um 4/3 auf, Noise legt 16 Byte je Chiffre dazu --
+// dann bleiben knapp 5,5 MiB Rohdaten je Block. 4 MiB laesst reichlich
+// Luft und ist eine runde Zahl, die auf jedem Speicher lebt.
+const BLOCK = 4 * 1024 * 1024;
+
+// Wenn eine Datei kleiner als das ist, geht sie in EINER Frage. Sonst
+// waere jede Sprachnotiz ein Umlauf durch Marke, Blockzaehlung und
+// Pruefsumme -- unnoetige zwei Sekunden Tunnel je Datei.
+const KLEIN = BLOCK;
+
+class AhptFehler extends Error {
+  constructor(text, art) { super(text); this.art = art || 'fehler'; }
+}
+
+class AhptPortal {
+  /**
+   * @param basis      Verzeichnis mit relay.php, z. B. ".."
+   * @param privatRoh  eigener privater Schluessel, 32 Bytes
+   * @param agentPub   oeffentlicher Schluessel des Agenten, 32 Bytes
+   */
+  constructor(basis, privatRoh, agentPub) {
+    this.basis = String(basis || '..').replace(/\/+$/, '');
+    this.privat = privatRoh;
+    this.agent = agentPub;
+    // Zeitfenster, in dem die Antwort auf EINE Frage eintreffen muss.
+    //
+    // Passt zur MARKE_TTL des Vermittlers (120 s in relay.php); der CLI-
+    // Client hat 110 s -- knapp darunter, damit eine Frage, die dieses
+    // Portal noch fuer offen haelt, beim Vermittler nicht schon abgelaufen
+    // ist. 60 s waren zu wenig, sobald zwischen Antwort und naechster
+    // Frage ein Agenten-Poll-Zyklus (unbedingt_nach) lag.
+    this.frist = 110000;
+  }
+
+  async _sende(aktion, koerper) {
+    let r;
+    try {
+      r = await fetch(this.basis + '/relay.php?action=' + aktion, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(koerper),
+        redirect: 'error',            // eine Umleitung ist ein Befund
+        cache: 'no-store'
+      });
+    } catch (e) {
+      throw new AhptFehler('Der Vermittler ist nicht erreichbar. '
+                           + 'Steht relay.php am erwarteten Ort?', 'netz');
+    }
+    let d = {};
+    try { d = await r.json(); } catch (e) { /* gleich behandelt */ }
+    if (!r.ok || !d.ok) {
+      throw new AhptFehler('Abgewiesen (HTTP ' + r.status + '): '
+                           + (d.fehler || 'keine Begruendung'), 'abgewiesen');
+    }
+    return d;
+  }
+
+  async _hole(pfad) {
+    let r;
+    try {
+      r = await fetch(this.basis + '/ahpt/' + pfad,
+                      { redirect: 'error', cache: 'no-store' });
+    } catch (e) {
+      throw new AhptFehler('Abruf fehlgeschlagen -- eine Umleitung im Spiel? '
+                           + 'Dann fehlt CheckSpelling Off.', 'umleitung');
+    }
+    if (r.status === 404) return null;
+    if (!r.ok) throw new AhptFehler('Abruf ergab HTTP ' + r.status, 'netz');
+    return r.json();
+  }
+
+  /** Ein vollstaendiger Vorgang: fragen, warten, Antwort auspacken.
+   *
+   * `zeiten` ist freiwillig. Wird ein Objekt uebergeben, traegt dieser
+   * Vorgang seine Abschnitte darin ein -- ohne dass am Ablauf selbst
+   * etwas anders liefe. Genau das macht die Verbindungspruefung
+   * glaubwuerdig: Sie MISST DEN ECHTEN VORGANG, sie baut ihn nicht nach.
+   * Eine Nachbildung wuerde die Fehler nicht haben, die man sucht.
+   */
+  async frage(dienst, aktion, daten, beiFortschritt, zeiten) {
+    const t0 = Date.now();
+    const sitzung = await HandshakeIK.neu(AHPT_PROLOG, this.privat, this.agent);
+    const klartext = new TextEncoder().encode(
+      JSON.stringify({ dienst: dienst, aktion: aktion, daten: daten }));
+    const m1 = await sitzung.schreibeNachricht1(klartext);
+    const chiffre = bytesZuB64(m1);
+
+    const marke = (chiffre.length > MAX_FRAGE)
+      ? await this._hochladen(chiffre, beiFortschritt)
+      : (await this._sende('frage', {
+          v: AHPT_VERSION, krypto: AHPT_VERFAHREN,
+          nutzlast: { chiffre: chiffre }
+        })).marke;
+
+    if (typeof marke !== 'string' || marke.length !== 32) {
+      throw new AhptFehler('Vermittler gab keine gueltige Marke');
+    }
+    if (zeiten) zeiten.frage_ms = Date.now() - t0;
+    const umschlag = await this._warte(marke, beiFortschritt, zeiten);
+    const ergebnis = await this._auspacken(marke, umschlag, sitzung);
+    if (zeiten) {
+      zeiten.holen_ms = Date.now() - (zeiten._bereit || Date.now());
+      zeiten.gesamt_ms = Date.now() - t0;
+      zeiten.marke = marke;
+      delete zeiten._bereit;
+    }
+    return ergebnis;
+  }
+
+  /*
+   * Die Verbindung pruefen -- vom CLIENT aus, nicht vom Agenten.
+   *
+   * WARUM DAS HIER STEHEN MUSS UND NICHT BEIM AGENTEN
+   * --------------------------------------------------
+   * Der Vermittlertest in starten.py laeuft auf dem Rechner des Agenten und
+   * spielt beide Rollen. Was er ehrlich misst, ist die Strecke Agent <->
+   * Webspace. Die ANDERE Haelfte -- Webspace <-> dieses Geraet -- kann er
+   * prinzipiell nicht sehen: Dort steht er ja nicht. Und genau die ist es,
+   * die der Anwender spuert, wenn er unterwegs im Mobilfunk oder in einem
+   * fremden WLAN sitzt.
+   *
+   * Hier dagegen sitzt der Client. Er ist zugelassen, also kann er eine
+   * ECHTE Frage stellen und die Uhr mitlaufen lassen -- ohne Fuellstoff,
+   * ohne Sonderweg, ohne einen Endpunkt, den es sonst nicht gaebe.
+   *
+   * Gemessen wird die ANTWORTZEIT, nicht der Durchsatz: Eine Auflistung ist
+   * klein. Wieviel durch die Leitung passt, zeigt sich beim naechsten
+   * Herunterladen einer richtigen Datei -- und diese Zahl steht dort dann
+   * auch.
+   */
+  async messeVerbindung(pfad) {
+    const zeiten = {};
+    const t0 = Date.now();
+    const antwort = await this.frage('dateien', 'liste',
+                                     { pfad: pfad || '' }, null, zeiten);
+    zeiten.eintraege = (antwort && antwort.eintraege
+                        && antwort.eintraege.length) || 0;
+    zeiten.gesamt_ms = Date.now() - t0;
+    return zeiten;
+  }
+
+  /*
+   * Eine grosse Frage in Stuecken hinaufbringen.
+   *
+   * Verschluesselt wird VORHER, als ein Stueck -- geteilt wird erst der
+   * fertige Geheimtext. Andersherum waere jedes Stueck fuer sich gueltig,
+   * und wer eines weglaesst oder vertauscht, bliebe unbemerkt. So macht
+   * jede Aenderung das Ganze unbrauchbar.
+   *
+   * Sichtbar wird die Marke erst, wenn alle Stuecke liegen -- sonst holte
+   * der Agent eine halbe Frage.
+   */
+  async _hochladen(chiffre, beiFortschritt) {
+    // Mindestens 2 Stuecke -- nicht nur "mind. 1". Der Vermittler
+    // akzeptiert die leere Ankuendigungs-Nutzlast (siehe unten) nur bei
+    // `teile > 1`; bei genau 1 Stueck landet die leere Nutzlast in der
+    // normalen Pruefung und scheitert dort, weil leer kein gueltiges
+    // Base64 ist. Trifft jede Chiffre zwischen MAX_FRAGE (4096 B) und
+    // MAX_STUECK (49152 B) -- bei einer Datei heisst das ungefaehr
+    // 2,3 KB bis 27 KB roh, ein ganz gewoehnlicher Bereich. Am
+    // 05.09.2026 live gefunden: eine 12,43-KB-Textdatei scheiterte
+    // genau daran.
+    const teile = Math.max(2, Math.ceil(chiffre.length / MAX_STUECK));
+    if (teile > MAX_FRAGE_TEILE) {
+      throw new AhptFehler(
+        'Zu gross: ' + teile + ' Stuecke, erlaubt sind ' + MAX_FRAGE_TEILE
+        + '. Der Weg traegt Dokumente und Belege, keine Videos.', 'zu_gross');
+    }
+    // Schnittgroesse aus der (ggf. angehobenen) Stueckzahl ableiten, NICHT
+    // umgekehrt in feste MAX_STUECK-Bloecke schneiden -- sonst waere bei
+    // einer kurzen Chiffre und teile=2 das zweite Stueck leer, und leer
+    // scheitert bei `frage_stueck` an derselben Pruefung, nur eine Ebene
+    // tiefer.
+    const stueckgroesse = Math.ceil(chiffre.length / teile);
+    const d = await this._sende('frage', {
+      v: AHPT_VERSION, krypto: AHPT_VERFAHREN, teile: teile,
+      nutzlast: { chiffre: '' }
+    });
+    const marke = d.marke;
+    for (let i = 0; i < teile; i++) {
+      await this._sende('frage_stueck', {
+        v: AHPT_VERSION, krypto: AHPT_VERFAHREN, marke: marke,
+        teil: i, teile: teile,
+        nutzlast: chiffre.slice(i * stueckgroesse, (i + 1) * stueckgroesse)
+      });
+      if (beiFortschritt) {
+        beiFortschritt({ art: 'hoch', getan: i + 1, gesamt: teile });
+      }
+    }
+    await this._sende('frage_fertig', {
+      v: AHPT_VERSION, krypto: AHPT_VERFAHREN, marke: marke, teile: teile
+    });
+    return marke;
+  }
+
+  /*
+   * Warten, bis die Antwort bereitliegt -- ueber die WARTESCHLANGE, nicht
+   * durch wiederholtes Fragen nach der Antwortdatei.
+   *
+   * Der Unterschied ist nicht Feinschliff. Solange die Antwort nicht da ist,
+   * ergaebe ein direkter Abruf einen 404 -- und bplaced liefert seine eigene
+   * 404-Seite aus einem anderen Verzeichnis aus, ohne CORS-Kopfzeile. Ein
+   * 404 ohne CORS erreicht dieses JavaScript nicht als 404, sondern als
+   * Netzfehler; das Portal meldete dann eine Umleitung, wo keine war.
+   * Am 03.09.2026 im Browser gemessen. Weder eine FilesMatch-Regel noch ein
+   * eigenes ErrorDocument liessen sich dagegen durchsetzen.
+   *
+   * Die Warteschlange gibt es IMMER (sobald einmal gefragt wurde), also
+   * kommt sie mit 200 und mit Kopfzeile. Steht die eigene Marke in `fertig`,
+   * liegt die Antwortdatei -- der Vermittler schreibt sie unter derselben
+   * Sperre, unter der er die Liste fortschreibt.
+   *
+   * Nebenbei spart es Abrufe: EIN Abruf beantwortet die Frage fuer alle
+   * laufenden Vorgaenge, nicht einer je Vorgang.
+   */
+  async _warte(marke, beiFortschritt, zeiten) {
+    const bis = Date.now() + this.frist;
+    const t0 = Date.now();
+    let abstand = 350;
+    let abrufe = 0;
+    while (Date.now() < bis) {
+      const q = await this._hole('warteschlange.json');
+      abrufe++;
+      if (q && Array.isArray(q.fertig) && q.fertig.indexOf(marke) >= 0) {
+        // Der Zeitpunkt, an dem die Antwort BEREITLAG. Alles davor ist
+        // Warten, alles danach ist Holen -- und die zwei zu trennen ist
+        // der Sinn der Sache: Warten heisst "der Agent war noch nicht
+        // soweit", Holen heisst "die Leitung hierher".
+        if (zeiten) {
+          zeiten.warten_ms = Date.now() - t0;
+          zeiten.abrufe = abrufe;
+          zeiten._bereit = Date.now();
+        }
+        const u = await this._hole('antwort_' + marke + '.json');
+        if (u) return u;
+        throw new AhptFehler(
+          'Die Warteschlange meldet die Antwort als fertig, aber die Datei '
+          + 'fehlt. Das deutet auf ein Aufraeumen zur Unzeit hin.', 'netz');
+      }
+      if (beiFortschritt) beiFortschritt({ art: 'warten' });
+      await new Promise(r => setTimeout(r, abstand));
+      abstand = Math.min(1500, Math.round(abstand * 1.3));
+    }
+    throw new AhptFehler(
+      'Zeit abgelaufen -- der Agent hat nicht geantwortet. Laeuft er? '
+      + 'Steht der oeffentliche Schluessel dieses Geraets in seiner '
+      + 'clients-Liste?', 'zeit');
+  }
+
+  _pruefeUmschlag(u, marke, teil) {
+    if (!u || typeof u !== 'object') throw new AhptFehler('Umschlag fehlt');
+    if (u.v !== AHPT_VERSION) {
+      throw new AhptFehler('Protokollfassung ' + u.v + ', erwartet '
+                           + AHPT_VERSION);
+    }
+    // DIE Pruefung gegen eine stille Umleitung.
+    if (u.marke !== marke) {
+      throw new AhptFehler(
+        'Marke weicht ab -- das deutet auf eine Umleitung hin. '
+        + 'Steht CheckSpelling Off in der .htaccess?', 'umleitung');
+    }
+    if (teil !== undefined && u.teil !== teil) {
+      throw new AhptFehler('Stuecknummer weicht ab', 'umleitung');
+    }
+  }
+
+  async _auspacken(marke, u, sitzung) {
+    this._pruefeUmschlag(u, marke);
+    if (u.krypto !== AHPT_VERFAHREN) {
+      // Ein Rueckfall auf Klartext waere ein Angriff, kein Zufall: Wer die
+      // Verschluesselung abschalten kann, indem er sie weglaesst, hat keine.
+      throw new AhptFehler(
+        'Die Antwort kam unverschluesselt (' + u.krypto + '). Das wird nicht '
+        + 'hingenommen -- entweder stimmt die Einrichtung nicht, oder jemand '
+        + 'hat die Antwort ersetzt.', 'krypto');
+    }
+    const n = u.nutzlast || {};
+    const chiffre = (u.teile > 1)
+      ? await this._stuecke(marke, u.teile, n.stuecke)
+      : (n.chiffre || '');
+
+    let klartext;
+    try {
+      klartext = await sitzung.liesNachricht2(b64ZuBytes(chiffre));
+    } catch (e) {
+      throw new AhptFehler(
+        'Die Antwort liess sich nicht entschluesseln. Sie stammt nicht von '
+        + 'dem Agenten, dessen Schluessel hier eingetragen ist -- oder sie '
+        + 'wurde unterwegs veraendert.', 'krypto');
+    }
+    return JSON.parse(new TextDecoder().decode(klartext));
+  }
+
+  async _stuecke(marke, teile, liste) {
+    if (!Array.isArray(liste) || liste.length !== teile) {
+      throw new AhptFehler('Verzeichnis und Stueckzahl passen nicht zusammen');
+    }
+    const teil = new Array(teile).fill(null);
+    for (const e of liste) {
+      // Der Dateiname wird GELESEN, nie gebaut: Er traegt vier abgeleitete
+      // Zeichen, damit benachbarte Stuecke nicht eine Zeichenaenderung
+      // auseinanderliegen -- sonst haelt mod_speling sie fuer Tippfehler.
+      const datei = e && e.datei;
+      const nr = e && e.teil;
+      if (typeof datei !== 'string' || !datei.startsWith('antwort_')
+          || datei.includes('/') || datei.includes('\\')) {
+        throw new AhptFehler('Stueck mit unbrauchbarem Dateinamen');
+      }
+      const s = await this._hole(datei);
+      if (!s) throw new AhptFehler('Stueck ' + nr + ' fehlt');
+      this._pruefeUmschlag(s, marke, nr);
+      if (s.teile !== teile) throw new AhptFehler('Stueck ' + nr + ' zaehlt anders');
+      if (!Number.isInteger(nr) || nr < 0 || nr >= teile) {
+        throw new AhptFehler('Stueck mit unbrauchbarer Nummer');
+      }
+      teil[nr] = s.nutzlast || '';
+    }
+    if (teil.some(t => t === null)) throw new AhptFehler('Es fehlt ein Stueck');
+    return teil.join('');
+  }
+
+  /* ------------------------------------------------------- Bequemlichkeit */
+
+  async liste(pfad) {
+    const a = await this.frage('dateien', 'liste', { pfad: pfad || '' });
+    if (!a.gefunden) throw new AhptFehler(a.grund || 'nichts gefunden', 'leer');
+    return JSON.parse(a.inhalt || '{}');
+  }
+
+  /*
+   * Eine Datei jeder Groesse herunterholen.
+   *
+   * Der erste Umlauf fragt gleich Daten UND Pruefsumme -- kleine Dateien
+   * sind damit nach EINEM Umlauf da und geprueft. Bei einer grossen laeuft
+   * der Empfaenger dann in einer Schleife bis zum Ende.
+   *
+   * Alle Stuecke landen in einem Uint8Array -- der Browser gibt dem Aufrufer
+   * keinen Blob zurueck, mit dem er einen Download anstossen koennte, ohne
+   * die Datei doch wieder im Speicher zu haben. Das ist die Beschraenkung
+   * dieses Wegs: sehr grosse Downloads brauchen einen Handhaufen Speicher.
+   * Ein Streaming-Download waere eine File-System-Access-API-Sache, die
+   * nicht ueberall geht -- spaeter.
+   */
+  async hole(pfad, beiFortschritt) {
+    // Erster Umlauf: bereichsweise, Pruefsumme mit.
+    const erst = await this.frage('dateien', 'hole', {
+      pfad: pfad, von: 0, laenge: BLOCK, pruefsumme: true
+    }, beiFortschritt);
+    if (!erst.gefunden) {
+      throw new AhptFehler(erst.grund || 'nichts gefunden', 'leer');
+    }
+    const a = JSON.parse(erst.inhalt || '{}');
+    const gesamt = a.gesamt|0;
+    const stand = a.stand;
+    const summe = a.sha256 || null;
+
+    // Puffer fuer die ganze Datei anlegen. Bei einer 200-MiB-Datei sind
+    // das 200 MiB Speicher -- zu viel fuer ein Handy. Wer da anlaeuft, soll
+    // eine klare Meldung bekommen statt eines stillen Absturzes.
+    let alles;
+    try {
+      alles = new Uint8Array(gesamt);
+    } catch (e) {
+      throw new AhptFehler(
+        'Zu gross fuer diesen Browser: ' + Math.round(gesamt/1048576)
+        + ' MiB passen nicht in einen einzelnen Speicherblock.',
+        'zu_gross');
+    }
+
+    let von = 0;
+    const erstesStueck = b64ZuBytes(a.inhalt);
+    alles.set(erstesStueck, von);
+    von += erstesStueck.length;
+    if (beiFortschritt && gesamt > BLOCK) {
+      beiFortschritt({ art: 'runter', getan: von, gesamt: gesamt });
+    }
+
+    while (von < gesamt) {
+      const laenge = Math.min(BLOCK, gesamt - von);
+      const w = await this.frage('dateien', 'hole', {
+        pfad: pfad, von: von, laenge: laenge
+      });
+      if (!w.gefunden) {
+        throw new AhptFehler(w.grund || 'nichts gefunden', 'leer');
+      }
+      const b = JSON.parse(w.inhalt || '{}');
+      // Zeitstempel muss ueber alle Umlaeufe gleich bleiben. Aendert sich
+      // die Datei waehrend des Holens, waeren die Stuecke aus zwei
+      // Fassungen zusammengesetzt -- jedes fuer sich gueltig, das Ganze
+      // falsch, und niemand saehe es.
+      if (b.stand !== stand) {
+        throw new AhptFehler(
+          'Die Datei hat sich waehrend des Holens geaendert. '
+          + 'Nichts uebernommen -- der Vorgang bleibt in sich schluessig.',
+          'geaendert');
+      }
+      const stueck = b64ZuBytes(b.inhalt);
+      alles.set(stueck, von);
+      von += stueck.length;
+      if (beiFortschritt) {
+        beiFortschritt({ art: 'runter', getan: von, gesamt: gesamt });
+      }
+    }
+
+    // Pruefsumme des Ganzen. Dieselbe Ueberlegung wie oben: kein Streaming
+    // im Browser, aber die Datei liegt ohnehin schon in einem Stueck vor.
+    if (summe) {
+      const h = await crypto.subtle.digest('SHA-256', alles);
+      if (bytesZuHex(new Uint8Array(h)) !== summe) {
+        throw new AhptFehler(
+          'Pruefsumme stimmt nicht -- nichts uebernommen.',
+          'pruefsumme');
+      }
+    }
+
+    return {
+      bytes: alles,
+      typ: 'base64',
+      titel: a.name || pfad.split('/').pop() || pfad
+    };
+  }
+
+  /*
+   * Eine Datei jeder Groesse hinaufbringen.
+   *
+   * `bytes` kann ein Uint8Array sein (bisheriger Weg, klein), oder ein Blob
+   * bzw. File. Der Grund fuer die Doppelspur: Ein Uint8Array liegt schon
+   * vollstaendig im Speicher, ein Blob laesst sich Stueck fuer Stueck
+   * anschauen. Eine 500-MiB-Datei am Stueck in den Speicher zu ziehen,
+   * bringt den Browserstab auf dem Handy zum Absturz.
+   *
+   * Kleine Dateien gehen weiterhin in EINER Frage. Der Weg mit Marke,
+   * Blockzaehlung und Pruefsumme kostet pro Umlauf rund zwei Sekunden --
+   * das lohnt sich erst bei mehr als einem Block.
+   */
+  async lege(pfad, dateiOderBytes, beiFortschritt) {
+    // Wir muessen die Gesamtgroesse kennen, um zu wissen, ob es EIN Zug
+    // oder Bloecke werden -- und die Pruefsumme kann nur nach dem letzten
+    // Byte da sein. Datei-Objekte liefern die Groesse ohne Lesen.
+    const istDatei = typeof Blob !== 'undefined'
+                     && dateiOderBytes instanceof Blob;
+    const gesamt = istDatei ? dateiOderBytes.size : dateiOderBytes.length;
+
+    if (gesamt <= KLEIN) {
+      // KLEIN: Ein Zug, alter Weg. Wenn es ein Blob war, jetzt in den
+      // Speicher ziehen -- bei KLEIN Bytes ist das tragbar.
+      const bytes = istDatei
+        ? new Uint8Array(await dateiOderBytes.arrayBuffer())
+        : dateiOderBytes;
+      const a = await this.frage('dateien', 'lege', {
+        pfad: pfad, inhalt_typ: 'base64', inhalt: bytesZuB64(bytes)
+      }, beiFortschritt);
+      if (!a.gefunden) {
+        throw new AhptFehler(a.grund || 'nicht abgelegt', 'leer');
+      }
+      return JSON.parse(a.inhalt || '{}');
+    }
+
+    // GROSS: in BLOECKEN. Der Agent haengt sie an eine Teildatei und legt
+    // erst ab, wenn die Pruefsumme des GANZEN stimmt.
+    //
+    // Pruefsumme wird VORHER in einem eigenen Durchlauf gebildet. Die
+    // Datei zweimal zu lesen ist billiger, als sie fuer die Pruefsumme im
+    // Speicher zu halten. Bei einer 500-MiB-Datei ist es der Unterschied
+    // zwischen laeuft und laeuft nicht.
+    const bloecke = Math.ceil(gesamt / BLOCK);
+    const marke = zufallHex(16);
+
+    if (beiFortschritt) beiFortschritt({ art: 'summe', getan: 0, gesamt: gesamt });
+    const summe = await this._summeBlob(dateiOderBytes, gesamt, (getan) => {
+      if (beiFortschritt) beiFortschritt({ art: 'summe', getan: getan, gesamt: gesamt });
+    });
+
+    let antw = null;
+    for (let i = 0; i < bloecke; i++) {
+      const von = i * BLOCK;
+      const bis = Math.min(gesamt, von + BLOCK);
+      const rohstueck = istDatei
+        ? new Uint8Array(await dateiOderBytes.slice(von, bis).arrayBuffer())
+        : dateiOderBytes.subarray(von, bis);
+      const daten = {
+        uebertragung: marke, block: i, bloecke: bloecke,
+        inhalt_typ: 'base64', inhalt: bytesZuB64(rohstueck)
+      };
+      // Pfad nur beim ERSTEN Block. Danach steht er beim Agenten fest;
+      // ihn erneut mitzuschicken waere eine zweite Wahrheit.
+      if (i === 0) daten.pfad = pfad;
+      if (i === bloecke - 1) daten.sha256 = summe;
+      antw = await this.frage('dateien', 'lege_block', daten);
+      if (!antw.gefunden) {
+        throw new AhptFehler(antw.grund || 'block abgewiesen', 'leer');
+      }
+      if (beiFortschritt) {
+        beiFortschritt({ art: 'hoch', getan: i + 1, gesamt: bloecke });
+      }
+    }
+    return JSON.parse(antw.inhalt || '{}');
+  }
+
+  /*
+   * Pruefsumme eines Blobs, ohne die ganze Datei in den Speicher zu holen.
+   *
+   * Der Browser hat keinen fortschreitenden SHA-256 -- crypto.subtle
+   * verlangt den ganzen Datenblock auf einmal. Also lesen wir in Bloecken
+   * und speisen jeden in einen frischen digest(), das wiederum als
+   * Zwischenstand in den naechsten wandert. Das ist NICHT SHA-256.
+   *
+   * Deshalb: fuer die Pruefsumme, die mit der des Agenten uebereinstimmen
+   * muss, brauchen wir einen echten Streaming-SHA-256. Der ist im Browser
+   * nur ueber eine Umleitung zu haben: alle Bloecke einmal in einen
+   * ArrayBuffer zusammenkopieren -- bei einer sehr grossen Datei genau das,
+   * was wir vermeiden wollten. Der Ausweg: SubtleCrypto.digest kann einen
+   * Stream nicht, aber es kann einen Uint8Array pro Aufruf. Wir puffern
+   * DIE, aber nur die Datei EINMAL komplett -- bei einer 4-GiB-Datei
+   * geht das nicht auf einem Handy. Fuer die realistische Groesse einer
+   * Sprachnotiz, eines Videos, eines Fotoordners geht es.
+   */
+  async _summeBlob(blob, gesamt, beiFortschritt) {
+    const istBlob = typeof Blob !== 'undefined' && blob instanceof Blob;
+    if (!istBlob) {
+      const h = await crypto.subtle.digest('SHA-256', blob);
+      return bytesZuHex(new Uint8Array(h));
+    }
+    // Blob am Stueck an digest() geben -- die Web Crypto API frisst einen
+    // BufferSource, kein Stream. arrayBuffer() liest ihn dabei genau
+    // einmal.
+    if (beiFortschritt) beiFortschritt(gesamt);
+    const puffer = await blob.arrayBuffer();
+    const h = await crypto.subtle.digest('SHA-256', puffer);
+    return bytesZuHex(new Uint8Array(h));
+  }
+
+  async neuerOrdner(pfad) {
+    const a = await this.frage('dateien', 'neuer_ordner', { pfad: pfad });
+    if (!a.gefunden) throw new AhptFehler(a.grund || 'nicht angelegt', 'leer');
+    return JSON.parse(a.inhalt || '{}');
+  }
+}
+
+/* --------------------------------------------------------------------
+ * Fuer die Pruefung ausserhalb des Browsers.
+ *
+ * `tests/pruefe_portal.cjs` fuehrt genau diese Datei gegen den ECHTEN
+ * Python-Agenten -- nicht gegen eine Nachbildung. Das ist die einzige
+ * Pruefung, die zeigt, ob Browser und Heimserver wirklich dieselbe Sprache
+ * sprechen; die Testvektoren zeigen nur, dass beide die Spezifikation
+ * treffen.
+ * -------------------------------------------------------------------- */
+
+</script>
+<script>
+'use strict';
+
+const $ = s => document.querySelector(s);
+const SPEICHER = { privat: 'ahpt.privat', agent: 'ahpt.agent', basis: 'ahpt.basis' };
+
+let portal = null;
+let pfad = '';
+let eintraege = [];
+
+/* ---------------------------------------------------- Matrix-Hintergrund */
+//
+// Rein dekorativ, ausdruecklich ohne Wirkung auf irgendetwas Sicherheits-
+// relevantes -- reine Optik, hinter allem, sehr schwach eingeblendet
+// (siehe CSS: opacity .14). Auf Wunsch vom 03.09.2026.
+//
+// Drei Ruecksichten, die eine Hintergrund-Animation nicht vergessen darf:
+//   1. prefers-reduced-motion: reduce -- dann startet sie gar nicht erst.
+//   2. Pausiert, wenn der Tab verborgen ist -- kein Akku fuer eine Seite,
+//      die niemand ansieht.
+//   3. Gedrosselte Bildrate (kein volles requestAnimationFrame-Tempo) --
+//      auf einem Handy, mit dem man ohnehin gerade zwei Bilder pro
+//      Sekunde bräuchte, um Text zu lesen, muss das nicht 60 mal
+//      pro Sekunde neu gezeichnet werden.
+function matrixHintergrund() {
+  const c = document.getElementById('matrix-hintergrund');
+  if (!c || !c.getContext) return;
+  if (window.matchMedia
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return;
+  }
+  const ctx = c.getContext('2d');
+  const ZEICHEN = '01アイウエオカキクケコサシスセソタチツテト0123456789ABCDEF';
+  const GROESSE = 15;
+  let spalten = [];
+
+  function einrichten() {
+    c.width = window.innerWidth;
+    c.height = window.innerHeight;
+    const n = Math.ceil(c.width / GROESSE);
+    spalten = new Array(n).fill(0).map(() => Math.random() * -50);
+  }
+  einrichten();
+  window.addEventListener('resize', einrichten);
+
+  let laeuft = !document.hidden;
+  document.addEventListener('visibilitychange', () => {
+    laeuft = !document.hidden;
+  });
+
+  let letzter = 0;
+  function bild(zeit) {
+    requestAnimationFrame(bild);
+    if (!laeuft || zeit - letzter < 80) return;   // ~12 Bilder/s reichen
+    letzter = zeit;
+
+    ctx.fillStyle = 'rgba(4,6,4,.13)';
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.font = GROESSE + 'px monospace';
+    ctx.fillStyle = '#3cff77';
+
+    for (let i = 0; i < spalten.length; i++) {
+      const z = ZEICHEN[Math.floor(Math.random() * ZEICHEN.length)];
+      ctx.fillText(z, i * GROESSE, spalten[i] * GROESSE);
+      if (spalten[i] * GROESSE > c.height && Math.random() > .975) {
+        spalten[i] = 0;
+      }
+      spalten[i]++;
+    }
+  }
+  requestAnimationFrame(bild);
+}
+matrixHintergrund();
+
+/* ------------------------------------------------------------ Meldungen */
+
+function esc(s) {
+  // HTML entschaerfen -- fuer jeden Wert, der in einen melde()-Text
+  // eingesetzt wird und NICHT selbst festverdrahtetes Markup ist (Datei-
+  // und Ordnernamen, Fehlermeldungen).
+  //
+  // Ein Dateiname kann auf den meisten Dateisystemen praktisch jedes
+  // Zeichen tragen -- < > " kommen durch _pfad_erlaubt() im Handler NICHT
+  // heraus gefiltert, das dort nur Steuerzeichen sperrt. Ungeschaerft in
+  // innerHTML eingesetzt waere ein Dateiname wie
+  // "<img src=x onerror=...>" gespeichertes XSS: Sobald jemand die Datei
+  // herunterlaedt, in der Vorschau oeffnet oder sie beim Hochladen
+  // rueckgemeldet bekommt, liefe das Skript im Ursprung dieses Portals --
+  // und griffe damit auf den privaten Schluessel in localStorage zu.
+  //
+  // Am 03.09.2026 im Sicherheitsaudit gefunden: `pre.textContent` fuer den
+  // DATEIINHALT stand schon richtig da (mit Begruendung im Kommentar), aber
+  // derselbe Fall fuer den DATEINAMEN in melde() fehlte.
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[c]);
+}
+
+function melde(text, art, dauerhaft) {
+  // Doppelte identische Meldung wegwerfen -- sie stapelten sich sonst
+  // sichtbar, wenn der Nutzer zweimal denselben Fehler ausloest (etwa:
+  // eine zu grosse Datei erneut hinaufziehen).
+  const zusammen = (art || 'gut') + '|' + text;
+  const alt = $('#meldungen').lastElementChild;
+  if (alt && alt.dataset.kennung === zusammen) return alt;
+
+  const d = document.createElement('div');
+  d.className = 'meldung ' + (art || 'gut');
+  d.dataset.kennung = zusammen;
+  d.innerHTML = text;
+  if (dauerhaft) {
+    // Schliessen-Knopf. Dauerhafte Meldungen bleiben sonst stehen, bis
+    // der Nutzer die Seite neu laedt -- und sie stapeln sich untereinander.
+    const zu = document.createElement('button');
+    zu.className = 'zu';
+    zu.setAttribute('aria-label', 'Meldung schliessen');
+    zu.textContent = '×';
+    zu.onclick = () => d.remove();
+    d.appendChild(zu);
+  } else {
+    setTimeout(() => d.remove(), 7000);
+  }
+  $('#meldungen').appendChild(d);
+  return d;
+}
+function meldungenLeeren() { $('#meldungen').innerHTML = ''; }
+
+function zustand(text, art) {
+  $('#zustand').textContent = text;
+  $('#punkt').className = 'punkt ' + (art || '');
+  $('#titel').classList.toggle('verbunden', art === 'gut');
+}
+
+/* --------------------------------------------------------- Einrichtung */
+
+function lies(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function schreib(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+function zeigeEinrichtung(an) {
+  $('#karte-einrichtung').hidden = !an;
+  $('#karte-dateien').hidden = an;
+}
+
+/* ------------------------------------------------- Verbindung pruefen
+
+   WAS DAS MISST, UND WAS DER TEST AUF DEM SERVER NICHT MESSEN KANN
+   -----------------------------------------------------------------
+   Der Vermittlertest in starten.py laeuft auf dem Rechner des Agenten und
+   spielt beide Rollen. Ehrlich misst er damit die Strecke Agent <->
+   Webspace. Die andere Haelfte -- Webspace <-> DIESES Geraet -- sieht er
+   prinzipiell nicht, denn dort steht er nicht. Und genau die spuert der
+   Anwender, wenn er im Mobilfunk oder in einem fremden WLAN sitzt.
+
+   Hier sitzt der Client. Also wird hier gemessen, mit einer ECHTEN Frage
+   ueber den ganzen Weg: dieses Geraet -> Vermittler -> Agent -> Vermittler
+   -> dieses Geraet. */
+$('#btn-verbindung').onclick = async () => {
+  if (!portal) {
+    melde('Erst einrichten und verbinden -- ohne Verbindung gibt es nichts '
+          + 'zu messen.', 'warn');
+    return;
+  }
+  meldungenLeeren();
+  const laeuft = melde('Verbindung wird gepr&uuml;ft &hellip;', 'gut', true);
+  try {
+    const z = await portal.messeVerbindung(pfad);
+    laeuft.remove();
+    melde(
+      '<b>Verbindung gepr&uuml;ft.</b> Ein vollst&auml;ndiger Vorgang &uuml;ber '
+      + 'den ganzen Weg &ndash; dieses Ger&auml;t, Vermittler, Agent und '
+      + 'zur&uuml;ck &ndash; hat <b>' + (z.gesamt_ms / 1000).toFixed(1)
+      + ' s</b> gebraucht.<br><br>'
+      + 'Frage ablegen: ' + z.frage_ms + ' ms<br>'
+      + 'Warten auf den Agenten: ' + z.warten_ms + ' ms ('
+      + z.abrufe + ' Abfrage' + (z.abrufe === 1 ? '' : 'n') + ')<br>'
+      + 'Antwort holen: ' + z.holen_ms + ' ms<br><br>'
+      + '<span class="klein">Gemessen wird die ANTWORTZEIT, nicht der '
+      + 'Durchsatz &ndash; eine Auflistung ist klein. Wieviel durch die '
+      + 'Leitung passt, steht nach dem n&auml;chsten Herunterladen einer '
+      + 'richtigen Datei. Ist dieser Wert hier gut und AHPT trotzdem z&auml;h, '
+      + 'liegt es nicht an der Strecke zu diesem Ger&auml;t.</span>',
+      'gut', true);
+  } catch (e) {
+    laeuft.remove();
+    melde('Die Pr&uuml;fung ist fehlgeschlagen: ' + esc(e.message), 'fehler',
+          true);
+  }
+};
+
+$('#btn-einrichten').onclick = () => zeigeEinrichtung($('#karte-einrichtung').hidden);
+
+/* Das "..."-Menue: oeffnet/schliesst per Klick auf den Knopf, schliesst
+ * sich sonst bei jedem Klick anderswo auf der Seite -- auch nach einem
+ * Klick auf "Einrichtung" selbst, weil dessen Klick zum Dokument
+ * durchreicht. Auf Wunsch vom 06.09.2026. */
+{
+  const menuKnopf = $('#btn-menu');
+  const menu = $('#menu-dropdown');
+  menuKnopf.onclick = (e) => {
+    e.stopPropagation();
+    const offen = menu.hidden;
+    menu.hidden = !offen;
+    menuKnopf.setAttribute('aria-expanded', String(offen));
+  };
+  document.addEventListener('click', () => {
+    menu.hidden = true;
+    menuKnopf.setAttribute('aria-expanded', 'false');
+  });
+}
+
+/* Der Knopf sagt, was er tut -- und sieht anders aus, wenn es schon einen
+   Schluessel gibt.
+
+   Ein Knopf, der eine bestehende Paarung ungueltig macht, darf nicht
+   aussehen wie eine harmlose Wiederholung. Am 03.09.2026 genau so
+   passiert: Die Verbindung stand bereits, ein zweiter Druck erzeugte einen
+   neuen Schluessel, und der Agent kannte das Geraet nicht mehr. Die
+   Fehlermeldung war richtig ("steht der Schluessel in der clients-Liste?")
+   und half trotzdem nicht weiter, weil niemand vermutete, dass er sich
+   gerade selbst ausgesperrt hatte. */
+function knopfAnpassen() {
+  const da = !!lies(SPEICHER.privat);
+  const b = $('#btn-schluessel');
+  b.textContent = da ? 'Schluessel ERSETZEN' : 'Schluessel erzeugen';
+  b.className = da ? 'gefahr' : 'haupt';
+  $('#schluessel-hinweis').innerHTML = da
+    ? 'Dieses Geraet hat bereits einen Schluessel. <b>Ein neuer macht die '
+      + 'Paarung ungueltig</b> &ndash; der Agent kennt ihn dann nicht mehr, '
+      + 'und du muesstest ihn dort erneut eintragen. Zum Verbinden genuegt '
+      + '&bdquo;Speichern und verbinden&ldquo;.'
+    : 'Noch keiner. Einmal erzeugen, dann beim Agenten in die '
+      + '<code>clients</code>-Liste eintragen.';
+}
+
+$('#btn-schluessel').onclick = async () => {
+  if (lies(SPEICHER.privat) &&
+      !confirm('Dieses Geraet hat schon einen Schluessel, und der Agent '
+               + 'kennt ihn vermutlich.\n\n'
+               + 'Ein NEUER macht die Paarung ungueltig: Der Agent wuerde '
+               + 'nicht mehr antworten, bis du den neuen Wert dort '
+               + 'eingetragen und ihn neu gestartet hast.\n\n'
+               + 'Zum blossen Verbinden brauchst du das NICHT -- dafuer '
+               + 'genuegt "Speichern und verbinden".\n\n'
+               + 'Wirklich ersetzen?')) return;
+  const p = await schluesselpaar();
+  schreib(SPEICHER.privat, bytesZuHex(p.roh));
+  $('#feld-eigen').value = bytesZuHex(p.oeffentlich);
+  knopfAnpassen();
+  melde('Schluessel erzeugt. Trage den oeffentlichen Wert oben in die '
+        + '<code>clients</code>-Liste der <code>config.toml</code> deines '
+        + 'Agenten ein und starte ihn neu.', 'warn', true);
+};
+
+$('#btn-kopieren').onclick = async () => {
+  const w = $('#feld-eigen').value.trim();
+  if (!w) return;
+  try { await navigator.clipboard.writeText(w); melde('Kopiert.'); }
+  catch (e) { $('#feld-eigen').select(); melde('Bitte von Hand kopieren.', 'warn'); }
+};
+
+/* ------------------------------------------- Kopplung mit dem Assistenten
+
+   WAS HIER ANDERS IST ALS BEI DER VERBINDUNGSDATEI
+   -------------------------------------------------
+   Die Verbindungsdatei bringt Adresse und Agent-Schluessel HERUEBER. Die
+   Rueckrichtung -- der oeffentliche Schluessel dieses Geraets muss zum
+   Agenten -- blieb bisher Handarbeit: abtippen, im Assistenten einfuegen.
+   Die App macht das seit dem 07.09.2026 selbst, das Portal nicht. Genau
+   diese Luecke schliesst der Block hier.
+
+   WARUM ES DIE DATEI NICHT KANN
+   ------------------------------
+   Zum Zurueckmelden braucht es das Zugangs-Token des Assistenten, und das
+   gehoert nicht in eine Datei: Sie bleibt im Download-Ordner liegen, der
+   Assistent laeuft laengst nicht mehr, das Token steht trotzdem noch da.
+   Der Kopplungscode dagegen lebt nur, solange der Assistent laeuft.
+
+   ZWEI WEGE, EIN INHALT
+   ----------------------
+   Kamera oder Text -- beides ergibt dieselben vier Werte. Die Kamera ist
+   schoener, wenn Assistent und Portal auf verschiedenen Geraeten laufen.
+   Sitzen beide auf demselben Rechner, ist Kopieren der kuerzere Weg, als
+   eine Kamera auf den eigenen Bildschirm zu halten -- und viele Browser
+   koennen ohnehin keine QR-Codes lesen. */
+
+function kopplungStand(text, art) {
+  const d = $('#kopplung-stand');
+  d.innerHTML = text;
+  d.style.color = art === 'fehler' ? 'var(--fehler)'
+                : art === 'gut' ? 'var(--akzent)' : 'var(--leise)';
+}
+
+function geraetename() {
+  // Nur damit im Assistenten nicht "Unbenanntes Geraet" steht. Der Wert
+  // dient der Wiedererkennung, sonst nichts -- er landet in keiner Datei.
+  const p = (navigator.userAgentData && navigator.userAgentData.platform)
+            || navigator.platform || '';
+  return ('Portal' + (p ? ' auf ' + p : '')).slice(0, 60);
+}
+
+/* Den Inhalt eines Kopplungscodes lesen -- dieselbe Pruefung wie in der App
+   (Kopplung.kt). Eine Absage soll sagen, WAS fehlt: "ungueltig" laesst den
+   Nutzer raten, ob er den falschen Code erwischt hat oder etwas kaputt ist. */
+function kopplungLesen(roh) {
+  let o;
+  try { o = JSON.parse(String(roh).trim()); }
+  catch (e) {
+    throw new Error('Das ist kein AHPT-Kopplungscode. Der Assistent zeigt '
+                    + 'ihn unter „Weiteres Ger&auml;t hinzuf&uuml;gen".');
+  }
+  const basis = String(o.b || '').replace(/\/+$/, '');
+  const agent = String(o.a || '').toLowerCase();
+  const token = String(o.t || '');
+  const adressen = Array.isArray(o.h) ? o.h.filter(x => typeof x === 'string' && x) : [];
+  if (!basis) throw new Error('Im Code fehlt die Adresse des Vermittlers.');
+  if (!/^[0-9a-f]{64}$/.test(agent))
+    throw new Error('Im Code fehlt der Schl&uuml;ssel des Agenten, oder er '
+                    + 'ist unvollst&auml;ndig.');
+  if (!token) throw new Error('Im Code fehlt das Zugangs-Token des Assistenten.');
+  if (!adressen.length) throw new Error('Im Code steht keine Adresse des Assistenten.');
+  return { basis, agent, token, adressen };
+}
+
+/* Den eigenen oeffentlichen Schluessel beim Assistenten anmelden.
+
+   Alle Adressen der Reihe nach, die erste die antwortet gewinnt -- der
+   Assistent weiss beim Anzeigen des Codes noch nicht, ueber welchen Weg
+   dieses Geraet zurueckkommt (WLAN, Kabel, derselbe Rechner). */
+async function meldeBeimAssistenten(k, eigenerHex) {
+  const gruende = [];
+  for (const adresse of k.adressen) {
+    let a;
+    try {
+      a = await fetch('http://' + adresse + '/api/koppeln?t='
+                      + encodeURIComponent(k.token), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schluessel: eigenerHex, geraet: geraetename() }),
+        // Kein Cookie mitschicken: Das Token steht in der Adresse, und
+        // Anmeldedaten vertragen sich nicht mit einer Freigabe fuer alle.
+        credentials: 'omit',
+        redirect: 'error',
+      });
+    } catch (e) {
+      gruende.push(adresse);
+      continue;
+    }
+    let d = {};
+    try { d = await a.json(); } catch (e) {}
+    if (a.ok) return d;
+    // Ein ANTWORTENDER Assistent, der ablehnt, ist etwas anderes als einer,
+    // den wir nicht erreichen. Weitersuchen waere sinnlos, und seine
+    // Begruendung ist die brauchbarste Meldung, die es gibt.
+    throw new Error(d.fehler || ('Der Assistent hat abgelehnt (HTTP ' + a.status + ').'));
+  }
+  throw new Error('Der Assistent war unter keiner seiner Adressen erreichbar ('
+                  + esc(gruende.join(', ')) + '). Meist heisst das: Dieses '
+                  + 'Ger&auml;t und der Rechner mit dem Assistenten h&auml;ngen '
+                  + 'nicht im selben Netz. Oder der Assistent l&auml;uft nicht '
+                  + 'mehr &ndash; er endet, wenn man sein Fenster schliesst.');
+}
+
+async function kopplungAnwenden(roh) {
+  let k;
+  try { k = kopplungLesen(roh); }
+  catch (e) { kopplungStand(e.message, 'fehler'); return false; }
+
+  $('#feld-basis').value = k.basis;
+  $('#feld-agent').value = k.agent;
+  schreib(SPEICHER.basis, k.basis);
+  schreib(SPEICHER.agent, k.agent);
+
+  // Schluessel nur erzeugen, wenn es noch keinen gibt. Ein neuer machte die
+  // bestehende Paarung ungueltig -- derselbe Fehler, vor dem der Knopf
+  // daneben seit dem 03.09.2026 ausdruecklich warnt.
+  let priv = lies(SPEICHER.privat);
+  if (!priv) {
+    kopplungStand('Schl&uuml;ssel wird erzeugt &hellip;');
+    const p = await schluesselpaar();
+    priv = bytesZuHex(p.roh);
+    schreib(SPEICHER.privat, priv);
+  }
+  const eigenerHex = bytesZuHex(await oeffentlichZu(hexZuBytes(priv)));
+  $('#feld-eigen').value = eigenerHex;
+  knopfAnpassen();
+
+  kopplungStand('Melde diesen Schl&uuml;ssel beim Assistenten an &hellip;');
+  try {
+    const d = await meldeBeimAssistenten(k, eigenerHex);
+    kopplungStand(d.war_schon_da
+      ? 'Der Assistent kannte dieses Ger&auml;t schon. Alles steht.'
+      : 'Angemeldet als „' + esc(d.geraet || geraetename()) + '". Der Agent '
+        + 'wurde neu gestartet und kennt dieses Ger&auml;t jetzt.', 'gut');
+  } catch (e) {
+    // Eingerichtet ist das Portal trotzdem -- nur die Rueckmeldung fehlt.
+    // Das muss dastehen, sonst faengt der Nutzer wieder von vorne an.
+    kopplungStand(e.message + '<br><br>Adresse und Agent-Schl&uuml;ssel sind '
+      + 'trotzdem eingetragen. Es fehlt nur die R&uuml;ckmeldung: Den Wert '
+      + 'unter „&Ouml;ffentlicher Schl&uuml;ssel dieses Ger&auml;ts" von Hand '
+      + 'in den Assistenten &uuml;bertragen.', 'fehler');
+    return false;
+  }
+  return true;
+}
+
+/* ---- Weg 1: Text einfuegen */
+$('#btn-kopplung-text').onclick = () => {
+  kameraAus();
+  $('#feld-kopplungstext').hidden = false;
+  $('#leiste-kopplungstext').hidden = false;
+  $('#feld-kopplungstext').focus();
+  kopplungStand('');
+};
+$('#btn-kopplung-abbruch').onclick = () => {
+  $('#feld-kopplungstext').hidden = true;
+  $('#leiste-kopplungstext').hidden = true;
+  $('#feld-kopplungstext').value = '';
+  kopplungStand('');
+};
+$('#btn-kopplung-los').onclick = async () => {
+  const k = $('#btn-kopplung-los');
+  k.disabled = true;
+  try {
+    if (await kopplungAnwenden($('#feld-kopplungstext').value)) {
+      $('#feld-kopplungstext').value = '';
+      $('#feld-kopplungstext').hidden = true;
+      $('#leiste-kopplungstext').hidden = true;
+      await verbinden();
+    }
+  } finally { k.disabled = false; }
+};
+
+/* ---- Weg 2: Kamera
+
+   BarcodeDetector gibt es nicht ueberall -- Firefox und Safari kennen es
+   nicht. Deshalb wird der Knopf erst eingeblendet, wenn feststeht, dass er
+   auch etwas tut: Ein Knopf, der beim Druecken "geht hier nicht" sagt, ist
+   schlimmer als keiner. Der Textweg daneben funktioniert immer. */
+let kameraStrom = null;
+
+function kameraAus() {
+  if (kameraStrom) {
+    kameraStrom.getTracks().forEach(t => t.stop());
+    kameraStrom = null;
+  }
+  const v = $('#kopplung-video');
+  if (v) { v.hidden = true; v.srcObject = null; }
+}
+
+(async () => {
+  if (!('BarcodeDetector' in window) || !navigator.mediaDevices) return;
+  let formate = [];
+  try { formate = await window.BarcodeDetector.getSupportedFormats(); }
+  catch (e) { return; }
+  if (!formate.includes('qr_code')) return;
+  $('#btn-kopplung-kamera').hidden = false;
+})();
+
+$('#btn-kopplung-kamera').onclick = async () => {
+  if (kameraStrom) { kameraAus(); kopplungStand(''); return; }
+  const v = $('#kopplung-video');
+  try {
+    kameraStrom = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' } });
+  } catch (e) {
+    kopplungStand('Die Kamera l&auml;sst sich nicht &ouml;ffnen (' + esc(e.name)
+      + '). Der Textweg daneben funktioniert ohne sie.', 'fehler');
+    return;
+  }
+  v.hidden = false;
+  v.srcObject = kameraStrom;
+  await v.play();
+  kopplungStand('Den Code des Assistenten ins Bild halten &hellip;');
+
+  const leser = new window.BarcodeDetector({ formats: ['qr_code'] });
+  const suche = async () => {
+    if (!kameraStrom) return;
+    let treffer = [];
+    try { treffer = await leser.detect(v); } catch (e) { treffer = []; }
+    if (treffer.length) {
+      const roh = treffer[0].rawValue;
+      kameraAus();
+      if (await kopplungAnwenden(roh)) await verbinden();
+      return;
+    }
+    setTimeout(suche, 250);
+  };
+  suche();
+};
+
+// Kamera nicht weiterlaufen lassen, wenn die Karte zugeht -- ein
+// vergessenes Kamerabild ist eine unangenehme Ueberraschung.
+window.addEventListener('pagehide', kameraAus);
+
+$('#btn-verbindungsdatei').onclick = () => $('#feld-verbindungsdatei').click();
+$('#feld-verbindungsdatei').onchange = async ev => {
+  const datei = ev.target.files[0];
+  ev.target.value = '';
+  if (!datei) return;
+  let d;
+  try {
+    d = JSON.parse(await datei.text());
+  } catch (e) {
+    melde('Diese Datei ist kein gueltiges JSON.', 'fehler');
+    return;
+  }
+  // Form pruefen, nicht nur hoffen, dass sie stimmt -- dieselbe Haltung
+  // wie ueberall sonst hier: eine Datei mit falschem Inhalt soll eine
+  // klare Absage bekommen, kein stilles Falsch-Ausfuellen.
+  if (d.typ !== 'ahpt-verbindung' || typeof d.basis !== 'string'
+      || !/^[0-9a-f]{64}$/i.test(d.agent_oeffentlich || '')) {
+    melde('Das ist keine Verbindungsdatei des Assistenten (falscher '
+          + 'Aufbau).', 'fehler');
+    return;
+  }
+  $('#feld-basis').value = d.basis;
+  $('#feld-agent').value = d.agent_oeffentlich.toLowerCase();
+  melde('Adresse und Agent-Schl&uuml;ssel eingetragen. Fehlt noch: '
+        + 'Schl&uuml;ssel erzeugen (falls neu) und speichern.', 'gut');
+};
+
+$('#btn-vergessen').onclick = () => {
+  if (!confirm('Schluessel und Einstellungen dieses Geraets loeschen?\n\n'
+               + 'Auf dem Server aendert das nichts.')) return;
+  Object.values(SPEICHER).forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+  location.reload();
+};
+
+$('#btn-speichern').onclick = async () => {
+  const agentHex = $('#feld-agent').value.trim().toLowerCase().replace(/[^0-9a-f]/g, '');
+  if (agentHex.length !== 64) {
+    melde('Der Schluessel des Agenten muss 64 Hexzeichen haben '
+          + '(hat ' + agentHex.length + ').', 'fehler');
+    return;
+  }
+  if (!lies(SPEICHER.privat)) {
+    melde('Dieses Geraet hat noch keinen eigenen Schluessel. '
+          + 'Erst „Neu erzeugen“ druecken.', 'fehler');
+    return;
+  }
+  schreib(SPEICHER.agent, agentHex);
+  const basis = $('#feld-basis').value.trim() || '..';
+  schreib(SPEICHER.basis, basis);
+  meldungenLeeren();
+
+  // Viele kostenlose Webspaces liefern kein https fuer den eigenen Bereich
+  // aus -- Port 443 zeigt dort oft eine ganz andere Seite. Chrome und
+  // manche Tastaturen wandeln http:// aber gern eigenmaechtig in https://
+  // um ("Immer sichere Verbindungen"), ohne dass der Nutzer es bemerkt.
+  // Am 03.09.2026 genau so erlebt: die Adresse stand am Ende auf https,
+  // obwohl http eingetippt worden war, und die Fehlermeldung ("Vermittler
+  // nicht erreichbar") verriet nicht, WARUM.
+  //
+  // Kein hartes Verbot -- manche Webspaces haben echtes https, das soll
+  // weiter funktionieren. Nur ein Hinweis, an der Stelle, wo er etwas
+  // nuetzt.
+  if (/^https:\/\//i.test(basis)) {
+    melde('Die Adresse beginnt mit <code>https://</code>. Funktioniert '
+          + 'gleich nichts: viele kostenlose Webspaces liefern darueber '
+          + 'gar nicht dein Verzeichnis aus, sondern eine ganz andere '
+          + 'Seite. Manche Tastaturen und Chrome selbst wandeln '
+          + '<code>http://</code> eigenmaechtig um. Falls die Verbindung '
+          + 'gleich fehlschlaegt: erneut versuchen, diesmal mit '
+          + '<code>http://</code>.', 'warn', true);
+  }
+
+  await verbinden();
+};
+
+/* ------------------------------------------------------------ Verbinden */
+
+async function verbinden() {
+  const verf = await kryptoVerfuegbar();
+  if (!verf.ok) {
+    zustand('Verschluesselung nicht moeglich', 'schlecht');
+    melde('<b>Dieses Portal kann hier nicht verschluesseln.</b> ' + esc(verf.grund)
+          + '<br><br>Der haeufigste Grund: Die Seite wurde ueber <code>http://</code> '
+          + 'geoeffnet. Browser geben WebCrypto nur ueber <code>https://</code> '
+          + 'oder auf <code>localhost</code> frei. Ohne Verschluesselung '
+          + 'arbeitet dieses Portal <b>nicht</b> &ndash; unverschluesselt laege '
+          + 'jede Datei fuer jeden lesbar auf dem Webspace.', 'fehler', true);
+    zeigeEinrichtung(true);
+    return;
+  }
+
+  const priv = lies(SPEICHER.privat), ag = lies(SPEICHER.agent);
+  $('#feld-basis').value = lies(SPEICHER.basis) || '..';
+  if (priv) $('#feld-eigen').value = bytesZuHex(await oeffentlichZu(hexZuBytes(priv)));
+  knopfAnpassen();
+  if (ag) $('#feld-agent').value = ag;
+
+  if (!priv || !ag) {
+    zustand('noch nicht eingerichtet');
+    zeigeEinrichtung(true);
+    return;
+  }
+
+  portal = new AhptPortal(lies(SPEICHER.basis) || '..',
+                          hexZuBytes(priv), hexZuBytes(ag));
+  zeigeEinrichtung(false);
+  await lade('');
+}
+
+/* -------------------------------------------------------------- Dateien */
+
+function groesse(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KiB';
+  return (b / 1048576).toFixed(1) + ' MiB';
+}
+
+function brotkrumen() {
+  const el = $('#brotkrumen');
+  el.innerHTML = '';
+  const teile = pfad ? pfad.split('/') : [];
+  const mach = (text, ziel) => {
+    const a = document.createElement('a');
+    a.textContent = text;
+    a.onclick = () => lade(ziel);
+    el.appendChild(a);
+  };
+  mach('Start', '');
+  let bis = '';
+  for (const t of teile) {
+    bis = bis ? bis + '/' + t : t;
+    const s = document.createElement('span');
+    s.className = 'trenner'; s.textContent = '/';
+    el.appendChild(s);
+    mach(t, bis);
+  }
+}
+
+function dateiTag(name) {
+  // Terminal-Kennzeichen statt Emoji: [DIR], [PDF], [JPG] ... zeigt auf
+  // einen Blick mehr als ein Symbol es koennte. Reine Textverarbeitung --
+  // das Ergebnis geht ausschliesslich ueber textContent hinaus, nie ueber
+  // innerHTML (siehe die Begruendung an der Aufrufstelle).
+  const punkt = name.lastIndexOf('.');
+  if (punkt <= 0 || punkt === name.length - 1) return 'FILE';
+  const ext = name.slice(punkt + 1).toUpperCase();
+  return ext.length <= 4 ? ext : ext.slice(0, 4);
+}
+
+function zeichne() {
+  const filter = $('#feld-filter').value.trim().toLowerCase();
+  const sicht = eintraege.filter(e => !filter || e.name.toLowerCase().includes(filter));
+  const ziel = $('#liste');
+
+  if (!sicht.length) {
+    ziel.innerHTML = '<div class="leer">'
+      + (eintraege.length ? 'Nichts passt zum Filter.'
+                          : 'Dieser Ordner ist leer. Dateien hierher ziehen zum Hochladen.')
+      + '</div>';
+    return;
+  }
+
+  const t = document.createElement('table');
+  t.innerHTML = '<thead><tr><th>Name</th><th class="rechts">Groesse</th>'
+              + '<th class="rechts"></th></tr></thead>';
+  const koerper = document.createElement('tbody');
+  // Ordner zuerst, dann alphabetisch -- so, wie man es erwartet.
+  sicht.sort((a, b) => (a.art === b.art)
+    ? a.name.localeCompare(b.name, 'de')
+    : (a.art === 'ordner' ? -1 : 1));
+
+  for (const e of sicht) {
+    const tr = document.createElement('tr');
+    tr.className = 'zeile';
+    const ordner = e.art === 'ordner';
+    const unter = pfad ? pfad + '/' + e.name : e.name;
+
+    const td1 = document.createElement('td');
+    td1.className = 'name';
+    // ueber createElement/textContent, NIE ueber innerHTML: dateiTag()
+    // leitet sich aus e.name ab, und e.name kann praktisch jedes Zeichen
+    // enthalten (siehe esc() weiter oben -- derselbe Grund gilt hier).
+    const sym = document.createElement('span');
+    sym.className = 'sym';
+    sym.textContent = ordner ? '[DIR]' : '[' + dateiTag(e.name) + ']';
+    td1.appendChild(sym);
+    td1.appendChild(document.createTextNode(' ' + e.name));
+    td1.onclick = () => ordner ? lade(unter) : vorschau(unter, e.name);
+    tr.appendChild(td1);
+
+    const td2 = document.createElement('td');
+    td2.className = 'rechts';
+    td2.textContent = ordner ? '' : groesse(e.bytes || 0);
+    tr.appendChild(td2);
+
+    const td3 = document.createElement('td');
+    td3.className = 'rechts';
+    if (!ordner) {
+      const d = document.createElement('div');
+      d.className = 'aktionen';
+      const b = document.createElement('button');
+      b.textContent = 'Herunterladen';
+      b.onclick = ev => { ev.stopPropagation(); herunterladen(unter, e.name); };
+      d.appendChild(b);
+      td3.appendChild(d);
+    }
+    tr.appendChild(td3);
+    koerper.appendChild(tr);
+  }
+  t.appendChild(koerper);
+  ziel.innerHTML = '';
+  ziel.appendChild(t);
+}
+
+async function lade(neuerPfad) {
+  pfad = neuerPfad || '';
+  brotkrumen();
+  $('#liste').innerHTML = '<div class="leer">wird geholt …</div>';
+  zustand('fragt an …');
+  try {
+    const d = await portal.liste(pfad);
+    eintraege = d.eintraege || [];
+    zeichne();
+    zustand('verbunden, verschluesselt', 'gut');
+
+    // Warum die Liste kuerzer sein kann, als der Ordner Eintraege hat.
+    // Eine unvollstaendige Liste, die wie eine vollstaendige aussieht, ist
+    // schlimmer als eine Fehlermeldung.
+    //
+    // Der Agent kennt DREI Gruende (handler/datei.py) -- hier standen lange
+    // nur zwei davon, `versteckt` fehlte. Wer alle Gruende nennen will, muss
+    // sie auch alle nennen; eine Liste mit zwei von drei Erklaerungen ist
+    // wieder genau die unvollstaendige Liste, um die es hier geht.
+    if (d.gekappt) {
+      melde('Nur die ersten <b>' + d.gekappt + '</b> Eintraege werden gezeigt. '
+            + 'Der Ordner enthaelt mehr.', 'warn');
+    }
+    if (d.versteckt) {
+      melde(d.versteckt + ' ' + (d.versteckt === 1 ? 'Eintrag' : 'Eintraege')
+            + ' mit fuehrendem Punkt nicht gezeigt. Versteckte Namen laesst '
+            + 'der Agent grundsaetzlich aus &ndash; so landen <code>.git</code>, '
+            + '<code>.env</code> oder <code>.ssh</code> nie in einer Freigabe. '
+            + 'In der Wurzel ist meist AHPTs eigener Sammelordner '
+            + '<code>.ahpt-teil</code> dabei.', 'warn');
+    }
+    if (d.endung_gesperrt) {
+      melde(d.endung_gesperrt + ' Datei(en) nicht gezeigt &ndash; ihre Endung '
+            + 'steht nicht in der <code>endungen</code>-Liste des Agenten.', 'warn');
+    }
+  } catch (e) {
+    eintraege = [];
+    $('#liste').innerHTML = '<div class="leer">nichts geladen</div>';
+    zustand('Fehler', 'schlecht');
+    melde('<b>Konnte nicht laden.</b> ' + esc(e.message), 'fehler', true);
+  }
+}
+
+function fortschritt(text, anteil) {
+  $('#fortschritt').hidden = text === null;
+  if (text === null) return;
+  $('#fortschritt-text').textContent = text;
+  $('#fortschritt-balken').style.width = Math.round((anteil || 0) * 100) + '%';
+}
+
+async function herunterladen(voll, name) {
+  fortschritt('holt ' + name + ' …', 0.15);
+  try {
+    const d = await portal.hole(voll, s => {
+      if (s.art === 'warten') fortschritt('wartet auf den Agenten …', 0.4);
+    });
+    const url = URL.createObjectURL(new Blob([d.bytes]));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    melde('<b>' + esc(name) + '</b> geholt (' + groesse(d.bytes.length) + ').');
+  } catch (e) {
+    melde('<b>' + esc(name) + '</b> nicht geholt: ' + esc(e.message), 'fehler', true);
+  } finally { fortschritt(null); }
+}
+
+const TEXT_ENDUNGEN = ['txt', 'md', 'csv', 'json', 'log', 'ini', 'toml', 'yml'];
+const BILD_ENDUNGEN = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
+
+async function vorschau(voll, name) {
+  const e = (name.split('.').pop() || '').toLowerCase();
+  if (!TEXT_ENDUNGEN.includes(e) && !BILD_ENDUNGEN.includes(e) && e !== 'pdf') {
+    return herunterladen(voll, name);
+  }
+  fortschritt('holt ' + name + ' …', 0.15);
+  try {
+    const d = await portal.hole(voll, s => {
+      if (s.art === 'warten') fortschritt('wartet auf den Agenten …', 0.4);
+    });
+    const ziel = $('#vorschau');
+    ziel.innerHTML = '';
+    $('#vorschau-titel').textContent = name;
+    if (BILD_ENDUNGEN.includes(e)) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(new Blob([d.bytes]));
+      ziel.appendChild(img);
+    } else if (e === 'pdf') {
+      const f = document.createElement('iframe');
+      f.src = URL.createObjectURL(new Blob([d.bytes], { type: 'application/pdf' }));
+      f.style.width = '100%'; f.style.height = '70vh';
+      ziel.appendChild(f);
+    } else {
+      // textContent, nie innerHTML: Der Inhalt kommt vom Server, und selbst
+      // im eigenen Portal wird fremder Text nicht als Markup eingehaengt.
+      const pre = document.createElement('pre');
+      pre.textContent = new TextDecoder().decode(d.bytes);
+      ziel.appendChild(pre);
+    }
+    $('#vorschau-dialog').showModal();
+  } catch (err) {
+    melde('<b>' + esc(name) + '</b> nicht geholt: ' + esc(err.message), 'fehler', true);
+  } finally { fortschritt(null); }
+}
+
+/* ----------------------------------------------------------- Hochladen */
+
+async function hochladen(dateien) {
+  const liste = Array.from(dateien);
+  let i = 0;
+  for (const f of liste) {
+    i++;
+    const vor = liste.length > 1 ? '(' + i + '/' + liste.length + ') ' : '';
+    fortschritt(vor + 'verschluesselt ' + f.name + ' …', 0.1);
+    try {
+      // Die Datei selbst hinaufreichen -- nicht ihre Bytes.
+      //
+      // Ein Uint8Array haelt die ganze Datei im Speicher; bei einer
+      // Sprachnotiz egal, bei einem 200-MiB-Video bricht das Handy zusammen.
+      // Das Portal liest sie unten blockweise ueber blob.slice().
+      const ziel = pfad ? pfad + '/' + f.name : f.name;
+      const d = await portal.lege(ziel, f, s => {
+        if (s.art === 'summe') {
+          fortschritt(vor + 'pruefsumme … ' + f.name, 0.05);
+        } else if (s.art === 'hoch') {
+          fortschritt(vor + 'laedt ' + f.name + ' … Stueck ' + s.getan
+                      + '/' + s.gesamt, 0.1 + 0.8 * (s.getan / s.gesamt));
+        } else {
+          fortschritt(vor + 'wartet auf den Agenten …', 0.95);
+        }
+      });
+      // Der Server nennt den Namen, unter dem die Datei WIRKLICH liegt.
+      // Ueberschrieben wird nie -- wer das verschweigt, laesst den Nutzer
+      // glauben, er habe eine aeltere Fassung ersetzt.
+      if (d.abgelegt && d.abgelegt !== ziel) {
+        melde('<b>' + esc(f.name) + '</b> abgelegt als <b>'
+              + esc(d.abgelegt.split('/').pop()) + '</b> &ndash; unter dem '
+              + 'urspruenglichen Namen lag schon etwas. Ueberschrieben wird nie.',
+              'warn', true);
+      } else {
+        melde('<b>' + esc(f.name) + '</b> abgelegt (' + groesse(d.bytes || 0) + ').');
+      }
+    } catch (e) {
+      melde('<b>' + esc(f.name) + '</b> nicht abgelegt: ' + esc(e.message), 'fehler', true);
+    }
+  }
+  fortschritt(null);
+  await lade(pfad);
+}
+
+$('#btn-hoch').onclick = () => $('#feld-datei').click();
+$('#feld-datei').onchange = ev => {
+  if (ev.target.files.length) hochladen(ev.target.files);
+  ev.target.value = '';
+};
+
+$('#btn-ordner').onclick = async () => {
+  const name = prompt('Name des neuen Ordners:');
+  if (!name) return;
+  try {
+    await portal.neuerOrdner(pfad ? pfad + '/' + name : name);
+    melde('Ordner <b>' + esc(name) + '</b> angelegt.');
+    await lade(pfad);
+  } catch (e) {
+    melde('Ordner nicht angelegt: ' + esc(e.message), 'fehler', true);
+  }
+};
+
+$('#btn-aktualisieren').onclick = () => lade(pfad);
+$('#feld-filter').oninput = zeichne;
+
+/* Ziehen und Ablegen. Der Zaehler verhindert, dass die Zone beim Wandern
+   ueber Kindelemente flackert. */
+let ziehTiefe = 0;
+window.addEventListener('dragenter', e => {
+  if (!portal) return;
+  e.preventDefault(); ziehTiefe++; $('#ablegezone').classList.add('an');
+});
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('dragleave', e => {
+  if (--ziehTiefe <= 0) { ziehTiefe = 0; $('#ablegezone').classList.remove('an'); }
+});
+window.addEventListener('drop', e => {
+  e.preventDefault(); ziehTiefe = 0;
+  $('#ablegezone').classList.remove('an');
+  if (portal && e.dataTransfer.files.length) hochladen(e.dataTransfer.files);
+});
+
+verbinden();
+</script>
+</body>
+</html>

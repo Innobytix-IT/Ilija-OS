@@ -534,6 +534,24 @@ input[type=number]{max-width:90px}
           <strong>Wie es funktioniert:</strong> Der AHPT-Agent läuft auf diesem Server und pollt den bplaced-Relay. Die Android-App verbindet sich über denselben Relay — Ende-zu-Ende-verschlüsselt via Noise&nbsp;IK. Endanwender können so Dokumente direkt in den DMS-Importordner hochladen, von überall, ohne VPN.
         </div>
 
+        <!-- Einrichtungs-Assistent (startet AHPT einrichten.py im Hintergrund) -->
+        <div class="card" id="ahpt-wizard-card" style="margin-bottom:18px;padding:16px">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <div style="flex:1;min-width:220px">
+              <div style="font-weight:600;font-size:.95rem;margin-bottom:4px">🔧 AHPT einrichten oder weiteres Gerät koppeln</div>
+              <div style="font-size:.78rem;color:var(--tx2);line-height:1.4" id="ahpt-wiz-sub">
+                Startet den Einrichtungs-Assistenten. Dort läufst du durch die 9 Schritte (Webspace, Agent, Portal, Kopplung) und bekommst am Ende den QR-Code für deine App. Den Assistenten danach wieder stoppen.
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button id="ahpt-wiz-start"  class="btn btn-prim btn-sm" onclick="ahptWizStart()">▶ Assistent starten</button>
+              <button id="ahpt-wiz-open"   class="btn btn-teal btn-sm" onclick="ahptWizOpen()" style="display:none">⤴ Assistent öffnen</button>
+              <button id="ahpt-wiz-stop"   class="btn btn-ghost btn-sm" onclick="ahptWizStop()" style="display:none">⏹ Stoppen</button>
+            </div>
+          </div>
+          <div id="ahpt-wiz-msg" style="font-size:.76rem;color:var(--tx3);margin-top:10px"></div>
+        </div>
+
         <!-- QR-Codes -->
         <div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap">
           <div class="card" style="flex:1;min-width:190px;padding:18px;text-align:center">
@@ -2163,6 +2181,78 @@ checkNovnc();
 loadUpdateSettings();
 loadPlatteStatus();
 loadUpdateHistory();
+ahptWizStatusRefresh();
+setInterval(ahptWizStatusRefresh, 10000);
+
+// ── AHPT-Einrichtungs-Assistent (einrichten.py als Subprozess) ──
+async function ahptWizStatusRefresh() {
+  try {
+    const r = await fetch('/api/ahpt/assistent-status');
+    const d = await r.json();
+    const bStart = document.getElementById('ahpt-wiz-start');
+    const bOpen  = document.getElementById('ahpt-wiz-open');
+    const bStop  = document.getElementById('ahpt-wiz-stop');
+    const msg    = document.getElementById('ahpt-wiz-msg');
+    const sub    = document.getElementById('ahpt-wiz-sub');
+    if (!bStart) return;
+    if (d.laeuft) {
+      bStart.style.display = 'none';
+      bOpen.style.display  = '';
+      bStop.style.display  = '';
+      bOpen.dataset.url    = d.url || '';
+      msg.innerHTML = `✓ Läuft (PID ${d.pid}). URL: <code style="font-size:.72rem">${d.url||''}</code>`;
+    } else {
+      bStart.style.display = '';
+      bOpen.style.display  = 'none';
+      bStop.style.display  = 'none';
+      if (d.installiert === false) {
+        bStart.disabled = true;
+        msg.textContent = '⚠ AHPT-Dateien fehlen – bitte Update einspielen oder den Installer erneut laufen lassen.';
+      } else {
+        bStart.disabled = false;
+        msg.textContent = '';
+      }
+    }
+  } catch (e) {
+    // Netzfehler ignorieren
+  }
+}
+
+async function ahptWizStart() {
+  const b = document.getElementById('ahpt-wiz-start');
+  const msg = document.getElementById('ahpt-wiz-msg');
+  b.disabled = true;
+  const alt = b.textContent;
+  b.textContent = '⏳ starte …';
+  try {
+    const r = await fetch('/api/ahpt/assistent-starten', {method: 'POST'});
+    const d = await r.json();
+    if (!d.ok) {
+      msg.textContent = '✗ ' + (d.error || 'Start fehlgeschlagen');
+      b.disabled = false; b.textContent = alt;
+      return;
+    }
+    await ahptWizStatusRefresh();
+    // Direkt öffnen fuer Komfort
+    if (d.url) window.open(d.url, '_blank', 'noopener');
+  } catch (e) {
+    msg.textContent = '✗ Verbindungsfehler: ' + e.message;
+    b.disabled = false; b.textContent = alt;
+  }
+}
+
+function ahptWizOpen() {
+  const b = document.getElementById('ahpt-wiz-open');
+  if (b.dataset.url) window.open(b.dataset.url, '_blank', 'noopener');
+}
+
+async function ahptWizStop() {
+  if (!confirm('AHPT-Einrichtungs-Assistenten wirklich stoppen? Der eingerichtete Agent läuft davon unabhängig weiter.')) return;
+  try {
+    await fetch('/api/ahpt/assistent-stoppen', {method: 'POST'});
+    ahptWizStatusRefresh();
+  } catch (_) {}
+}
 
 // ── Update-Verlauf ───────────────────────────────────────────
 async function loadUpdateHistory() {

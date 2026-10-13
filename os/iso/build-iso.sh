@@ -593,6 +593,28 @@ AIPROXY
         echo "ai-api-proxy.service installiert (nicht enabled)" >> "$LOG"
     fi
 
+    # AHPT-Agent nach /opt/ilija-os/ahpt-agent/ deployen (gleiche Logik wie
+    # install-ilija-os.sh - User richtet dann ueber die Ilija-UI ein).
+    AHPT_SRC="$ILIJA_DIR/vendor/ahpt"
+    AHPT_DST="/opt/ilija-os/ahpt-agent"
+    if [ -d "$AHPT_SRC" ]; then
+        mkdir -p "$AHPT_DST/handler" "$AHPT_DST/portal"
+        cp "$AHPT_SRC"/*.py "$AHPT_DST/" 2>>"$LOG" || true
+        cp "$AHPT_SRC"/relay.php "$AHPT_SRC"/htaccess-beispiel \
+           "$AHPT_SRC"/htaccess-ablage-beispiel "$AHPT_SRC"/config-beispiel.toml \
+           "$AHPT_SRC"/README.md "$AHPT_DST/" 2>>"$LOG" || true
+        cp "$AHPT_SRC"/handler/*.py "$AHPT_DST/handler/" 2>>"$LOG" || true
+        cp "$AHPT_SRC"/portal/*.html "$AHPT_SRC"/portal/*.js \
+           "$AHPT_SRC"/portal/*.py "$AHPT_DST/portal/" 2>>"$LOG" || true
+        chown -R "$NEW_USER:$NEW_USER" "$AHPT_DST"
+        chmod +x "$AHPT_DST"/*.py 2>>"$LOG" || true
+        # cryptography-Lib fuer noise_ik ins Ilija-venv
+        if [ -x "$ILIJA_DIR/venv/bin/pip" ]; then
+            sudo -u "$NEW_USER" "$ILIJA_DIR/venv/bin/pip" install --quiet cryptography >> "$LOG" 2>&1 || true
+        fi
+        echo "AHPT-Agent nach $AHPT_DST deployed" >> "$LOG"
+    fi
+
     # Sudoers erweitern um ai-api-proxy Service-Steuerung (zusaetzlich zu Base-Regeln)
     cat >> /etc/sudoers.d/ilija-update-rules << AIPSUDO
 $NEW_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl enable ai-api-proxy, /usr/bin/systemctl enable ai-api-proxy.service, /usr/bin/systemctl disable ai-api-proxy, /usr/bin/systemctl disable ai-api-proxy.service, /usr/bin/systemctl restart ai-api-proxy, /usr/bin/systemctl restart ai-api-proxy.service, /usr/bin/systemctl stop ai-api-proxy, /usr/bin/systemctl stop ai-api-proxy.service, /usr/bin/systemctl start ai-api-proxy, /usr/bin/systemctl start ai-api-proxy.service

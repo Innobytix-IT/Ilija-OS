@@ -258,4 +258,123 @@ def register_ahpt_routes(app):
     def relay_builder():
         return render_template("ahpt_relay_builder.html")
 
+    # ── Einrichtungs-Assistent (AHPT einrichten.py als Subprozess) ──
+    # Startet den mitgelieferten AHPT-Assistenten im Hintergrund.
+    # User oeffnet dessen URL im eigenen Browser, laeuft die 9 Schritte
+    # durch (Webspace, Agent, Portal, Kopplung). Danach stoppt der User
+    # den Assistenten wieder – der konfigurierte Agent laeuft als
+    # systemd-user-service weiter und wird von Ilijas ahpt-settings-API
+    # automatisch erkannt.
+    _AHPT_ASSISTENT_DIR = "/opt/ilija-os/ahpt-agent"
+    _AHPT_ASSISTENT_PY  = os.path.join(_AHPT_ASSISTENT_DIR, "einrichten.py")
+    _AHPT_ASSISTENT_STATE = os.path.join(_AHPT_DIR, "assistent_state.json")
+    _AHPT_ASSISTENT_PORT  = 8771
+
+    def _assistent_state_load():
+        try:
+            with open(_AHPT_ASSISTENT_STATE, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def _assistent_state_save(d):
+        os.makedirs(_AHPT_DIR, exist_ok=True)
+        with open(_AHPT_ASSISTENT_STATE, "w", encoding="utf-8") as f:
+            json.dump(d, f, ensure_ascii=False, indent=2)
+
+    def _assistent_lebt(pid):
+        try:
+            os.kill(int(pid), 0)
+            return True
+        except (OSError, ValueError, TypeError):
+            return False
+
+    def _lan_ip_oder_localhost():
+        """Beste erreichbare Adresse fuer den Nutzer: LAN-IP wenn moeglich,
+        sonst localhost."""
+        try:
+            import socket as _s
+            with _s.socket(_s.AF_INET, _s.SOCK_DGRAM) as sk:
+                sk.connect(("8.8.8.8", 53))
+                return sk.getsockname()[0]
+        except Exception:
+            return "127.0.0.1"
+
+    @bp.route("/api/ahpt/assistent-status", methods=["GET"])
+    def assistent_status():
+        st = _assistent_state_load()
+        pid = st.get("pid")
+        if pid and _assistent_lebt(pid):
+            return jsonify({"laeuft": True,
+                            "pid":   pid,
+                            "url":   st.get("url", ""),
+                            "token": st.get("token", "")})
+        return jsonify({"laeuft": False,
+                        "installiert": os.path.exists(_AHPT_ASSISTENT_PY)})
+
+    @bp.route("/api/ahpt/assistent-starten", methods=["POST"])
+    def assistent_starten():
+        if not os.path.exists(_AHPT_ASSISTENT_PY):
+            return jsonify({"ok": False,
+                            "error": f"AHPT-Dateien fehlen unter {_AHPT_ASSISTENT_DIR}. "
+                                     "Update einspielen oder Installer erneut laufen lassen."}), 404
+        # Schon laufend?
+        st = _assistent_state_load()
+        if st.get("pid") and _assistent_lebt(st["pid"]):
+            return jsonify({"ok": True, "laeuft": True,
+                            "pid": st["pid"], "url": st.get("url", ""),
+                            "token": st.get("token", "")})
+        # Neu starten – im Hintergrund, Log in ~/.ahpt/einrichten.log
+        os.makedirs(_AHPT_DIR, exist_ok=True)
+        log_pfad = os.path.join(_AHPT_DIR, "einrichten.log")
+        try:
+            with open(log_pfad, "a") as logf:
+                logf.write(f"\n=== Assistent gestartet via Ilija-UI, "
+                           f"{__import__('datetime').datetime.now().isoformat()} ===\n")
+            proc = subprocess.Popen(
+                ["python3", _AHPT_ASSISTENT_PY, "--port", str(_AHPT_ASSISTENT_PORT)],
+                cwd=_AHPT_ASSISTENT_DIR,
+                stdout=open(log_pfad, "a"), stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                start_new_session=True,  # ueberlebt SSH-/Flask-Abbrueche
+            )
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+        # Token aus Log extrahieren (steht spaetestens nach ~2 Sek)
+        import time as _t, re as _re
+        token = ""
+        for _ in range(20):
+            _t.sleep(0.2)
+            try:
+                with open(log_pfad) as logf:
+                    inhalt = logf.read()
+                m = _re.search(r"\?t=([a-f0-9]+)", inhalt)
+                if m:
+                    token = m.group(1)
+                    break
+            except Exception:
+                pass
+        if not token:
+            return jsonify({"ok": False,
+                            "error": "Assistent startet, aber Token nicht lesbar. "
+                                     f"Pruefe {log_pfad}"}), 500
+        ip = _lan_ip_oder_localhost()
+        url = f"http://{ip}:{_AHPT_ASSISTENT_PORT}/?t={token}"
+        _assistent_state_save({"pid": proc.pid, "token": token, "url": url,
+                               "gestartet": __import__("datetime").datetime.now().isoformat()})
+        return jsonify({"ok": True, "laeuft": True, "pid": proc.pid,
+                        "url": url, "token": token})
+
+    @bp.route("/api/ahpt/assistent-stoppen", methods=["POST"])
+    def assistent_stoppen():
+        st = _assistent_state_load()
+        pid = st.get("pid")
+        if pid and _assistent_lebt(pid):
+            try:
+                os.kill(int(pid), 15)  # SIGTERM
+            except Exception:
+                pass
+        _assistent_state_save({})
+        return jsonify({"ok": True})
+
     app.register_blueprint(bp)
