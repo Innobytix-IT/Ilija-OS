@@ -758,6 +758,55 @@ say "7d/8 noVNC-Fernzugriff einrichten (Browser-Remote-Desktop auf Port 6080)"
 
 run_quiet "noVNC + x11vnc + xvfb installieren" apt-get install -y -qq novnc x11vnc xvfb websockify
 
+# Dummy-Xorg-Treiber – rettet den Boot auf headless Thin-Clients.
+# Hintergrund: Auf alter AMD-Hardware (Mullins/Jaguar) haengt der
+# modesetting-Treiber beim Start, wenn kein echter Monitor dran ist.
+# SDDM bekommt dann nie das "bereit"-Signal von Xorg, Autologin springt
+# nicht, LXQt startet nie -> noVNC zeigt schwarz. Mit dem Dummy-Treiber
+# als Fallback-Device bringt Xorg zuverlaessig einen virtuellen
+# Bildschirm hoch, Session startet, noVNC funktioniert.
+# Siehe Melanie-Futro vom 08.10.2026 (AMD Mullins ohne Monitor).
+run_quiet "xserver-xorg-video-dummy installieren" apt-get install -y -qq xserver-xorg-video-dummy
+
+HEADLESS_CONF=/etc/X11/xorg.conf.d/10-headless-dummy.conf
+if [ ! -f "$HEADLESS_CONF" ]; then
+    mkdir -p "$(dirname "$HEADLESS_CONF")"
+    cat > "$HEADLESS_CONF" << 'XORGDUMMY'
+# Ilija OS – Headless-Fallback.
+# Virtueller Bildschirm, damit Xorg auch ohne angeschlossenen Monitor
+# zuverlaessig hochkommt (siehe install-ilija-os.sh Kommentar).
+# Falls du dauerhaft einen echten Monitor nutzt: diese Datei entfernen
+# und sudo systemctl restart sddm.
+Section "Monitor"
+    Identifier "Monitor0"
+    HorizSync 28.0-80.0
+    VertRefresh 48.0-75.0
+    Modeline "1280x1024_60.00"  109.00  1280 1368 1496 1712  1024 1027 1034 1063 -hsync +vsync
+EndSection
+
+Section "Device"
+    Identifier "Card0"
+    Driver "dummy"
+    VideoRam 256000
+EndSection
+
+Section "Screen"
+    Identifier "Screen0"
+    Device "Card0"
+    Monitor "Monitor0"
+    DefaultDepth 24
+    SubSection "Display"
+        Depth 24
+        Modes "1280x1024_60.00"
+    EndSubSection
+EndSection
+XORGDUMMY
+    chmod 644 "$HEADLESS_CONF"
+    ok "Headless-Xorg-Fallback eingerichtet ($HEADLESS_CONF)"
+else
+    ok "Headless-Xorg-Fallback bereits vorhanden"
+fi
+
 # Hybrid-Launcher aus Repo installieren (siehe system/x11vnc-smart.sh).
 # Script getrennt ins Repo gelegt, damit es bei Updates automatisch
 # mitgezogen wird (siehe deploy_runtime_scripts in ilija-update.sh).

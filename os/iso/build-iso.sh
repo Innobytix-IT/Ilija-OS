@@ -469,6 +469,48 @@ SUDOEOF
     # noVNC-Services (xvfb, x11vnc, novnc) als systemd-Units installieren
     DEBIAN_FRONTEND=noninteractive apt-get install -y novnc x11vnc xvfb websockify >> "$LOG" 2>&1 || true
 
+    # Dummy-Xorg-Treiber: rettet den Boot auf headless Thin-Clients
+    # (alte AMD-Hardware wie Mullins/Jaguar haengt beim Modesetting-
+    # Start wenn kein Monitor dran ist -> SDDM-Autologin springt nie ->
+    # noVNC bleibt schwarz). Siehe install-ilija-os.sh fuer Details.
+    DEBIAN_FRONTEND=noninteractive apt-get install -y xserver-xorg-video-dummy >> "$LOG" 2>&1 || true
+
+    HEADLESS_CONF=/etc/X11/xorg.conf.d/10-headless-dummy.conf
+    if [ ! -f "$HEADLESS_CONF" ]; then
+        mkdir -p "$(dirname "$HEADLESS_CONF")"
+        cat > "$HEADLESS_CONF" << 'XORGDUMMY'
+# Ilija OS – Headless-Fallback.
+# Virtueller Bildschirm, damit Xorg auch ohne angeschlossenen Monitor
+# zuverlaessig hochkommt. Bei dauerhaftem Monitor-Betrieb entfernen und
+# sudo systemctl restart sddm.
+Section "Monitor"
+    Identifier "Monitor0"
+    HorizSync 28.0-80.0
+    VertRefresh 48.0-75.0
+    Modeline "1280x1024_60.00"  109.00  1280 1368 1496 1712  1024 1027 1034 1063 -hsync +vsync
+EndSection
+
+Section "Device"
+    Identifier "Card0"
+    Driver "dummy"
+    VideoRam 256000
+EndSection
+
+Section "Screen"
+    Identifier "Screen0"
+    Device "Card0"
+    Monitor "Monitor0"
+    DefaultDepth 24
+    SubSection "Display"
+        Depth 24
+        Modes "1280x1024_60.00"
+    EndSubSection
+EndSection
+XORGDUMMY
+        chmod 644 "$HEADLESS_CONF"
+        echo "Headless-Xorg-Fallback eingerichtet ($HEADLESS_CONF)" >> "$LOG"
+    fi
+
     cat > /etc/systemd/system/xvfb.service << 'XVFB'
 [Unit]
 Description=X Virtual Frame Buffer (Xvfb)

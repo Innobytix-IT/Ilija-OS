@@ -148,6 +148,14 @@ Weg 1 (ISO) läuft auf jeder BIOS/UEFI-fähigen x86-64-Hardware. Weg 2 ist auf L
 
 **Hinweis zum RAM beim Install**: Während `pip install` wird kurzzeitig PyTorch gebaut, das peakt bei ~2 GB. VMs mit weniger als 3 GB können an dieser Stelle scheitern.
 
+**Headless-Betrieb (ohne angeschlossenen Monitor)**: Standard-Use-Case für Thin-Clients. Der Installer legt dafür einen Dummy-Xorg-Treiber als Fallback an (`/etc/X11/xorg.conf.d/10-headless-dummy.conf`). Damit kommt Xorg auch dann hoch, wenn kein echter Monitor erkannt wird — nötig weil manche Grafikchips (alte AMD-APUs wie Mullins/Jaguar) sich sonst beim Boot aufhängen. noVNC zeigt dann einen virtuellen 1280×1024-Desktop.
+
+Wer dauerhaft **einen echten Monitor** anschließt und direkt davor arbeitet, sollte die Datei entfernen, damit der echte Grafiktreiber die native Auflösung nutzen kann:
+```bash
+sudo rm /etc/X11/xorg.conf.d/10-headless-dummy.conf
+sudo systemctl restart sddm
+```
+
 ---
 
 ## Lizenz
