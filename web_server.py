@@ -1740,6 +1740,87 @@ def google_oauth_callback():
                           service=service)
 
 
+@app.route("/api/google-oauth-start-oob/<service>", methods=["POST"])
+def google_oauth_start_oob(service):
+    """
+    OOB-Variante (Out-Of-Band / "manuell"): wird genutzt wenn der User
+    Ilija NICHT direkt am Futro bedienen kann (also kein Browser am
+    Server selbst). Statt dass Google automatisch zu uns zurueckleitet,
+    bekommt der User die URL hier zum Oeffnen in beliebigem Browser,
+    laeuft durch den Google-Login, Google schickt den Browser auf
+    localhost:<port>/api/google-oauth-callback?code=... — das
+    scheitert in Users PC (keine App dort), aber die Adresszeile zeigt
+    den code. Der kopiert sie zurueck in Ilija, /api/google-oauth-paste
+    tauscht ihn gegen das Token.
+
+    Hintergrund: Google OAuth akzeptiert nur localhost oder oeffentliche
+    Domains als Redirect-URI, keine privaten IPs wie 192.168.x.x. Wer
+    Ilija nur ueber die LAN-IP erreicht, kommt sonst nicht durch den
+    Flow (siehe Melanie-Futro vom 08.10.2026).
+    """
+    from skills.google_oauth_helper import KNOWN_SERVICES, start_oauth
+    if service not in KNOWN_SERVICES:
+        return jsonify({"ok": False, "error": f"Unbekannter Service: {service}"}), 400
+    port = int(os.getenv("PORT", 5000))
+    redirect_uri = f"http://localhost:{port}/api/google-oauth-callback"
+    try:
+        auth_url, state = start_oauth(service, redirect_uri)
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    return jsonify({
+        "ok": True,
+        "auth_url":     auth_url,
+        "state":        state,
+        "redirect_uri": redirect_uri,
+    })
+
+
+@app.route("/api/google-oauth-paste", methods=["POST"])
+def google_oauth_paste():
+    """
+    Nimmt eine vom User gepastete Callback-URL (oder nur den Code) entgegen
+    und schliesst den OOB-Flow ab. Erwartet JSON:
+      {"pasted": "<url-oder-code>"}
+    Entweder ganze URL (http://localhost:5001/api/...?code=xyz&state=abc)
+    oder nur code+state separat.
+    """
+    from skills.google_oauth_helper import complete_oauth
+    data = request.get_json(force=True) or {}
+    pasted = (data.get("pasted") or "").strip()
+    code   = (data.get("code") or "").strip()
+    state  = (data.get("state") or "").strip()
+
+    if pasted and not (code and state):
+        # URL parsen – entweder volle URL oder nur Query-String
+        try:
+            from urllib.parse import urlparse, parse_qs
+            # Wenn kein Schema davor steht, parse_qs direkt auf String
+            if "://" in pasted:
+                qs = urlparse(pasted).query
+            elif pasted.startswith("?"):
+                qs = pasted[1:]
+            else:
+                qs = pasted
+            params = parse_qs(qs)
+            code  = code  or (params.get("code",  [""])[0])
+            state = state or (params.get("state", [""])[0])
+        except Exception as e:
+            return jsonify({"ok": False, "error": f"URL/Code nicht parsbar: {e}"}), 400
+
+    if not code or not state:
+        return jsonify({"ok": False,
+                        "error": "In der eingefuegten Adresse stehen keine "
+                                 "'code='- und 'state='-Werte. Hast du die "
+                                 "GANZE Adresszeile aus deinem Browser kopiert?"}), 400
+    try:
+        service = complete_oauth(code, state)
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"Technischer Fehler: {e}"}), 500
+    return jsonify({"ok": True, "service": service})
+
+
 @app.route("/api/google-revoke/<service>", methods=["POST"])
 def google_revoke(service):
     """Löscht das token.json eines Google-Services (lokaler Logout)."""
