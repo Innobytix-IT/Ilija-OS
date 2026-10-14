@@ -297,9 +297,9 @@ if __name__ == "__main__":
         "env_var": "GOOGLE_API_KEY", "api_key": "TESTKEY",
         "bausteine": {"ilija": True, "erp": True, "ahpt": True},
         "ablage_wurzel": f"{HOME}/Ilija-Ablage",
-        "firma": {"name": "Innobytix-IT", "strasse": "Musterstr. 1",
-                  "plz": "79098", "ort": "Freiburg", "ustid": "DE123456789",
-                  "telefon": "+49 761 1", "email": "a@b.de",
+        "firma": {"name": "Deine Firma GmbH", "strasse": "Musterstr. 1",
+                  "plz": "12345", "ort": "Musterstadt", "ustid": "DE123456789",
+                  "telefon": "+49 123 4567890", "email": "info@beispiel.de",
                   "iban": "DE89...", "bic": "COBADEFF", "leitweg": ""},
     }
     import sys

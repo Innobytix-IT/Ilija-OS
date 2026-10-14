@@ -33,6 +33,15 @@ USER_CONFIGS=(
     "data/email/email_config.json:data/email/email_config.example.json"
     "data/telegram/telegram_config.json:data/telegram/telegram_config.example.json"
     "data/whatsapp/whatsapp_config.json:data/whatsapp/whatsapp_config.example.json"
+    # Die vier sind historisch noch im git-Repo mit Default-Inhalt. Fuer
+    # bestehende Installationen setzt der Loop unten skip-worktree, damit
+    # vorhandene User-Daten (DMS-Metadaten, Kalender, Firma, Oeffnungszeiten)
+    # bei einem Update nicht ueberschrieben werden. Example-Pfad == real-Pfad,
+    # weil die Default-Datei selbst als Vorlage dient (keine *.example.*).
+    "data/dms/meta.json:data/dms/meta.json"
+    "data/local_calendar_events.json:data/local_calendar_events.json"
+    "data/openphoenix_config.json:data/openphoenix_config.json"
+    "data/verfuegbarkeit.txt:data/verfuegbarkeit.txt"
 )
 for pair in "${USER_CONFIGS[@]}"; do
     real="${pair%%:*}"

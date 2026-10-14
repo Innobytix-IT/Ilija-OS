@@ -199,7 +199,7 @@ def pdf_zusammenfuehren(dateien: str = "", dateiname: str = "") -> str:
 def pdf_text_lesen(datei: str = "", max_zeichen: str = "4000") -> str:
     """
     Liest den Text aus einem PDF aus. datei: Pfad zur PDF-Datei.
-    Beispiel: pdf_text_lesen(datei="/home/innobytix/Ilija-Ablage/DMS/archiv/rechnung.pdf")
+    Beispiel: pdf_text_lesen(datei="/mnt/ilija-ablage/DMS/archiv/rechnung.pdf")
     """
     from PyPDF2 import PdfReader
     p = os.path.expanduser(datei or "")

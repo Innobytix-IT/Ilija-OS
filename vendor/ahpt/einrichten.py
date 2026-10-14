@@ -2450,14 +2450,14 @@ function zeigeWebspace() {
   zeig(huelle(
     '<h2>Webspace</h2>'
     + '<p>Die Adresse, unter der dein Webspace erreichbar ist. '
-    + 'Beispiel: <code>innobytix-it.bplaced.net/privat</code>.</p>'
+    + 'Beispiel: <code>deinname.bplaced.net/privat</code>.</p>'
     + warum('Warum ein Unterordner?',
         'Wenn du den Webspace fuer andere Sachen (eine Webseite) '
       + 'auch nutzt, sollen die Vermittler-Dateien nicht mitten drin '
       + 'liegen. Ein eigener Ordner haelt es getrennt und macht '
       + 'sp&auml;teres Umziehen einfacher.')
     + '<label>Adresse</label>'
-    + '<input type="text" id="fWebspace" placeholder="innobytix-it.bplaced.net/privat" value="' + alt + '">'
+    + '<input type="text" id="fWebspace" placeholder="deinname.bplaced.net/privat" value="' + alt + '">'
     + '<div id="webErgebnis"></div>',
     '<button onclick="zeigePruefen()">Zur&uuml;ck</button>',
     '<button class="haupt" onclick="pruefeWebspace()">Pr&uuml;fen und weiter</button>'

@@ -1808,7 +1808,7 @@ new QRCode(document.getElementById("qr-download"),{{text:"{dl_url}",width:200,he
         _geh_pr = os.path.join(_ahpt_home, "geheimnis")
         _default_key = _key_eb if os.path.exists(_key_eb) else _key_pr
         _default_geh = _geh_eb if os.path.exists(_geh_eb) else _geh_pr
-        self.ent_ahpt_relay.insert(0, ahpt_cfg.get("relay", "http://innobytix-it.bplaced.net/privat"))
+        self.ent_ahpt_relay.insert(0, ahpt_cfg.get("relay", ""))
         self.ent_ahpt_geheimnis.insert(0, ahpt_cfg.get("geheimnis", _default_geh))
         self.ent_ahpt_key.insert(0, ahpt_cfg.get("key", _default_key))
         self.ent_ahpt_clients.insert(0, ahpt_cfg.get("clients", ""))

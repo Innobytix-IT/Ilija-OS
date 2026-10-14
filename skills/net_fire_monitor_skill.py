@@ -97,8 +97,8 @@ def nfm_pfad_einrichten(pfad: str) -> str:
     """
     Richtet den Pfad zum Net-Fire-Monitor ein. Nur einmalig nötig!
     Der Pfad wird dauerhaft gespeichert.
-    Beispiel Windows : nfm_pfad_einrichten(pfad="C:\\Users\\Manuel\\Downloads\\net_monitor\\V2.1")
-    Beispiel Linux   : nfm_pfad_einrichten(pfad="/home/manuel/net_fire_monitor")
+    Beispiel Windows : nfm_pfad_einrichten(pfad="C:\\Users\\Benutzer\\Downloads\\net_monitor\\V2.1")
+    Beispiel Linux   : nfm_pfad_einrichten(pfad="/home/benutzer/net_fire_monitor")
     """
     p = Path(pfad.strip())
 

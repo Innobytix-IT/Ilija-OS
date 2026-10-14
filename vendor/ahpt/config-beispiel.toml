@@ -67,7 +67,7 @@ art    = "datei"
 # Ordner darin legst du ganz normal an -- per SSH, Dateimanager, wie du
 # magst. Es gibt keinen Abgleich und keine zweite Liste: Der Agent zeigt,
 # was in dem Moment wirklich dasteht.
-wurzel = "/home/manuel/ahpt-freigabe"
+wurzel = "/home/benutzer/ahpt-freigabe"
 
 aktionen  = ["liste", "hole"]
 max_bytes = 5242880

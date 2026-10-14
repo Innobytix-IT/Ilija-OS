@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Erstellt den Desktop-Shortcut für die Einstellungsseite.
 # Aufruf: sudo bash /opt/ilija-os/ilija/os/setup_einstellungen.sh
+# Via sudo -u <user> aufrufen, damit $HOME richtig expandiert. Fallback:
+# TARGET_USER=<name> vorne an den Aufruf haengen.
 
-DESKTOP="/home/manuel/Desktop"
+TARGET_USER="${TARGET_USER:-${SUDO_USER:-${USER:-$(id -un)}}}"
+DESKTOP="$(getent passwd "$TARGET_USER" | cut -d: -f6)/Desktop"
 SHORTCUT="$DESKTOP/ilija-einstellungen.desktop"
 
 mkdir -p "$DESKTOP"
