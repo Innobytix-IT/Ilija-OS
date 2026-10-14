@@ -413,9 +413,14 @@ input[type=number]{max-width:90px}
 
       <!-- ─── Google ────────────────────────────────────────── -->
       <div class="section" id="sec-google">
-        <div class="sec-head">
-          <div class="sec-icon">🔵</div>
-          <div><div class="sec-title">Google Dienste</div><div class="sec-sub">Gmail, Drive, Docs, Kalender</div></div>
+        <div class="sec-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+          <div style="display:flex;align-items:flex-start;gap:14px;flex:1;min-width:0">
+            <div class="sec-icon">🔵</div>
+            <div><div class="sec-title">Google Dienste</div><div class="sec-sub">Gmail, Drive, Docs, Kalender</div></div>
+          </div>
+          <button type="button" onclick="showGoogleHelp()"
+            style="background:var(--bdim);color:var(--blue);border:1px solid rgba(96,165,250,.3);border-radius:7px;padding:5px 11px;font-size:.72rem;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0"
+            title="Hilfe wenn 'Verbinden' nicht funktioniert">? Hilfe</button>
         </div>
         <div class="hint">1. <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> → Neues Projekt → APIs aktivieren<br>2. OAuth-Anmeldedaten → Desktop-App → JSON laden → hier hochladen</div>
         <div class="card" id="google-card"></div>
@@ -1406,6 +1411,64 @@ async function revokeGoogle(service) {
   } catch(e) {
     toast('Fehler: ' + e.message);
   }
+}
+
+// ── Google-Hilfe-Modal ────────────────────────────────────────
+// Erklaert die zwei Wege falls das normale "Verbinden" fehlschlaegt:
+//   1) Code manuell (OOB-Flow)  -- geht IMMER, auch ohne Browser am Server
+//   2) noVNC-Workaround          -- Browser am Server oeffnen, dort einloggen
+function showGoogleHelp() {
+  document.getElementById('google-help-modal')?.remove();
+  const host = location.hostname;
+  const vncUrl = `http://${host}:6080/vnc.html`;
+  const m = document.createElement('div');
+  m.id = 'google-help-modal';
+  m.style = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+  m.innerHTML = `
+    <div style="background:var(--s1);border:1px solid var(--bdr2);border-radius:10px;padding:22px;max-width:640px;width:100%;color:var(--tx);line-height:1.55;max-height:92vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-weight:700;font-size:1rem">🔵 Google verbinden – Hilfe bei Problemen</div>
+        <button onclick="document.getElementById('google-help-modal').remove()" style="background:transparent;border:none;color:var(--tx3);font-size:20px;cursor:pointer;line-height:1">✕</button>
+      </div>
+
+      <p style="margin:0 0 14px;font-size:.84rem;color:var(--tx2)">
+        <strong>Normalfall:</strong> Du klickst neben einem Dienst auf <strong>„Verbinden"</strong>, Ilija öffnet ein neues Browser-Fenster, du meldest dich bei Google an, und Google leitet dich zurück auf Ilija. Wenn das klappt, brauchst du nichts von unten.
+      </p>
+
+      <p style="margin:0 0 14px;font-size:.84rem;color:var(--tx2)">
+        <strong>Wenn du nach dem Login „Website nicht erreichbar"</strong> oder <strong>„ERR_CONNECTION_REFUSED"</strong> siehst (die URL beginnt mit <code>http://localhost:5001/…</code>), hat Google richtig zurückgeleitet – aber der Browser auf <em>deinem</em> Gerät kennt kein <code>localhost:5001</code>, weil Ilija auf einem anderen Rechner im Netzwerk läuft. Dafür gibt es zwei Wege:
+      </p>
+
+      <div style="background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:14px;margin-bottom:14px">
+        <div style="font-weight:600;color:var(--teal);margin-bottom:6px">Weg A &nbsp;•&nbsp; Code manuell einfügen (empfohlen)</div>
+        <ol style="margin:4px 0 4px 20px;padding:0;font-size:.82rem;color:var(--tx2)">
+          <li>Klicke neben dem Dienst auf <strong>⤴ Code manuell</strong> (statt „Verbinden").</li>
+          <li>Ilija zeigt dir eine URL. Kopiere die, öffne sie in deinem Browser, melde dich bei Google an.</li>
+          <li>Du landest auf der <em>„Website nicht erreichbar"</em>-Seite — <strong>das ist genau, worauf du gewartet hast</strong>.</li>
+          <li>Kopiere die komplette URL aus der Adresszeile (fängt mit <code>http://localhost:5001/api/google-oauth-callback?…</code> an) und füge sie im Ilija-Dialog ein → <strong>Senden</strong>.</li>
+        </ol>
+        <div style="font-size:.75rem;color:var(--tx3);margin-top:6px">Funktioniert aus jedem Browser auf jedem Gerät, auch wenn dein Server kein Internet-Fenster hat.</div>
+      </div>
+
+      <div style="background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:14px;margin-bottom:14px">
+        <div style="font-weight:600;color:var(--teal);margin-bottom:6px">Weg B &nbsp;•&nbsp; Über noVNC am Server-Desktop einloggen</div>
+        <ol style="margin:4px 0 4px 20px;padding:0;font-size:.82rem;color:var(--tx2)">
+          <li>Öffne den Server-Desktop im Browser: <a href="${vncUrl}" target="_blank" style="color:var(--teal)">${vncUrl}</a> (oder Button „Im Browser öffnen" bei <em>Desktop-Fernzugriff (noVNC)</em>).</li>
+          <li>Dort öffnest du den Browser (Chromium/Firefox), navigierst zu <code>http://localhost:5001/einstellungen</code> und klickst dort auf <strong>Verbinden</strong>.</li>
+          <li>Weil der Browser jetzt <em>auf dem Server</em> läuft, kennt er <code>localhost:5001</code> und der Rückweg funktioniert direkt.</li>
+        </ol>
+        <div style="font-size:.75rem;color:var(--tx3);margin-top:6px">Vorteil: Keine URL-Copy-Paste. Nachteil: noVNC muss laufen und du musst auf dem Server-Desktop arbeiten.</div>
+      </div>
+
+      <div style="font-size:.75rem;color:var(--tx3);margin-top:12px">
+        <strong>Hintergrund:</strong> Google verbietet die Nutzung lokaler IPs (z.B. <code>192.168.x.y</code>) als OAuth-Redirect-URI. Deshalb ist <code>localhost:5001</code> die einzige akzeptierte Rückkehr-Adresse – was aber nur klappt wenn der Browser auf demselben Gerät läuft wie Ilija.
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:16px">
+        <button class="btn btn-prim btn-sm" onclick="document.getElementById('google-help-modal').remove()">Verstanden</button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
 }
 
 // Nachrichten vom OAuth-Callback-Fenster abfangen – auf drei Wegen, weil
