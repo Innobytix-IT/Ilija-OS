@@ -10,9 +10,14 @@ UPDATE_SCRIPT=/opt/ilija-os/ilija-update.sh
 
 echo "--- System-Update (apt) ---"
 sudo apt-get update -qq
+# Vor dem Upgrade zaehlen was ueberhaupt zu aktualisieren waere -- damit das
+# Update-Script auch bei "git ist aktuell" einen sinnvollen Verlaufseintrag
+# schreiben kann ("apt: 7 Pakete aktualisiert"). apt list --upgradable gibt
+# eine Kopfzeile zurueck, die wir mit `grep upgradable` wegfiltern.
+APT_UPGRADED=$(apt list --upgradable 2>/dev/null | grep -c "upgradable" || echo 0)
 sudo apt-get upgrade -y -qq
 sudo apt-get autoremove -y -qq
-echo "--- System-Update abgeschlossen ---"
+echo "--- System-Update abgeschlossen (${APT_UPGRADED} Pakete aktualisiert) ---"
 
 echo "--- Ilija OS Update (GitHub) ---"
 git config --global --add safe.directory "$ILIJA_DIR" 2>/dev/null || true
@@ -78,6 +83,12 @@ if [ "$LOCAL" != "$REMOTE" ]; then
     if [ -n "$BEFORE" ]; then
         CHANGELOG=$(git log --oneline "$BEFORE..$AFTER" 2>/dev/null | head -10)
         echo "$CHANGELOG" | sed 's/^/    /'
+    fi
+    # apt-Info mit anhaengen falls was aktualisiert wurde -- sonst ist nach
+    # einem reinen System-Patch der Verlauf nicht aussagekraeftig.
+    if [ "${APT_UPGRADED:-0}" -gt 0 ] 2>/dev/null; then
+        CHANGELOG="${CHANGELOG}
+System-Pakete: ${APT_UPGRADED} aktualisiert"
     fi
 
     # Python-Abhängigkeiten
@@ -367,5 +378,17 @@ SOUND_AUTOSTART
     exit 0
 else
     echo "--- Ilija OS ist aktuell (kein Update noetig) ---"
+    # Auch ohne git-Pull soll der Verlauf etwas melden -- SONST sieht der
+    # User im UI "Noch keine Updates" obwohl das Update-Script heute gelaufen
+    # ist. Nur schreiben WENN apt was gemacht hat; sonst waere der Verlauf
+    # mit leeren Nachtlaeufen zugespammt.
+    if [ "${APT_UPGRADED:-0}" -gt 0 ] 2>/dev/null; then
+        SHORT_LOCAL=$(git rev-parse --short HEAD 2>/dev/null || echo "?")
+        python3 "$ILIJA_DIR/system/update_history_eintrag.py" \
+            --von "$LOCAL" --nach "$LOCAL" --status ok \
+            --changelog "nur System-Pakete: ${APT_UPGRADED} aktualisiert" \
+            2>/dev/null || true
+        echo "--- Verlaufseintrag geschrieben (${APT_UPGRADED} apt-Pakete auf ${SHORT_LOCAL}) ---"
+    fi
 fi
 echo "=== Fertig ==="
