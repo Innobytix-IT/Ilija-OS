@@ -342,7 +342,12 @@ def register_ahpt_routes(app):
             )
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
-        # Token aus Log extrahieren (steht spaetestens nach ~2 Sek)
+        # Token aus Log extrahieren (steht spaetestens nach ~2 Sek).
+        # WICHTIG: Das Log wird im "a"-Modus geoeffnet und waechst bei jedem
+        # Neustart. re.search() wuerde das ERSTE (alte) Token finden. Nur
+        # das LETZTE Token im Log gehoert zum jetzt gestarteten Prozess.
+        # Zusaetzlich: Nur Tokens suchen die NACH dem letzten "Assistent
+        # gestartet"-Marker stehen, damit auch Edge-Cases sauber bleiben.
         import time as _t, re as _re
         token = ""
         for _ in range(20):
@@ -350,9 +355,12 @@ def register_ahpt_routes(app):
             try:
                 with open(log_pfad) as logf:
                     inhalt = logf.read()
-                m = _re.search(r"\?t=([a-f0-9]+)", inhalt)
-                if m:
-                    token = m.group(1)
+                # Ab der letzten Start-Markierung lesen
+                markers = list(_re.finditer(r"=== Assistent gestartet", inhalt))
+                ab = markers[-1].start() if markers else 0
+                treffer = _re.findall(r"\?t=([a-f0-9]+)", inhalt[ab:])
+                if treffer:
+                    token = treffer[-1]
                     break
             except Exception:
                 pass
