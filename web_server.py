@@ -685,12 +685,25 @@ def novnc_switch_display():
             tmp = f"/tmp/x11vnc-override.conf.{os.getpid()}"
             with open(tmp, "w") as f:
                 f.write(content)
-            _sp.run(["sudo", "-n", "mkdir", "-p", override_dir],
-                    capture_output=True, timeout=5)
-            _sp.run(["sudo", "-n", "cp", tmp, override_path],
-                    capture_output=True, timeout=5)
+            # Verzeichnis anlegen falls nicht da (sudoers erlaubt
+            # 'mkdir /etc/systemd/system/x11vnc.service.d' ohne -p).
+            if not os.path.isdir(override_dir):
+                rmk = _sp.run(["sudo", "-n", "mkdir", override_dir],
+                              capture_output=True, text=True, timeout=5)
+                if rmk.returncode != 0 and not os.path.isdir(override_dir):
+                    try: os.remove(tmp)
+                    except OSError: pass
+                    return jsonify({"ok": False,
+                                    "error": f"mkdir {override_dir} fehlgeschlagen: "
+                                             f"{(rmk.stderr or '').strip()}"}), 500
+            rcp = _sp.run(["sudo", "-n", "cp", tmp, override_path],
+                          capture_output=True, text=True, timeout=5)
             try: os.remove(tmp)
             except OSError: pass
+            if rcp.returncode != 0:
+                return jsonify({"ok": False,
+                                "error": f"sudo cp fehlgeschlagen: "
+                                         f"{(rcp.stderr or '').strip()}"}), 500
         _sp.run(["sudo", "-n", "systemctl", "daemon-reload"],
                 capture_output=True, timeout=5)
         r = _sp.run(["sudo", "-n", "systemctl", "restart", "x11vnc"],
