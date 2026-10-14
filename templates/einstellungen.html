@@ -688,9 +688,8 @@ input[type=number]{max-width:90px}
       <!-- Display-Umschalter -->
       <div style="display:flex;align-items:center;gap:12px;padding:8px 10px;background:var(--s3);border-radius:6px;flex-wrap:wrap;font-size:.72rem">
         <div style="color:var(--tx3)">Falls Bild schwarz: Display manuell wählen</div>
-        <label class="toggle-wrap" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
-          <input type="checkbox" id="novnc-auto" checked onchange="novncAutoToggle()">
-          <span class="toggle-slider"></span>
+        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
+          <span class="toggle"><input type="checkbox" id="novnc-auto" checked onchange="novncAutoToggle()"><div class="t-track"></div><div class="t-thumb"></div></span>
           <span style="color:var(--tx2);font-size:.72rem">Automatisch</span>
         </label>
         <!-- Segmentierter Toggle fuer :0 / :1 -->
