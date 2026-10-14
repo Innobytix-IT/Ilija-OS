@@ -672,12 +672,19 @@ input[type=number]{max-width:90px}
     </div>
 
     <!-- noVNC Desktop-Fernzugriff (nur wenn Desktopumgebung aktiv) -->
-    <div id="novnc-bar" style="display:none;margin:18px 0 4px;padding:10px 16px;background:var(--s2);border:1px solid var(--bdr2);border-radius:8px;align-items:center;gap:10px">
+    <div id="novnc-bar" style="display:none;margin:18px 0 4px;padding:10px 16px;background:var(--s2);border:1px solid var(--bdr2);border-radius:8px;align-items:center;gap:10px;flex-wrap:wrap">
       <span style="font-size:1rem">🖥</span>
-      <div style="flex:1">
+      <div style="flex:1;min-width:220px">
         <div style="font-size:.77rem;font-weight:600;color:var(--tx2)">Desktop-Fernzugriff (noVNC)</div>
         <div style="font-size:.72rem;color:var(--tx3);margin-top:1px">Desktopumgebung aktiv — du kannst diesen Server direkt im Browser steuern</div>
         <div style="font-size:.70rem;color:var(--green);margin-top:3px">🔓 Kein VNC-Passwort erforderlich</div>
+        <div style="font-size:.68rem;color:var(--tx3);margin-top:5px">
+          Falls Bild schwarz: Display manuell wählen
+          <span id="novnc-current" style="color:var(--tx2);font-family:var(--m)"></span>
+          <button class="btn btn-sm" onclick="novncSwitch('0')" style="margin-left:4px;font-size:.68rem;padding:1px 7px">:0 (echter Desktop)</button>
+          <button class="btn btn-sm" onclick="novncSwitch('1')" style="font-size:.68rem;padding:1px 7px">:1 (Xvfb-Fallback)</button>
+          <button class="btn btn-sm btn-ghost" onclick="novncSwitch('auto')" style="font-size:.68rem;padding:1px 7px">🔄 Auto</button>
+        </div>
       </div>
       <a id="novnc-link" href="#" target="_blank" rel="noopener"
          style="font-size:.75rem;font-weight:600;color:var(--teal);border:1px solid rgba(45,212,191,.25);border-radius:6px;padding:5px 12px;text-decoration:none;white-space:nowrap;background:var(--tdim)">
@@ -2006,8 +2013,10 @@ async function checkNovnc() {
     if (d.available) {
       const bar  = document.getElementById('novnc-bar');
       const link = document.getElementById('novnc-link');
+      const cur  = document.getElementById('novnc-current');
       if (bar)  { bar.style.display = 'flex'; }
       if (link) { link.href = d.url; link.textContent = d.url.replace('http://','') + ' →'; }
+      if (cur)  { cur.textContent = d.display ? `(aktuell :${d.display})` : ''; }
     } else if (!d.has_desktop) {
       const bar = document.getElementById('ssh-bar');
       const cmd = document.getElementById('ssh-cmd');
@@ -2173,6 +2182,26 @@ async function _pollUpdateLog() {
       }
     } catch(_) {}
   }, 1500);
+}
+
+// ── noVNC-Display-Umschalter ────────────────────────────────
+async function novncSwitch(target) {
+  try {
+    const r = await fetch('/api/novnc-switch-display', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({display: target})
+    });
+    const d = await r.json();
+    if (!d.ok) { toast('Fehler: ' + (d.error || 'unbekannt')); return; }
+    toast(target === 'auto'
+      ? '🔄 Zurück auf Auto-Umschaltung – Service startet neu…'
+      : `✓ Umgeschaltet auf :${target} – Service startet neu…`);
+    // Nach ~3s Status neu laden
+    setTimeout(() => checkNovnc(), 3000);
+  } catch (e) {
+    toast('Verbindungsfehler: ' + e.message);
+  }
 }
 
 // ── Start ─────────────────────────────────────────────────────

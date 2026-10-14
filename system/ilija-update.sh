@@ -300,6 +300,18 @@ SOUND_AUTOSTART
         fi
     fi
 
+    # Sudoers-Regel fuer manuellen noVNC-Display-Umschalter (UI-Button).
+    # Legt /etc/systemd/system/x11vnc.service.d/override.conf an bzw. ab,
+    # macht daemon-reload. Idempotent.
+    X11VNC_SWITCH_LINE="$USER ALL=(ALL) NOPASSWD: /bin/mkdir /etc/systemd/system/x11vnc.service.d, /usr/bin/mkdir /etc/systemd/system/x11vnc.service.d, /bin/cp /tmp/x11vnc-override.conf.* /etc/systemd/system/x11vnc.service.d/override.conf, /usr/bin/cp /tmp/x11vnc-override.conf.* /etc/systemd/system/x11vnc.service.d/override.conf, /bin/rm -f /etc/systemd/system/x11vnc.service.d/override.conf, /usr/bin/rm -f /etc/systemd/system/x11vnc.service.d/override.conf, /bin/systemctl daemon-reload, /usr/bin/systemctl daemon-reload"
+    if [ -f "$SUDOERS_FILE" ] && ! sudo grep -q "x11vnc.service.d" "$SUDOERS_FILE" 2>/dev/null; then
+        echo "--- sudoers-Regel fuer noVNC-Display-Umschalter nachtragen ---"
+        echo "$X11VNC_SWITCH_LINE" | sudo tee -a "$SUDOERS_FILE" >/dev/null 2>&1 \
+            && sudo chmod 440 "$SUDOERS_FILE" 2>/dev/null \
+            && echo "--- noVNC-Switch-sudoers installiert ---" \
+            || echo "WARNUNG: noVNC-Switch-sudoers konnte nicht nachgetragen werden."
+    fi
+
     if deploy_pair "system/x11vnc-smart.sh" "/opt/ilija-os/x11vnc-smart.sh" "noVNC-Launcher"; then
         # Wenn das noVNC-Script neu ist, den VNC-Dienst neu starten damit
         # die neue Logik sofort greift (ohne Reboot).

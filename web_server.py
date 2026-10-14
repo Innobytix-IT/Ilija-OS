@@ -611,6 +611,18 @@ def novnc_info():
     client_host = request.host.split(":")[0]
     host = client_host or "localhost"
     user = getpass.getuser()
+    # 3) Welches Display hoert x11vnc gerade ab? (fuer UI-Umschalter)
+    display = None
+    try:
+        r = _sp.run(["pgrep", "-af", "x11vnc"],
+                    capture_output=True, text=True, timeout=2)
+        for line in (r.stdout or "").splitlines():
+            if "-display :0" in line and "smart" not in line:
+                display = "0"; break
+            if "-display :1" in line and "smart" not in line:
+                display = "1"; break
+    except Exception:
+        pass
     return jsonify({
         "available": available,
         "has_desktop": has_desktop,
@@ -618,7 +630,74 @@ def novnc_info():
         "ssh": f"ssh {user}@{host}",
         "host": host,
         "user": user,
+        "display": display,   # "0", "1", oder None
     })
+
+
+@app.route("/api/novnc-switch-display", methods=["POST"])
+def novnc_switch_display():
+    """Zwingt x11vnc auf ein bestimmtes Display. Fallback-Mechanismus
+    falls das automatische Switching im x11vnc-smart.sh mal nicht greift
+    (z.B. wenn der echte Desktop ueber einen angeschlossenen Monitor
+    gerendert wird und noVNC sonst nur das leere Xvfb-Display zeigt).
+
+    Setzt /etc/systemd/system/x11vnc.service.d/override.conf mit einem
+    einfachen x11vnc-Aufruf gegen das gewaehlte Display und restartet
+    den Service. Wenn target='auto', wird das Override entfernt und der
+    normale smart-Script wieder verwendet."""
+    import subprocess as _sp, re as _re
+    data = request.get_json(force=True) or {}
+    target = (data.get("display") or "auto").strip().lower()
+    if target not in ("0", "1", "auto"):
+        return jsonify({"ok": False, "error": "display muss 0, 1 oder auto sein"}), 400
+    override_dir  = "/etc/systemd/system/x11vnc.service.d"
+    override_path = f"{override_dir}/override.conf"
+
+    def _find_xauth(disp):
+        if disp != "0":
+            return ""
+        for pattern in ("/run/sddm/xauth_*", "/tmp/xauth_*",
+                        "/var/run/lightdm/root/*", "/home/*/.Xauthority"):
+            import glob as _g
+            hits = _g.glob(pattern)
+            if hits:
+                return hits[0]
+        return ""
+
+    try:
+        if target == "auto":
+            # Override entfernen
+            _sp.run(["sudo", "-n", "rm", "-f", override_path],
+                    capture_output=True, timeout=5)
+        else:
+            xauth = _find_xauth(target)
+            auth_arg = f" -auth {xauth}" if xauth else ""
+            content = (
+                "[Service]\n"
+                "ExecStart=\n"
+                f"ExecStart=/usr/bin/x11vnc -display :{target}{auth_arg} "
+                "-forever -nopw -listen localhost -rfbport 5900\n"
+            )
+            tmp = f"/tmp/x11vnc-override.conf.{os.getpid()}"
+            with open(tmp, "w") as f:
+                f.write(content)
+            _sp.run(["sudo", "-n", "mkdir", "-p", override_dir],
+                    capture_output=True, timeout=5)
+            _sp.run(["sudo", "-n", "cp", tmp, override_path],
+                    capture_output=True, timeout=5)
+            try: os.remove(tmp)
+            except OSError: pass
+        _sp.run(["sudo", "-n", "systemctl", "daemon-reload"],
+                capture_output=True, timeout=5)
+        r = _sp.run(["sudo", "-n", "systemctl", "restart", "x11vnc"],
+                    capture_output=True, text=True, timeout=10)
+        if r.returncode != 0:
+            return jsonify({"ok": False,
+                            "error": f"Service-Restart fehlgeschlagen: "
+                                     f"{(r.stderr or '').strip()}"}), 500
+        return jsonify({"ok": True, "display": target})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 # ── Ilija AI-API-Proxy: Konfiguration & Dienst-Steuerung ──────

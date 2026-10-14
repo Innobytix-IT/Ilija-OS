@@ -382,6 +382,7 @@ $TARGET_USER ALL=(ALL) NOPASSWD: /bin/systemctl enable ai-api-proxy, /bin/system
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/sbin/update-initramfs
 $TARGET_USER ALL=(ALL) NOPASSWD: /usr/bin/update-alternatives
 $TARGET_USER ALL=(ALL) NOPASSWD: /bin/mount /mnt/ilija-ablage, /bin/umount /mnt/ilija-ablage, /usr/bin/mount /mnt/ilija-ablage, /usr/bin/umount /mnt/ilija-ablage
+$TARGET_USER ALL=(ALL) NOPASSWD: /bin/mkdir /etc/systemd/system/x11vnc.service.d, /usr/bin/mkdir /etc/systemd/system/x11vnc.service.d, /bin/cp /tmp/x11vnc-override.conf.* /etc/systemd/system/x11vnc.service.d/override.conf, /usr/bin/cp /tmp/x11vnc-override.conf.* /etc/systemd/system/x11vnc.service.d/override.conf, /bin/rm -f /etc/systemd/system/x11vnc.service.d/override.conf, /usr/bin/rm -f /etc/systemd/system/x11vnc.service.d/override.conf, /bin/systemctl daemon-reload, /usr/bin/systemctl daemon-reload
 SUDO
 chmod 440 /etc/sudoers.d/ilija-update-rules
 ok "sudoers-Regeln für passwortloses Update installiert"
