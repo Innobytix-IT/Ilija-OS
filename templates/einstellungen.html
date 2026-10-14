@@ -534,13 +534,36 @@ input[type=number]{max-width:90px}
           <strong>Wie es funktioniert:</strong> Der AHPT-Agent läuft auf diesem Server und pollt den bplaced-Relay. Die Android-App verbindet sich über denselben Relay — Ende-zu-Ende-verschlüsselt via Noise&nbsp;IK. Endanwender können so Dokumente direkt in den DMS-Importordner hochladen, von überall, ohne VPN.
         </div>
 
-        <!-- Einrichtungs-Assistent (startet AHPT einrichten.py im Hintergrund) -->
+        <!-- Schritt 1: Webspace-Paket herunterladen -->
+        <div class="card" id="ahpt-webspace-card" style="margin-bottom:12px;padding:16px">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <div style="flex:1;min-width:220px">
+              <div style="font-weight:600;font-size:.95rem;margin-bottom:4px">📦 Schritt 1 – Webspace-Paket</div>
+              <div style="font-size:.78rem;color:var(--tx2);line-height:1.4">
+                Lade das ZIP herunter und entpacke es im öffentlichen Verzeichnis deines Webspace (meist <code>htdocs</code>, <code>www</code> oder <code>public_html</code>). Danach liegen dort <code>relay.php</code>, <code>.htaccess</code> und ein Unterordner <code>ahpt/</code> mit eigener <code>.htaccess</code>. Eine <code>LIESMICH.txt</code> ist im ZIP – darin stehen die drei Schritte nochmal in Ruhe.
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <a id="ahpt-webspace-dl" class="btn btn-prim btn-sm"
+                 href="/api/ahpt/webspace-paket"
+                 download="ahpt-webspace.zip">⬇ ahpt-webspace.zip</a>
+            </div>
+          </div>
+          <div style="font-size:.72rem;color:var(--tx3);margin-top:10px">
+            Du hast noch keinen Webspace? Jeder Freehoster mit PHP reicht –
+            empfohlen: <a href="https://www.bplaced.net" target="_blank" rel="noopener" style="color:var(--teal)">bplaced.net</a>
+            oder <a href="https://www.lima-city.de" target="_blank" rel="noopener" style="color:var(--teal)">lima-city.de</a>
+            (beide kostenlos, PHP 8, deutsches Rechenzentrum).
+          </div>
+        </div>
+
+        <!-- Schritt 2: Einrichtungs-Assistent (startet AHPT einrichten.py im Hintergrund) -->
         <div class="card" id="ahpt-wizard-card" style="margin-bottom:18px;padding:16px">
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
             <div style="flex:1;min-width:220px">
-              <div style="font-weight:600;font-size:.95rem;margin-bottom:4px">🔧 AHPT einrichten oder weiteres Gerät koppeln</div>
+              <div style="font-weight:600;font-size:.95rem;margin-bottom:4px">🔧 Schritt 2 – AHPT einrichten oder weiteres Gerät koppeln</div>
               <div style="font-size:.78rem;color:var(--tx2);line-height:1.4" id="ahpt-wiz-sub">
-                Startet den Einrichtungs-Assistenten. Dort läufst du durch die 9 Schritte (Webspace, Agent, Portal, Kopplung) und bekommst am Ende den QR-Code für deine App. Den Assistenten danach wieder stoppen.
+                Startet den Einrichtungs-Assistenten. Dort läufst du durch die 9 Schritte (Webspace-Prüfung, Agent, Portal, Kopplung) und bekommst am Ende den QR-Code für deine App. Den Assistenten danach wieder stoppen.
               </div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">

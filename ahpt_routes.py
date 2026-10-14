@@ -8,13 +8,15 @@ Users + Hostname. Fruehere Hardcodes "/home/manuel/.ahpt" und
 "Unbekannter Benutzer manuel".
 """
 
+import io
 import os
 import re
 import socket
 import getpass
 import json
 import subprocess
-from flask import Blueprint, jsonify, request, render_template
+import zipfile
+from flask import Blueprint, jsonify, request, render_template, send_file
 
 _CURRENT_USER = getpass.getuser()
 _HOSTNAME     = socket.gethostname().lower().split(".")[0]  # z.B. "ilijaos-futros930"
@@ -376,5 +378,78 @@ def register_ahpt_routes(app):
                 pass
         _assistent_state_save({})
         return jsonify({"ok": True})
+
+    # ── Webspace-Paket: ZIP mit allem was auf den Hoster muss ─────
+    # Kein User soll mehr relay.php, zwei .htaccess und einen Ordner einzeln
+    # ueber FTP hochladen muessen. Ein ZIP, das man im Dateimanager des
+    # Hosters hochlaedt und entpackt, erzeugt die exakt richtige Struktur.
+    @bp.route("/api/ahpt/webspace-paket")
+    def webspace_paket():
+        quelle = "/opt/ilija-os/ahpt-agent"
+        relay   = os.path.join(quelle, "relay.php")
+        htbasis = os.path.join(quelle, "htaccess-beispiel")
+        htabl   = os.path.join(quelle, "htaccess-ablage-beispiel")
+        fehlend = [p for p in (relay, htbasis, htabl) if not os.path.isfile(p)]
+        if fehlend:
+            return jsonify({
+                "ok": False,
+                "error": "AHPT-Dateien fehlen auf dem Server: "
+                         + ", ".join(os.path.basename(p) for p in fehlend)
+                         + ". Bitte das naechste Ilija-Update einspielen.",
+            }), 404
+
+        liesmich = (
+            "AHPT Webspace-Paket\n"
+            "===================\n"
+            "\n"
+            "Dieses ZIP enthaelt alles, was auf deinen Webspace muss, damit\n"
+            "AHPT dort als Vermittler funktioniert.\n"
+            "\n"
+            "SO GEHT'S:\n"
+            "----------\n"
+            "1. Logge dich bei deinem Hoster ein (FTP-Programm oder Datei-\n"
+            "   manager im Hoster-Backend, z.B. bei bplaced oder lima-city).\n"
+            "2. Wechsle ins oeffentliche Verzeichnis deines Webspace --\n"
+            "   dort, wo auch deine index.html stehen wuerde (meist 'htdocs',\n"
+            "   'www' oder 'public_html').\n"
+            "3. Lade dieses ZIP komplett dort hoch und entpacke es --\n"
+            "   oder entpacke es lokal und uebertrage die drei Teile:\n"
+            "       relay.php         ins Hauptverzeichnis\n"
+            "       .htaccess         ins Hauptverzeichnis\n"
+            "       ahpt/.htaccess    in einen NEUEN Unterordner 'ahpt/'\n"
+            "4. Zurueck in Ilija: 'AHPT einrichten'-Assistent starten.\n"
+            "   Dort traegst du die Basis-URL ein, z.B.\n"
+            "       https://deinname.bplaced.net\n"
+            "   Der Assistent prueft sofort ob der Webspace richtig antwortet.\n"
+            "\n"
+            "WAS DIE DATEIEN TUN:\n"
+            "--------------------\n"
+            "   relay.php         Der Vermittler, der Fragen und Antworten\n"
+            "                     zwischenlagert. Nur PHP erforderlich,\n"
+            "                     keine Datenbank, kein Cronjob.\n"
+            "   .htaccess         Schuetzt relay_token.php / relay_state.php\n"
+            "                     und schaltet mod_speling aus. Entscheidend\n"
+            "                     fuer die Sicherheit -- unbedingt mit\n"
+            "                     hochladen.\n"
+            "   ahpt/.htaccess    Setzt CORS-Kopfzeilen damit das Portal\n"
+            "                     auch von anderen Hosts darauf zugreifen\n"
+            "                     kann (z.B. von deiner lokalen Festplatte).\n"
+            "\n"
+            "WICHTIG: Die .htaccess-Dateien beginnen mit einem Punkt und sind\n"
+            "unter Windows standardmaessig unsichtbar. Im Explorer unter\n"
+            "'Ansicht' -> 'Ausgeblendete Elemente' aktivieren falls sie fehlen.\n"
+        )
+
+        puffer = io.BytesIO()
+        with zipfile.ZipFile(puffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.write(relay,   "relay.php")
+            zf.write(htbasis, ".htaccess")
+            zf.write(htabl,   "ahpt/.htaccess")
+            zf.writestr("LIESMICH.txt", liesmich)
+        puffer.seek(0)
+        return send_file(puffer,
+                         mimetype="application/zip",
+                         as_attachment=True,
+                         download_name="ahpt-webspace.zip")
 
     app.register_blueprint(bp)
