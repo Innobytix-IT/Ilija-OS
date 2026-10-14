@@ -266,8 +266,26 @@ def _ki_kategorisiere(filename: str, text: str, provider) -> dict:
     jahr_aktuell  = str(datetime.now().year)
     ts_fallback   = datetime.now().strftime('%H%M%S')
     kein_text     = not text or len(text.strip()) < 20
+    stem_original = Path(filename).stem  # ohne Endung
 
-    if kein_text:
+    if kein_text and not ist_kryptisch:
+        # Kein lesbarer Text (z.B. Bild-PDF-Scan ohne OCR), aber der
+        # DATEINAME sieht sprechend aus. Die KI darf aus dem Namen
+        # Hauptkategorie + Jahr + Absender raten. Der Originalname
+        # bleibt erhalten -- besser ein sprechender Name an falscher
+        # Stelle als "Unbekanntes_Dokument" an "richtiger".
+        prompt = f"""Kein lesbarer Textinhalt im Dokument (vermutlich reiner Bild-Scan).
+Der Dateiname ist aber sprechend: {filename}
+
+Rate aus dem DATEINAMEN:
+- Hauptkategorie aus: Rechnungen / Vertraege / Versicherung / Steuern / Behoerden / Medizin / Privat / Finanzen / Arbeit / Immobilien / Fahrzeuge / Bildung / PKW / Unsortiert
+- Unterkategorie: Firma/Absender aus dem Namen, sonst "Allgemein"
+- Jahr: 4-stellige Jahreszahl aus dem Namen, sonst {jahr_aktuell}
+
+Schreibe als LETZTE ZEILE deiner Antwort (und nichts danach):
+ERGEBNIS: Hauptkategorie|Unterkategorie|Jahr|{stem_original}{endung}"""
+    elif kein_text:
+        # Kein Text UND kryptischer Name -- echter Fallback.
         prompt = f"""Kategorisiere diese Datei. Kein Text vorhanden.
 Antworte NUR mit dieser einen Zeile (nichts sonst):
 Unsortiert|Allgemein|{jahr_aktuell}|Unbekanntes_Dokument_{ts_fallback}{endung}"""
