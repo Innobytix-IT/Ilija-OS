@@ -1,6 +1,6 @@
-﻿{
-  "archiv_pfad": "D:\\DMS",
-  "import_pfad": "D:\\DMS",
+{
+  "archiv_pfad": "/opt/ilija-os/ilija/data/dms/archiv",
+  "import_pfad": "/opt/ilija-os/ilija/data/dms/import",
   "passwort_hash": "",
   "passwort_aktiv": false
 }
