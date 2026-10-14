@@ -378,17 +378,20 @@ SOUND_AUTOSTART
     exit 0
 else
     echo "--- Ilija OS ist aktuell (kein Update noetig) ---"
-    # Auch ohne git-Pull soll der Verlauf etwas melden -- SONST sieht der
-    # User im UI "Noch keine Updates" obwohl das Update-Script heute gelaufen
-    # ist. Nur schreiben WENN apt was gemacht hat; sonst waere der Verlauf
-    # mit leeren Nachtlaeufen zugespammt.
+    # Jeder Lauf schreibt einen Eintrag -- auch wenn weder git noch apt
+    # was zu tun hatten. Grund: User sieht sonst "Noch keine Updates
+    # aufgezeichnet" obwohl das Update-System aktiv ist. Ein leerer
+    # Eintrag "keine Aenderungen" ist bessere Kommunikation als Stille.
+    # Der Verlauf ist auf die letzten 20 begrenzt (update_history_eintrag.py).
+    SHORT_LOCAL=$(git rev-parse --short HEAD 2>/dev/null || echo "?")
     if [ "${APT_UPGRADED:-0}" -gt 0 ] 2>/dev/null; then
-        SHORT_LOCAL=$(git rev-parse --short HEAD 2>/dev/null || echo "?")
-        python3 "$ILIJA_DIR/system/update_history_eintrag.py" \
-            --von "$LOCAL" --nach "$LOCAL" --status ok \
-            --changelog "nur System-Pakete: ${APT_UPGRADED} aktualisiert" \
-            2>/dev/null || true
-        echo "--- Verlaufseintrag geschrieben (${APT_UPGRADED} apt-Pakete auf ${SHORT_LOCAL}) ---"
+        CL_TEXT="nur System-Pakete: ${APT_UPGRADED} aktualisiert"
+    else
+        CL_TEXT="keine Aenderungen"
     fi
+    python3 "$ILIJA_DIR/system/update_history_eintrag.py" \
+        --von "$LOCAL" --nach "$LOCAL" --status ok \
+        --changelog "$CL_TEXT" 2>/dev/null || true
+    echo "--- Verlaufseintrag geschrieben (${CL_TEXT}, auf ${SHORT_LOCAL}) ---"
 fi
 echo "=== Fertig ==="
