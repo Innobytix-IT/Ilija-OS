@@ -132,8 +132,8 @@ input[type=number]{max-width:90px}
 /* ── Toggle ─────────────────────────────────────────────── */
 .toggle{position:relative;width:38px;height:21px;flex-shrink:0}
 .toggle input{opacity:0;width:0;height:0;position:absolute}
-.t-track{position:absolute;inset:0;border-radius:11px;background:var(--s4);cursor:pointer;transition:background .2s}
-.toggle input:checked + .t-track{background:var(--g)}
+.t-track{position:absolute;inset:0;border-radius:11px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:background .2s,border-color .2s}
+.toggle input:checked + .t-track{background:var(--g);border-color:transparent}
 .t-thumb{position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#fff;transition:transform .2s;pointer-events:none}
 .toggle input:checked ~ .t-thumb{transform:translateX(17px)}
 
