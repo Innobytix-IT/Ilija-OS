@@ -350,7 +350,8 @@ if [ -d "$AHPT_SRC" ]; then
     cp "$AHPT_SRC"/*.py "$AHPT_DST/" 2>/dev/null || true
     cp "$AHPT_SRC"/relay.php "$AHPT_SRC"/htaccess-beispiel \
        "$AHPT_SRC"/htaccess-ablage-beispiel "$AHPT_SRC"/config-beispiel.toml \
-       "$AHPT_SRC"/README.md "$AHPT_DST/" 2>/dev/null || true
+       "$AHPT_SRC"/README.md "$AHPT_SRC"/WEBSPACE.md \
+       "$AHPT_DST/" 2>/dev/null || true
     cp "$AHPT_SRC"/handler/*.py "$AHPT_DST/handler/" 2>/dev/null || true
     cp "$AHPT_SRC"/portal/*.html "$AHPT_SRC"/portal/*.js \
        "$AHPT_SRC"/portal/*.py "$AHPT_DST/portal/" 2>/dev/null || true

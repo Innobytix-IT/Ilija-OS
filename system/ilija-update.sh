@@ -186,7 +186,8 @@ AIPROXY
         mkdir -p "$AHPT_DST/handler" "$AHPT_DST/portal"
         for f in "$AHPT_SRC"/*.py "$AHPT_SRC"/relay.php \
                  "$AHPT_SRC"/htaccess-beispiel "$AHPT_SRC"/htaccess-ablage-beispiel \
-                 "$AHPT_SRC"/config-beispiel.toml "$AHPT_SRC"/README.md ; do
+                 "$AHPT_SRC"/config-beispiel.toml "$AHPT_SRC"/README.md \
+                 "$AHPT_SRC"/WEBSPACE.md ; do
             [ -f "$f" ] || continue
             base=$(basename "$f")
             if ! cmp -s "$f" "$AHPT_DST/$base" 2>/dev/null; then

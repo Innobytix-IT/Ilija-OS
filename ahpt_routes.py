@@ -386,9 +386,10 @@ def register_ahpt_routes(app):
     @bp.route("/api/ahpt/webspace-paket")
     def webspace_paket():
         quelle = "/opt/ilija-os/ahpt-agent"
-        relay   = os.path.join(quelle, "relay.php")
-        htbasis = os.path.join(quelle, "htaccess-beispiel")
-        htabl   = os.path.join(quelle, "htaccess-ablage-beispiel")
+        relay    = os.path.join(quelle, "relay.php")
+        htbasis  = os.path.join(quelle, "htaccess-beispiel")
+        htabl    = os.path.join(quelle, "htaccess-ablage-beispiel")
+        webspace = os.path.join(quelle, "WEBSPACE.md")  # optional, mit rein wenn da
         fehlend = [p for p in (relay, htbasis, htabl) if not os.path.isfile(p)]
         if fehlend:
             return jsonify({
@@ -446,10 +447,24 @@ def register_ahpt_routes(app):
             zf.write(htbasis, ".htaccess")
             zf.write(htabl,   "ahpt/.htaccess")
             zf.writestr("LIESMICH.txt", liesmich)
+            if os.path.isfile(webspace):
+                zf.write(webspace, "WEBSPACE.md")
         puffer.seek(0)
         return send_file(puffer,
                          mimetype="application/zip",
                          as_attachment=True,
                          download_name="ahpt-webspace.zip")
+
+    @bp.route("/api/ahpt/webspace-doku")
+    def webspace_doku():
+        """Zeigt die WEBSPACE.md als lesbares Plain-Text an -- fuer die
+        Direkt-Verlinkung aus der UI, ohne GitHub-Umweg."""
+        pfad = "/opt/ilija-os/ahpt-agent/WEBSPACE.md"
+        if not os.path.isfile(pfad):
+            return "WEBSPACE.md noch nicht auf diesem System installiert. " \
+                   "Nach dem naechsten Ilija-Update verfuegbar.", 404, {
+                       "Content-Type": "text/plain; charset=utf-8"}
+        with open(pfad, encoding="utf-8") as f:
+            return f.read(), 200, {"Content-Type": "text/plain; charset=utf-8"}
 
     app.register_blueprint(bp)
