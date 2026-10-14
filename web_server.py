@@ -103,6 +103,23 @@ def _kalender_pull_scheduler():
 threading.Thread(target=_kalender_pull_scheduler, daemon=True, name="kalender-sync").start()
 
 
+# ── Browser-Cache fuer HTML-Seiten aus ───────────────────
+# HTML-Templates werden bei jedem Update neu generiert — ohne diesen Header
+# bleibt die alte Version haengen bis der User Strg+F5 drueckt. Statisches
+# (static/*) und JSON-APIs sind davon ausgenommen.
+@app.after_request
+def _no_cache_html(resp):
+    try:
+        ct = resp.headers.get("Content-Type", "")
+        if ct.startswith("text/html"):
+            resp.headers["Cache-Control"] = "no-store, must-revalidate"
+            resp.headers["Pragma"] = "no-cache"
+            resp.headers["Expires"] = "0"
+    except Exception:
+        pass
+    return resp
+
+
 # ── Haupt-Interface (Workflow Studio) ────────────────────
 @app.route("/")
 def index():
@@ -1049,7 +1066,14 @@ def update_now():
                 run_as = _UPDATE_SCRIPT_USER if _UPDATE_SCRIPT_USER else None
                 cmd = (["sudo", "-u", run_as, "/bin/bash", _UPDATE_SCRIPT]
                        if run_as else ["/bin/bash", _UPDATE_SCRIPT])
-                proc = _sp.Popen(cmd, stdout=log, stderr=log, text=True)
+                # start_new_session=True: Update-Script laeuft in eigener
+                # Session/Prozessgruppe. Sonst killt der `systemctl restart
+                # ilija` im Script sich selbst mit (systemd default KillMode
+                # ist control-group), und Post-Selbsttest + History-Write
+                # werden nie erreicht. Bug entdeckt 14.10.2026: Update
+                # erschien im UI nie im Verlauf.
+                proc = _sp.Popen(cmd, stdout=log, stderr=log, text=True,
+                                 start_new_session=True)
                 proc.wait()
                 log.write(f"\n=== Fertig (Exit-Code: {proc.returncode}) ===\n")
         except Exception as e:
