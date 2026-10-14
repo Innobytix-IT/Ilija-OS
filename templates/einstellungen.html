@@ -130,7 +130,7 @@ input[type=number]{max-width:90px}
 .inline-pair label{font-size:.75rem;color:var(--tx3);white-space:nowrap}
 
 /* ── Toggle ─────────────────────────────────────────────── */
-.toggle{position:relative;width:38px;height:21px;flex-shrink:0}
+.toggle{display:inline-block;position:relative;width:38px;height:21px;flex-shrink:0;vertical-align:middle}
 .toggle input{opacity:0;width:0;height:0;position:absolute}
 .t-track{position:absolute;inset:0;border-radius:11px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.08);cursor:pointer;transition:background .2s,border-color .2s}
 .toggle input:checked + .t-track{background:var(--g);border-color:transparent}
@@ -636,9 +636,10 @@ input[type=number]{max-width:90px}
               <div class="row-hint">Ilija holt täglich Updates von GitHub und startet ggf. neu</div>
             </div>
             <div class="row-control">
-              <label class="toggle-wrap">
+              <label class="toggle">
                 <input type="checkbox" id="upd-enabled" onchange="toggleUpdateTime()">
-                <span class="toggle-slider"></span>
+                <div class="t-track"></div>
+                <div class="t-thumb"></div>
               </label>
             </div>
           </div>
