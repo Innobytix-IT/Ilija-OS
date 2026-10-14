@@ -623,6 +623,9 @@ def novnc_info():
                 display = "1"; break
     except Exception:
         pass
+    # 4) Steht ein Override aktiv? (= manueller Modus, Auto aus)
+    override_aktiv = _os.path.exists(
+        "/etc/systemd/system/x11vnc.service.d/override.conf")
     return jsonify({
         "available": available,
         "has_desktop": has_desktop,
@@ -630,7 +633,8 @@ def novnc_info():
         "ssh": f"ssh {user}@{host}",
         "host": host,
         "user": user,
-        "display": display,   # "0", "1", oder None
+        "display": display,            # "0", "1", oder None
+        "manual_override": override_aktiv,  # True = Auto AUS
     })
 
 

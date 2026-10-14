@@ -672,24 +672,36 @@ input[type=number]{max-width:90px}
     </div>
 
     <!-- noVNC Desktop-Fernzugriff (nur wenn Desktopumgebung aktiv) -->
-    <div id="novnc-bar" style="display:none;margin:18px 0 4px;padding:10px 16px;background:var(--s2);border:1px solid var(--bdr2);border-radius:8px;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:1rem">🖥</span>
-      <div style="flex:1;min-width:220px">
-        <div style="font-size:.77rem;font-weight:600;color:var(--tx2)">Desktop-Fernzugriff (noVNC)</div>
-        <div style="font-size:.72rem;color:var(--tx3);margin-top:1px">Desktopumgebung aktiv — du kannst diesen Server direkt im Browser steuern</div>
-        <div style="font-size:.70rem;color:var(--green);margin-top:3px">🔓 Kein VNC-Passwort erforderlich</div>
-        <div style="font-size:.68rem;color:var(--tx3);margin-top:5px">
-          Falls Bild schwarz: Display manuell wählen
-          <span id="novnc-current" style="color:var(--tx2);font-family:var(--m)"></span>
-          <button class="btn btn-sm" onclick="novncSwitch('0')" style="margin-left:4px;font-size:.68rem;padding:1px 7px">:0 (echter Desktop)</button>
-          <button class="btn btn-sm" onclick="novncSwitch('1')" style="font-size:.68rem;padding:1px 7px">:1 (Xvfb-Fallback)</button>
-          <button class="btn btn-sm btn-ghost" onclick="novncSwitch('auto')" style="font-size:.68rem;padding:1px 7px">🔄 Auto</button>
+    <div id="novnc-bar" style="display:none;margin:18px 0 4px;padding:10px 16px;background:var(--s2);border:1px solid var(--bdr2);border-radius:8px;gap:10px;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:1rem">🖥</span>
+        <div style="flex:1;min-width:220px">
+          <div style="font-size:.77rem;font-weight:600;color:var(--tx2)">Desktop-Fernzugriff (noVNC)</div>
+          <div style="font-size:.72rem;color:var(--tx3);margin-top:1px">Desktopumgebung aktiv — du kannst diesen Server direkt im Browser steuern</div>
+          <div style="font-size:.70rem;color:var(--green);margin-top:3px">🔓 Kein VNC-Passwort erforderlich</div>
         </div>
+        <a id="novnc-link" href="#" target="_blank" rel="noopener"
+           style="font-size:.75rem;font-weight:600;color:var(--teal);border:1px solid rgba(45,212,191,.25);border-radius:6px;padding:5px 12px;text-decoration:none;white-space:nowrap;background:var(--tdim)">
+          Im Browser öffnen →
+        </a>
       </div>
-      <a id="novnc-link" href="#" target="_blank" rel="noopener"
-         style="font-size:.75rem;font-weight:600;color:var(--teal);border:1px solid rgba(45,212,191,.25);border-radius:6px;padding:5px 12px;text-decoration:none;white-space:nowrap;background:var(--tdim)">
-        Im Browser öffnen →
-      </a>
+      <!-- Display-Umschalter -->
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 10px;background:var(--s3);border-radius:6px;flex-wrap:wrap;font-size:.72rem">
+        <div style="color:var(--tx3)">Falls Bild schwarz: Display manuell wählen</div>
+        <label class="toggle-wrap" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="novnc-auto" checked onchange="novncAutoToggle()">
+          <span class="toggle-slider"></span>
+          <span style="color:var(--tx2);font-size:.72rem">Automatisch</span>
+        </label>
+        <!-- Segmentierter Toggle fuer :0 / :1 -->
+        <div id="novnc-seg" style="display:inline-flex;border:1px solid var(--bdr2);border-radius:6px;overflow:hidden;opacity:.5;pointer-events:none">
+          <button id="novnc-seg-0" onclick="novncSwitch('0')"
+                  style="padding:4px 10px;font-size:.70rem;background:transparent;border:none;color:var(--tx2);cursor:pointer">:0 echter Desktop</button>
+          <button id="novnc-seg-1" onclick="novncSwitch('1')"
+                  style="padding:4px 10px;font-size:.70rem;background:transparent;border:none;color:var(--tx2);cursor:pointer;border-left:1px solid var(--bdr2)">:1 Xvfb-Fallback</button>
+        </div>
+        <span id="novnc-current" style="color:var(--tx3);font-family:var(--m);font-size:.68rem"></span>
+      </div>
     </div>
 
     <!-- SSH-Terminal-Zugang (nur wenn keine Desktopumgebung aktiv) -->
@@ -2014,9 +2026,25 @@ async function checkNovnc() {
       const bar  = document.getElementById('novnc-bar');
       const link = document.getElementById('novnc-link');
       const cur  = document.getElementById('novnc-current');
+      const auto = document.getElementById('novnc-auto');
+      const seg  = document.getElementById('novnc-seg');
+      const s0   = document.getElementById('novnc-seg-0');
+      const s1   = document.getElementById('novnc-seg-1');
       if (bar)  { bar.style.display = 'flex'; }
       if (link) { link.href = d.url; link.textContent = d.url.replace('http://','') + ' →'; }
-      if (cur)  { cur.textContent = d.display ? `(aktuell :${d.display})` : ''; }
+      if (cur)  { cur.textContent = d.display ? `(läuft gerade auf :${d.display})` : '(x11vnc nicht aktiv)'; }
+      if (auto) {
+        auto.checked = !d.manual_override;
+        if (seg) { seg.style.opacity = d.manual_override ? '1' : '.5';
+                   seg.style.pointerEvents = d.manual_override ? 'auto' : 'none'; }
+      }
+      // Aktives Segment hervorheben
+      if (s0 && s1) {
+        s0.style.background = (d.display === '0') ? 'var(--tdim)' : 'transparent';
+        s0.style.color      = (d.display === '0') ? 'var(--teal)'  : 'var(--tx2)';
+        s1.style.background = (d.display === '1') ? 'var(--tdim)' : 'transparent';
+        s1.style.color      = (d.display === '1') ? 'var(--teal)'  : 'var(--tx2)';
+      }
     } else if (!d.has_desktop) {
       const bar = document.getElementById('ssh-bar');
       const cmd = document.getElementById('ssh-cmd');
@@ -2185,7 +2213,7 @@ async function _pollUpdateLog() {
 }
 
 // ── noVNC-Display-Umschalter ────────────────────────────────
-async function novncSwitch(target) {
+async function _novncApply(target) {
   try {
     const r = await fetch('/api/novnc-switch-display', {
       method: 'POST',
@@ -2193,14 +2221,41 @@ async function novncSwitch(target) {
       body: JSON.stringify({display: target})
     });
     const d = await r.json();
-    if (!d.ok) { toast('Fehler: ' + (d.error || 'unbekannt')); return; }
+    if (!d.ok) {
+      toast('Fehler: ' + (d.error || 'unbekannt'));
+      return false;
+    }
     toast(target === 'auto'
       ? '🔄 Zurück auf Auto-Umschaltung – Service startet neu…'
       : `✓ Umgeschaltet auf :${target} – Service startet neu…`);
-    // Nach ~3s Status neu laden
-    setTimeout(() => checkNovnc(), 3000);
+    // Mehrfaches Polling bis x11vnc wirklich wieder läuft
+    [2000, 4000, 7000, 11000].forEach(ms => setTimeout(checkNovnc, ms));
+    return true;
   } catch (e) {
     toast('Verbindungsfehler: ' + e.message);
+    return false;
+  }
+}
+
+function novncSwitch(target) {
+  // Nur erlauben wenn Auto aus
+  const auto = document.getElementById('novnc-auto');
+  if (auto && auto.checked) return;
+  _novncApply(target);
+}
+
+async function novncAutoToggle() {
+  const auto = document.getElementById('novnc-auto');
+  const seg  = document.getElementById('novnc-seg');
+  if (!auto) return;
+  if (auto.checked) {
+    // Auto AN: Override entfernen, Segment-Buttons ausgrauen
+    if (seg) { seg.style.opacity = '.5'; seg.style.pointerEvents = 'none'; }
+    await _novncApply('auto');
+  } else {
+    // Auto AUS: Segment-Buttons aktivieren, Default :0 wählen
+    if (seg) { seg.style.opacity = '1';  seg.style.pointerEvents = 'auto'; }
+    await _novncApply('0');
   }
 }
 
