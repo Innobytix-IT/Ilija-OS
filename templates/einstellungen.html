@@ -539,6 +539,23 @@ input[type=number]{max-width:90px}
           <strong>Wie es funktioniert:</strong> Der AHPT-Agent läuft auf diesem Server und pollt den bplaced-Relay. Die Android-App verbindet sich über denselben Relay — Ende-zu-Ende-verschlüsselt via Noise&nbsp;IK. Endanwender können so Dokumente direkt in den DMS-Importordner hochladen, von überall, ohne VPN.
         </div>
 
+        <!-- Reihenfolge-Hinweis + Status-Banner. Wird dynamisch gefuellt
+             abhaengig von /api/ahpt-status (not-configured / not-installed /
+             active / ...). Verhindert dass neue User die Felder weiter unten
+             direkt ausfuellen und speichern wollen -- das klappt nicht ohne
+             dass vorher der Assistent (Schritt 2) die Konfig-Datei anlegt. -->
+        <div id="ahpt-flow-banner" class="hint" style="margin-bottom:14px;background:var(--s3);border-left:3px solid var(--teal);padding:12px 14px">
+          <div style="font-weight:600;color:var(--teal);margin-bottom:6px">📋 Reihenfolge zum Einrichten</div>
+          <div style="font-size:.78rem;color:var(--tx2);line-height:1.55">
+            <strong>Erst-Einrichtung geht NUR über Schritt 1 + Schritt 2</strong> (siehe Kacheln unten).
+            Die Formular-Felder weiter unten (Relay-URL, Agent-Schlüssel, Clients, Dienst-Pfade)
+            sind für die <em>spätere Feinjustierung</em> da — Speichern funktioniert erst
+            wenn der Assistent einmal durchgelaufen ist und die Agent-Konfigurationsdatei
+            <code>~/.ahpt/agent_privat.toml</code> angelegt hat.<br>
+            <span id="ahpt-flow-status" style="color:var(--tx3);font-size:.72rem">Status wird geladen…</span>
+          </div>
+        </div>
+
         <!-- Schritt 1: Webspace-Paket herunterladen -->
         <div class="card" id="ahpt-webspace-card" style="margin-bottom:12px;padding:16px">
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -2013,12 +2030,12 @@ function updateAhptStatus(status, service) {
   const el = document.getElementById('ahpt-status-text');
   if (!el) return;
   const map = {
-    active:           ['🟢 AHPT-Tunnel läuft',                                          'var(--green)'],
-    inactive:         ['⚫ AHPT-Tunnel inaktiv (lokaler Chat funktioniert trotzdem)',    'var(--tx3)'],
-    failed:           ['🔴 AHPT-Tunnel fehlgeschlagen',                                 'var(--red)'],
-    'not-configured': ['⚪ AHPT nicht eingerichtet – Konfiguration oben ausfüllen und speichern', 'var(--tx3)'],
-    'not-installed':  ['⚪ systemd-Unit nicht installiert (Installer erneut laufen lassen)', 'var(--tx3)'],
-    unknown:          ['⚪ Status unbekannt',                                            'var(--tx3)'],
+    active:           ['🟢 AHPT-Tunnel läuft',                                                  'var(--green)'],
+    inactive:         ['⚫ AHPT-Tunnel inaktiv (lokaler Chat funktioniert trotzdem)',            'var(--tx3)'],
+    failed:           ['🔴 AHPT-Tunnel fehlgeschlagen',                                         'var(--red)'],
+    'not-configured': ['⚪ AHPT noch nicht eingerichtet – klick oben „Schritt 2: Assistent starten"', 'var(--tx3)'],
+    'not-installed':  ['⚪ systemd-Service fehlt (nach Abschluss des Assistenten)',              'var(--tx3)'],
+    unknown:          ['⚪ Status unbekannt',                                                   'var(--tx3)'],
   };
   const [text, color] = map[status] || ['⚪ ' + (status||'…'), 'var(--tx3)'];
   el.textContent = text;
@@ -2033,6 +2050,33 @@ function updateAhptStatus(status, service) {
     const b = document.getElementById(id);
     if (b) { b.disabled = disabled; b.style.opacity = disabled ? '0.4' : '1'; b.style.cursor = disabled ? 'not-allowed' : 'pointer'; }
   });
+
+  // Reihenfolge-Banner oben in der Section: zeigt wo der User gerade steht
+  const flowEl = document.getElementById('ahpt-flow-status');
+  if (flowEl) {
+    const flowMap = {
+      active:           ['✓ Alles eingerichtet. Die Formular-Felder unten kannst du jetzt für Feinjustierung (Clients, Dienst-Pfade) nutzen.', 'var(--green)'],
+      inactive:         ['Agent-Konfiguration vorhanden, aber Service aus. Start/Stop-Buttons weiter unten.',                                  'var(--tx3)'],
+      failed:           ['Service fehlgeschlagen — Log unten im Agent-Bereich prüfen.',                                                         'var(--red)'],
+      'not-configured': ['Aktuell: NICHT eingerichtet. Felder unten können (noch) nicht gespeichert werden — Schritt 2 nutzen!',                'var(--yellow)'],
+      'not-installed':  ['Konfiguration liegt vor, aber systemd-Service fehlt noch — Assistent erneut durchlaufen oder Service manuell anlegen.', 'var(--yellow)'],
+      unknown:          ['Status noch nicht abrufbar.',                                                                                         'var(--tx3)'],
+    };
+    const [t, c] = flowMap[status] || ['Status: ' + (status||'…'), 'var(--tx3)'];
+    flowEl.textContent = t;
+    flowEl.style.color = c;
+  }
+
+  // Felder unten optisch "gedimmt" wenn nicht konfiguriert, damit klar wird dass sie
+  // erst nach dem Assistenten greifen. Nicht hart disablen, falls User doch was
+  // vorbereiten moechte — nur visueller Hinweis.
+  const relayCard = document.getElementById('ahpt-relay-card');
+  if (relayCard) {
+    relayCard.style.opacity = (status === 'not-configured') ? '0.55' : '1';
+    relayCard.title = (status === 'not-configured')
+      ? 'Diese Felder sind erst speicherbar nachdem der Assistent (Schritt 2) die Konfiguration angelegt hat.'
+      : '';
+  }
 }
 
 // ── QR-Code Generierung ────────────────────────────────────────
