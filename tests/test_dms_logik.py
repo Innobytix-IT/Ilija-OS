@@ -185,8 +185,14 @@ class TestDmsKonfiguration:
         assert "passwort_aktiv" in cfg
 
     def test_config_speichern_und_laden(self, tmp_path, monkeypatch):
+        # WICHTIG: DMS_BASE_DEFAULT wird beim Modul-Import als absoluter Pfad
+        # berechnet. chdir alleine schuetzt NICHT - _save_config wuerde ohne
+        # Patch die ECHTE data/dms/dms_config.json des Nutzers ueberschreiben.
+        import skills.dms as _dms
+        test_base = tmp_path / "data" / "dms"
+        test_base.mkdir(parents=True)
+        monkeypatch.setattr(_dms, "DMS_BASE_DEFAULT", str(test_base))
         monkeypatch.chdir(tmp_path)
-        (tmp_path / "data" / "dms").mkdir(parents=True)
         test_cfg = {
             "archiv_pfad":    str(tmp_path / "archiv"),
             "import_pfad":    str(tmp_path / "import"),
@@ -197,3 +203,6 @@ class TestDmsKonfiguration:
         geladene_cfg = _get_config()
         assert geladene_cfg["passwort_hash"] == "abc123"
         assert geladene_cfg["passwort_aktiv"] is True
+        # Sicherheitsnetz: die geschriebene Config landet im tmp_path und
+        # nicht in der echten data/dms/
+        assert (test_base / "dms_config.json").exists()
