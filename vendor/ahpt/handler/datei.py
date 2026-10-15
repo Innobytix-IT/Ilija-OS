@@ -459,8 +459,31 @@ class DateiHandler(Handler):
             # neuer Name. Der Zaehler laeuft, statt beim ersten Versuch
             # aufzugeben: Sonst waere ein Ordner mit "bericht (2).pdf" darin
             # fuer immer gegen "bericht.pdf" gesperrt.
+            #
+            # ABER zuerst: Wenn die bestehende Datei byte-identisch mit der
+            # neuen ist, kommt die neue hoechstwahrscheinlich aus einem App-
+            # Retry nach Marken-Verfall (schlechte Verbindung, Chunks zu
+            # langsam -> TTL 120s abgelaufen -> App schickt alles nochmal).
+            # Dann KEINEN Zaehler anhaengen, sonst liegen zwei identische
+            # Kopien im Zielordner. Entdeckt 15.10.2026: Manuels Handy-
+            # Upload bei wackeligem WLAN produzierte 20250304_141639.jpg +
+            # 20250304_141639 (2).jpg, md5 identisch.
             endgueltig = ziel
             if os.path.exists(endgueltig):
+                neuer_hash = hashlib.sha256(roh).digest()
+                alter_hash = None
+                try:
+                    with open(endgueltig, 'rb') as _f:
+                        alter_hash = hashlib.sha256(_f.read()).digest()
+                except OSError:
+                    pass
+                if alter_hash == neuer_hash:
+                    name = os.path.relpath(endgueltig, self.wurzel).replace(os.sep, '/')
+                    return text_antwort(
+                        json.dumps({'abgelegt': name, 'bytes': len(roh),
+                                    'bemerkung': 'byte-identisch mit vorhandener Datei (Upload-Retry?) -- nicht dupliziert'},
+                                   ensure_ascii=False),
+                        titel=name)
                 stamm, endung = os.path.splitext(ziel)
                 for i in range(2, 1000):
                     endgueltig = '%s (%d)%s' % (stamm, i, endung)
@@ -678,8 +701,30 @@ class DateiHandler(Handler):
             # Schranke 7: NICHT UEBERSCHREIBEN. Erst hier, nicht beim ersten
             # Block -- sonst waere der Name belegt, waehrend die Datei noch
             # gar nicht vollstaendig ist.
+            #
+            # Ausnahme: Wenn die vorhandene Datei byte-identisch mit der neuen
+            # ist (gleiche SHA256), ist das vermutlich ein Retry nach Marken-
+            # Verfall. Dann nicht als "(2)" duplizieren. Siehe gleicher
+            # Mechanismus bei `lege` oben, Entdeckung 15.10.2026.
             endgueltig = z['ziel']
             if os.path.exists(endgueltig):
+                neuer_hash = None
+                alter_hash = None
+                try:
+                    with open(z['tmp'], 'rb') as _f:
+                        neuer_hash = hashlib.sha256(_f.read()).digest()
+                    with open(endgueltig, 'rb') as _f:
+                        alter_hash = hashlib.sha256(_f.read()).digest()
+                except OSError:
+                    pass
+                if neuer_hash is not None and alter_hash == neuer_hash:
+                    self._teil_verwerfen(marke)
+                    name = os.path.relpath(endgueltig, self.wurzel).replace(os.sep, '/')
+                    return text_antwort(
+                        json.dumps({'abgelegt': name, 'bytes': z['belegt'],
+                                    'bemerkung': 'byte-identisch mit vorhandener Datei (Upload-Retry?) -- nicht dupliziert'},
+                                   ensure_ascii=False),
+                        titel=name)
                 stamm, endung = os.path.splitext(z['ziel'])
                 for i in range(2, 1000):
                     endgueltig = '%s (%d)%s' % (stamm, i, endung)
