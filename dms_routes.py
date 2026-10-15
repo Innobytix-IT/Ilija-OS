@@ -249,16 +249,27 @@ def register_dms_routes(app):
     # ── Delete Import ─────────────────────────────────────────
     @app.route("/api/dms/delete", methods=["DELETE"])
     def dms_delete_import():
-        data       = request.get_json() or {}
-        name       = secure_filename(data.get("name", ""))
+        # NICHT secure_filename() -- das normalisiert Leerzeichen und
+        # Klammern weg, dann findet os.path.isfile() die Datei nicht
+        # mehr. Bug entdeckt 15.10.2026: Datei '20250304_141639 (2).jpg'
+        # wurde zu '20250304_141639_2.jpg' umgewandelt -> 404. Statt-
+        # dessen Pfad-Injection manuell blockieren und per abspath +
+        # commonpath pruefen dass das Ziel noch im import_dir liegt.
+        data = request.get_json() or {}
+        name = (data.get("name") or "").strip()
+        if not name or "/" in name or "\\" in name or name.startswith(".") or ".." in name:
+            return jsonify({"error": "Ungueltiger Dateiname"}), 400
         cfg        = _get_cfg()
-        import_dir = cfg["import_pfad"]
-        if not name:
-            return jsonify({"error": "Kein Dateiname"}), 400
-        pfad = os.path.join(import_dir, name)
+        import_dir = os.path.abspath(cfg["import_pfad"])
+        pfad       = os.path.abspath(os.path.join(import_dir, name))
+        if os.path.commonpath([pfad, import_dir]) != import_dir:
+            return jsonify({"error": "Ungueltiger Pfad"}), 400
         if not os.path.isfile(pfad):
             return jsonify({"error": "Datei nicht gefunden"}), 404
-        os.remove(pfad)
+        try:
+            os.remove(pfad)
+        except OSError as e:
+            return jsonify({"error": str(e)}), 500
         return jsonify({"ok": True})
 
     # ── Verschieben ───────────────────────────────────────────
