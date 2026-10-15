@@ -109,13 +109,19 @@ export DEBIAN_FRONTEND=noninteractive
 
 run_quiet "Paketlisten aktualisieren (apt-get update)" apt-get update -qq
 
-run_quiet "Basis-Pakete installieren (python3, git, plymouth, tesseract-ocr, ca. 15 Pakete)" \
+run_quiet "Basis-Pakete installieren (python3, git, plymouth, tesseract-ocr, poppler, ca. 16 Pakete)" \
     apt-get install -y -qq \
         python3 python3-venv python3-pip python3-dev python3-tk build-essential \
         git curl wget \
         plymouth plymouth-themes \
         tesseract-ocr tesseract-ocr-deu \
+        poppler-utils \
         portaudio19-dev
+# poppler-utils liefert `pdftoppm`, das die Python-Lib pdf2image aufruft,
+# um reine Bild-PDFs (Scans ohne Textschicht) seitenweise fuer Tesseract zu
+# rendern. Ohne poppler faellt der PDF-OCR-Fallback in skills/dms.py durch,
+# bleibt aber silent -- der User bekommt dann "Unsortiert/Allgemein" statt
+# korrekter Kategorie. Deshalb hier Pflicht.
 
 info "   Chromium installieren (unter Lubuntu meist via Snap – kann 2-5 Min dauern)"
 run_quiet "Chromium" bash -c "apt-get install -y -qq chromium-browser 2>/dev/null || apt-get install -y -qq chromium"

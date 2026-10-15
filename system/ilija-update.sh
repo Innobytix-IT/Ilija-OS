@@ -17,6 +17,14 @@ sudo apt-get update -qq
 APT_UPGRADED=$(apt list --upgradable 2>/dev/null | grep -c "upgradable" || echo 0)
 sudo apt-get upgrade -y -qq
 sudo apt-get autoremove -y -qq
+# Nachtraegliche Pflicht-Pakete fuer bestehende Installationen die vor
+# einer Erweiterung installiert wurden. Idempotent -- `apt-get install`
+# ist bei bereits installierten Paketen ein No-Op. Jedes Paket das hier
+# steht und bisher fehlte, wird einmalig nachgezogen.
+# - poppler-utils: 15.10.2026 fuer PDF-OCR-Fallback (pdf2image braucht
+#   pdftoppm). Melanies Install hatte das nie, deshalb lief ihr Scan-
+#   Einsortieren bisher nur ueber den sprechenden-Dateinamen-Fallback.
+sudo apt-get install -y -qq poppler-utils >/dev/null 2>&1 || true
 echo "--- System-Update abgeschlossen (${APT_UPGRADED} Pakete aktualisiert) ---"
 
 echo "--- Ilija OS Update (GitHub) ---"
