@@ -64,6 +64,74 @@ def _ilija_fragen(nachricht: str) -> str:
         return f"❌ Fehler: {e}"
 
 
+# Chat-IDs, die auf TEXT-Nachrichten eine SPRACHANTWORT wollen.
+# Bei Sprachnachrichten antwortet Ilija IMMER mit Sprache (natuerliches
+# Verhalten), unabhaengig von dieser Liste. Das Set hier ist nur fuer
+# "/voice ein" bei Text-Konversationen.
+_voice_mode_chats: set = set()
+
+
+def _text_fuer_tts_bereinigen(text: str) -> str:
+    """Entfernt Markdown-Formatierung damit sie nicht vorgelesen wird."""
+    import re as _re
+    text = _re.sub(r'```[\s\S]*?```', '', text)
+    text = _re.sub(r'`[^`]+`', '', text)
+    text = _re.sub(r'^#{1,6}\s+', '', text, flags=_re.MULTILINE)
+    text = _re.sub(r'\*{2,3}(.+?)\*{2,3}', r'\1', text)
+    text = _re.sub(r'_{2,3}(.+?)_{2,3}', r'\1', text)
+    text = _re.sub(r'\*([^\s*][^*]*[^\s*])\*', r'\1', text)
+    text = _re.sub(r'_([^\s_][^_]*[^\s_])_', r'\1', text)
+    text = _re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+    text = _re.sub(r'^[-*_]{3,}\s*$', '', text, flags=_re.MULTILINE)
+    text = _re.sub(r'\|', ' ', text)
+    text = _re.sub(r'^\s*[-*+]\s+', '', text, flags=_re.MULTILINE)
+    text = _re.sub(r'^\s*\d+\.\s+', '', text, flags=_re.MULTILINE)
+    text = _re.sub(r'^\s*>\s*', '', text, flags=_re.MULTILINE)
+    text = _re.sub(r'\n{3,}', '\n\n', text)
+    text = _re.sub(r'  +', ' ', text)
+    return text.strip()
+
+
+def _text_zu_ogg(text: str) -> str:
+    """Wandelt Text in eine OGG/Opus-Datei (Telegram-Voice-Format).
+    Rueckgabe: Pfad zur temporaeren Datei. Wirft Exception bei Fehler."""
+    from gtts import gTTS
+    import tempfile, subprocess, shutil as _shutil
+    with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as f:
+        mp3_path = f.name
+    with tempfile.NamedTemporaryFile(suffix='.ogg', delete=False) as f:
+        ogg_path = f.name
+    gTTS(text=text, lang='de', slow=False).save(mp3_path)
+    ffmpeg = _shutil.which('ffmpeg') or 'ffmpeg'
+    subprocess.run(
+        [ffmpeg, '-y', '-i', mp3_path, '-filter:a', 'atempo=1.15',
+         '-c:a', 'libopus', ogg_path],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True
+    )
+    try: os.unlink(mp3_path)
+    except Exception: pass
+    return ogg_path
+
+
+def _antwort_senden(bot, chat_id, antwort: str, als_voice: bool):
+    """Antwort an Chat senden. Faellt bei TTS-Fehler sauber auf Text zurueck."""
+    if als_voice:
+        try:
+            bereinigt = _text_fuer_tts_bereinigen(antwort)
+            if bereinigt:
+                ogg = _text_zu_ogg(bereinigt)
+                with open(ogg, 'rb') as f:
+                    bot.send_voice(chat_id, f)
+                try: os.unlink(ogg)
+                except Exception: pass
+                return
+        except Exception as e:
+            print(f"[Telegram] TTS fehlgeschlagen, fallback auf Text: {e}")
+    # Text-Fallback (oder normaler Text-Modus) -- in Haeppchen zu 4000 Zeichen
+    for i in range(0, len(antwort), 4000):
+        bot.send_message(chat_id, antwort[i:i+4000])
+
+
 def _transkribieren(datei_pfad: str) -> str:
     """Versucht eine Audiodatei zu transkribieren (Whisper falls installiert)."""
     try:
@@ -220,11 +288,39 @@ def telegram_starten() -> str:
         @bot.message_handler(func=lambda m: sicherheit(m), content_types=["text"])
         def handle_text(message):
             try:
+                text = (message.text or "").strip()
+                lower = text.lower()
+
+                # /voice-Toggle: Sprachantworten fuer Text-Konversationen
+                if lower in ("/voice", "/voice an", "/voice ein", "/voice on",
+                             "/voice aus", "/voice off"):
+                    if lower in ("/voice aus", "/voice off"):
+                        _voice_mode_chats.discard(message.chat.id)
+                        bot.send_message(message.chat.id,
+                            "🔇 Sprachantworten aus. Ich antworte wieder in Textform.")
+                    elif lower in ("/voice an", "/voice ein", "/voice on"):
+                        _voice_mode_chats.add(message.chat.id)
+                        bot.send_message(message.chat.id,
+                            "🎙️ Sprachantworten an. Auf Text-Fragen antworte ich jetzt mit Sprache. "
+                            "Zum Ausschalten: /voice aus")
+                    else:
+                        if message.chat.id in _voice_mode_chats:
+                            _voice_mode_chats.discard(message.chat.id)
+                            bot.send_message(message.chat.id,
+                                "🔇 Sprachantworten aus.")
+                        else:
+                            _voice_mode_chats.add(message.chat.id)
+                            bot.send_message(message.chat.id,
+                                "🎙️ Sprachantworten an. Auf Text-Fragen antworte ich jetzt mit Sprache. "
+                                "Zum Ausschalten: /voice")
+                    return
+
                 bot.send_chat_action(message.chat.id, "typing")
-                antwort = _ilija_fragen(message.text)
-                # Telegram-Limit: 4096 Zeichen pro Nachricht
-                for i in range(0, len(antwort), 4000):
-                    bot.send_message(message.chat.id, antwort[i:i+4000])
+                antwort = _ilija_fragen(text)
+                als_voice = message.chat.id in _voice_mode_chats
+                if als_voice:
+                    bot.send_chat_action(message.chat.id, "record_voice")
+                _antwort_senden(bot, message.chat.id, antwort, als_voice=als_voice)
             except Exception as e:
                 bot.send_message(message.chat.id, f"❌ Fehler: {e}")
 
@@ -244,17 +340,19 @@ def telegram_starten() -> str:
                 # Transkription versuchen
                 transkript = _transkribieren(pfad)
                 if transkript:
-                    bot.send_message(message.chat.id, f"🎤 Ich habe verstanden: \"{transkript}\"")
+                    # kurze Bestaetigung als Text, Antwort gleich als Sprache
+                    bot.send_message(message.chat.id, f"🎤 Verstanden: \"{transkript}\"")
+                    bot.send_chat_action(message.chat.id, "record_voice")
                     antwort = _ilija_fragen(transkript)
+                    _antwort_senden(bot, message.chat.id, antwort, als_voice=True)
                 else:
+                    # Keine Transkription moeglich -> Text zurueck
                     antwort = _ilija_fragen(
                         f"[Sprachnachricht empfangen. Datei gespeichert unter: {pfad}. "
                         f"Whisper ist nicht installiert, daher keine Transkription möglich. "
                         f"Teile dem Nutzer mit wie er Whisper installieren kann: pip install openai-whisper]"
                     )
-
-                for i in range(0, len(antwort), 4000):
-                    bot.send_message(message.chat.id, antwort[i:i+4000])
+                    _antwort_senden(bot, message.chat.id, antwort, als_voice=False)
 
             except Exception as e:
                 bot.send_message(message.chat.id, f"❌ Fehler bei Sprachnachricht: {e}")
