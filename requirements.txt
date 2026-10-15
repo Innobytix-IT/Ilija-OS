@@ -70,6 +70,7 @@ edge-tts>=6.1.0     # Microsoft Edge TTS (kein API-Key noetig)
 # -- Spracherkennung -------------------------------------------------
 openai-whisper>=20231117   # Lokal (benoetigt PyTorch ~2 GB)
 # Alternativ: OpenAI Whisper API via OPENAI_API_KEY (kein PyTorch noetig)
+gTTS>=2.5.0                # Text-to-Speech fuer Telegram-Voice-Antworten (gTTS → MP3 → ffmpeg → OGG/Opus)
 
 # -- Tests -----------------------------------------------------------
 pytest>=7.0.0

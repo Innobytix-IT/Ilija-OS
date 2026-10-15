@@ -24,7 +24,10 @@ sudo apt-get autoremove -y -qq
 # - poppler-utils: 15.10.2026 fuer PDF-OCR-Fallback (pdf2image braucht
 #   pdftoppm). Melanies Install hatte das nie, deshalb lief ihr Scan-
 #   Einsortieren bisher nur ueber den sprechenden-Dateinamen-Fallback.
-sudo apt-get install -y -qq poppler-utils >/dev/null 2>&1 || true
+# - ffmpeg: 15.10.2026 fuer Telegram-Voice-Antworten (gTTS -> MP3 ->
+#   OGG/Opus-Konvertierung). Ohne ffmpeg funktioniert /voice-Modus
+#   nicht -- Ilija antwortet dann weiter als Text statt als Sprache.
+sudo apt-get install -y -qq poppler-utils ffmpeg >/dev/null 2>&1 || true
 echo "--- System-Update abgeschlossen (${APT_UPGRADED} Pakete aktualisiert) ---"
 
 echo "--- Ilija OS Update (GitHub) ---"

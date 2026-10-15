@@ -109,14 +109,18 @@ export DEBIAN_FRONTEND=noninteractive
 
 run_quiet "Paketlisten aktualisieren (apt-get update)" apt-get update -qq
 
-run_quiet "Basis-Pakete installieren (python3, git, plymouth, tesseract-ocr, poppler, ca. 16 Pakete)" \
+run_quiet "Basis-Pakete installieren (python3, git, plymouth, tesseract-ocr, poppler, ffmpeg, ca. 17 Pakete)" \
     apt-get install -y -qq \
         python3 python3-venv python3-pip python3-dev python3-tk build-essential \
         git curl wget \
         plymouth plymouth-themes \
         tesseract-ocr tesseract-ocr-deu \
         poppler-utils \
+        ffmpeg \
         portaudio19-dev
+# ffmpeg braucht Ilija fuer Telegram-Voice-Antworten: gTTS liefert MP3,
+# ffmpeg konvertiert nach OGG/Opus damit Telegram die Datei als
+# Sprachnachricht erkennt (telegram_bot.py:437-442).
 # poppler-utils liefert `pdftoppm`, das die Python-Lib pdf2image aufruft,
 # um reine Bild-PDFs (Scans ohne Textschicht) seitenweise fuer Tesseract zu
 # rendern. Ohne poppler faellt der PDF-OCR-Fallback in skills/dms.py durch,
