@@ -168,7 +168,9 @@ class CustomEndpointProvider(Provider):
             raise ValueError("Kein Endpunkt-URL konfiguriert")
         super().__init__(f"Eigener Endpunkt ({url})")
         from openai import OpenAI
-        self.client = OpenAI(base_url=url, api_key=key)
+        # Timeout zwingend setzen: der SDK-Default ist 600s. Ohne Limit haelt ein
+        # haengender Endpunkt den Aufrufer (und damit kernel_lock) minutenlang fest.
+        self.client = OpenAI(base_url=url, api_key=key, timeout=90.0, max_retries=1)
         self.model  = model
 
     def chat(self, messages: list, system: str = None,

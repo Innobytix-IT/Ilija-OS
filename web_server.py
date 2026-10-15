@@ -2133,4 +2133,17 @@ if __name__ == "__main__":
     print(f"  DMS:      http://localhost:{port}/dms")
     print(f"{'='*56}\n")
 
+    # Kernel im Hintergrund vorwaermen: die Initialisierung (ChromaDB,
+    # Embedding-Modell, Skills) dauert auf schwacher Hardware 30-60s.
+    # Ohne Vorwaermen zahlt der ERSTE Browser-Request diese Wartezeit
+    # und das Workflow-Studio wirkt nach jedem Neustart "haengend".
+    def _kernel_warmup():
+        try:
+            get_kernel()
+            print("[Ilija] Kernel vorgewärmt ✅")
+        except Exception as _we:
+            print(f"[Ilija] Kernel-Warmup fehlgeschlagen: {_we}")
+    __import__("threading").Thread(target=_kernel_warmup, daemon=True,
+                                   name="kernel-warmup").start()
+
     app.run(host="0.0.0.0", port=port, debug=debug, threaded=True)

@@ -26,6 +26,19 @@ _scheduler_started = False
 _schedules_lock    = _sched_threading.Lock()   # Verhindert Race-Condition auf active.json
 _whisper_model     = None                      # Gecachtes Whisper-Modell (einmalig laden)
 
+def _safe_int(val, default=0):
+    """Toleranter int()-Wrapper: leerer String, None, ' 7 ' und ungueltige Werte → default."""
+    try:
+        if val is None:
+            return default
+        s = str(val).strip()
+        if not s:
+            return default
+        return int(float(s))  # erlaubt '7', '7.0', ' 7 '
+    except (ValueError, TypeError):
+        return default
+
+
 def _schedule_should_fire(config: dict, now: datetime) -> bool:
     """Prüft ob ein Zeitplan jetzt feuern soll."""
     itype = config.get("interval_type", "interval")
@@ -36,8 +49,8 @@ def _schedule_should_fire(config: dict, now: datetime) -> bool:
         last_dt = None
 
     if itype == "interval":
-        minuten  = int(config.get("minuten",  0))
-        sekunden = int(config.get("sekunden", 0))
+        minuten  = _safe_int(config.get("minuten"),  0)
+        sekunden = _safe_int(config.get("sekunden"), 0)
         gesamt   = minuten * 60 + sekunden
         if gesamt < 5:
             gesamt = 5  # Minimum 5 Sekunden
@@ -57,7 +70,7 @@ def _schedule_should_fire(config: dict, now: datetime) -> bool:
             return True
 
     elif itype == "woechentlich":
-        wochentag = int(config.get("wochentag", 0))
+        wochentag = _safe_int(config.get("wochentag"), 0)
         zeit      = config.get("zeit", "08:00")
         try:
             h, m = map(int, zeit.split(":"))
@@ -95,7 +108,12 @@ def _start_scheduler(port: int):
                     if not entry.get("active"):
                         continue
                     cfg = entry.get("config", {})
-                    if _schedule_should_fire(cfg, now):
+                    try:
+                        fire_now = _schedule_should_fire(cfg, now)
+                    except Exception as _ce:
+                        print(f"[Scheduler] Config-Fehler bei '{wid}': {_ce}")
+                        continue
+                    if fire_now:
                         wf_path = os.path.join(WORKFLOWS_DIR, f"{wid}.json")
                         if os.path.exists(wf_path):
                             try:
@@ -379,9 +397,13 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
         workflow_stopped   = None   # Wenn gesetzt: Workflow früh beendet (Grund als String)
         skipped_nodes      = set()  # Nodes die wegen Bedingung-Verzweigung übersprungen werden
 
+        # Kernel-Instanz nur unter Lock HOLEN (Singleton-Init), danach Lock freigeben,
+        # damit lange laufende KI-Calls im Workflow nicht alle anderen Requests
+        # (/api/status, /api/skills, /api/chat) blockieren.
         with kernel_lock:
             k = get_kernel_func()
 
+        if True:  # Nodes laufen ohne globales Lock
             for nid in order:
                 if workflow_stopped:
                     statuses[nid] = "skipped"
@@ -430,14 +452,27 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                             message = ctx
                         if not message:
                             message = "Hallo Ilija!"
-                        # Direkter Provider-Call ohne Chat-History und ohne vollständige Skill-Liste
-                        try:
-                            output = k.provider.chat(
+                        # Direkter Provider-Call mit Timeout damit der Workflow nicht
+                        # endlos haengt wenn der KI-Provider nicht antwortet.
+                        # WICHTIG: kein "with ThreadPoolExecutor" - dessen Exit wartet
+                        # auf den haengenden Worker und hebelt den Timeout wieder aus.
+                        import concurrent.futures as _cf
+                        def _chat_call():
+                            return k.provider.chat(
                                 messages=[{"role": "user", "content": message}],
                                 system="Du bist Ilija, ein hilfreicher KI-Assistent. Antworte auf Deutsch. Sei präzise und strukturiert.",
                             )
+                        _ex = _cf.ThreadPoolExecutor(max_workers=1)
+                        try:
+                            output = _ex.submit(_chat_call).result(timeout=120)
+                        except _cf.TimeoutError:
+                            output = ("❌ Keine KI-Antwort innerhalb von 120 Sekunden - abgebrochen.\n"
+                                      "Der KI-Provider antwortet gerade sehr langsam oder gar nicht\n"
+                                      "(z.B. Gemini-Rate-Limit erreicht oder Endpunkt nicht erreichbar).")
                         except Exception as _e:
                             output = f"❌ Fehler: {_e}"
+                        finally:
+                            _ex.shutdown(wait=False)
 
                     elif ntype == "chatfilter":
                         # ── Chat-Filter: universeller Wächter zwischen Lese- und Chat-Nodes ──
@@ -1194,61 +1229,35 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                         import base64 as _b64
                         import email  as _eml
 
-                        operation      = config.get("operation", "read")
-                        creds_pfad     = config.get("credentials_pfad",
-                                                    os.path.join("data", "google_kalender",
-                                                                 "credentials.json")).strip()
-                        _GM_TOKEN_PATH = os.path.join("data", "gmail", "token.json")
-                        _GM_SCOPES     = [
-                            "https://www.googleapis.com/auth/gmail.modify",
-                            "https://www.googleapis.com/auth/gmail.send",
-                        ]
+                        operation = config.get("operation", "read")
 
                         # ── OAuth2-Bibliotheken laden ────────────────────────────────
                         try:
-                            from google.oauth2.credentials          import Credentials as _GCreds2
-                            from google_auth_oauthlib.flow          import InstalledAppFlow as _Flow2
-                            from google.auth.transport.requests     import Request as _GRequest2
-                            from googleapiclient.discovery          import build as _gbuild2
-                        except ImportError:
+                            from googleapiclient.discovery import build as _gbuild2
+                            from skills.google_oauth_helper import get_credentials as _gm_get_creds
+                        except ImportError as _ie:
                             output = ("❌ Google-Bibliotheken fehlen.\n"
                                       "pip install google-auth google-auth-oauthlib "
-                                      "google-auth-httplib2 google-api-python-client")
+                                      "google-auth-httplib2 google-api-python-client\n"
+                                      f"Details: {_ie}")
                             results[nid]  = str(output)
                             statuses[nid] = "error"
                             continue
 
-                        if not os.path.exists(creds_pfad):
-                            output = (f"❌ credentials.json nicht gefunden: {creds_pfad}\n"
-                                      "Dieselbe Datei wie beim Google Kalender Node verwenden.")
+                        # ── Zentrale OAuth-Logik: nutzt data/gmail/token.json ────────
+                        # Falls kein Token: Nutzer muss in Einstellungen autorisieren
+                        # (das vermeidet "could not locate runnable browser" auf headless Servern)
+                        _gmcreds = _gm_get_creds("gmail")
+                        if _gmcreds is None:
+                            output = (
+                                "❌ Gmail ist noch nicht autorisiert.\n"
+                                "Bitte in den Einstellungen → Google Dienste → Gmail autorisieren.\n"
+                                "Die credentials.json (OAuth-Client-ID) wird mit dem Google-Kalender geteilt,\n"
+                                "aber das Access-Token für Gmail musst du einmalig separat erzeugen."
+                            )
                             results[nid]  = str(output)
                             statuses[nid] = "error"
                             continue
-
-                        # ── Token laden oder erstmalig autorisieren ──────────────────
-                        _gmcreds = None
-                        if os.path.exists(_GM_TOKEN_PATH):
-                            try:
-                                _gmcreds = _GCreds2.from_authorized_user_file(
-                                    _GM_TOKEN_PATH, _GM_SCOPES)
-                            except Exception:
-                                _gmcreds = None
-
-                        if not _gmcreds or not _gmcreds.valid:
-                            if _gmcreds and _gmcreds.expired and _gmcreds.refresh_token:
-                                try:
-                                    _gmcreds.refresh(_GRequest2())
-                                except Exception:
-                                    _gmcreds = None
-
-                            if not _gmcreds or not _gmcreds.valid:
-                                _flow2   = _Flow2.from_client_secrets_file(
-                                    creds_pfad, _GM_SCOPES)
-                                _gmcreds = _flow2.run_local_server(port=0, open_browser=True)
-
-                            os.makedirs(os.path.dirname(_GM_TOKEN_PATH), exist_ok=True)
-                            with open(_GM_TOKEN_PATH, "w", encoding="utf-8") as _tf2:
-                                _tf2.write(_gmcreds.to_json())
 
                         try:
                             _gmsvc = _gbuild2("gmail", "v1", credentials=_gmcreds,
@@ -2214,15 +2223,16 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                     elif ntype == "schedule_trigger":
                         itype = config.get("interval_type", "interval")
                         if itype == "interval":
-                            min_ = int(config.get("minuten", 0))
-                            sec_ = int(config.get("sekunden", 30))
+                            min_ = _safe_int(config.get("minuten"), 0)
+                            sec_ = _safe_int(config.get("sekunden"), 30)
                             tot_ = min_ * 60 + sec_
                             desc = f"alle {min_}m {sec_}s ({tot_}s)" if min_ > 0 else f"alle {sec_}s"
                         elif itype == "taglich":
                             desc = f"täglich um {config.get('zeit', '08:00')}"
                         elif itype == "woechentlich":
                             tage = ["Mo","Di","Mi","Do","Fr","Sa","So"]
-                            tag  = tage[int(config.get("wochentag", 0))]
+                            wt_  = max(0, min(6, _safe_int(config.get("wochentag"), 0)))
+                            tag  = tage[wt_]
                             desc = f"wöchentlich {tag} um {config.get('zeit', '08:00')}"
                         else:
                             desc = "Zeitplan"
