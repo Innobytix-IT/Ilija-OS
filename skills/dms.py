@@ -156,23 +156,48 @@ def _extrahiere_text(filepath: str) -> str:
     ext = Path(filepath).suffix.lower()
 
     if ext == ".pdf":
+        # Erst: Text direkt aus dem PDF ziehen (fuer PDFs mit Textschicht).
+        text = ""
         try:
             import pdfplumber
             with pdfplumber.open(filepath) as pdf:
                 seiten = [p.extract_text() or "" for p in pdf.pages[:8]]
-                return "\n".join(seiten)[:MAX_TEXT_LEN]
+                text = "\n".join(seiten)
         except ImportError:
-            pass
-        try:
-            import PyPDF2
-            with open(filepath, "rb") as f:
-                reader = PyPDF2.PdfReader(f)
+            try:
+                import PyPDF2
+                with open(filepath, "rb") as f:
+                    reader = PyPDF2.PdfReader(f)
+                    for page in reader.pages[:8]:
+                        text += page.extract_text() or ""
+            except Exception:
                 text = ""
-                for page in reader.pages[:8]:
-                    text += page.extract_text() or ""
+        except Exception:
+            text = ""
+
+        # Reicht der extrahierte Text? Dann sind wir fertig.
+        if len(text.strip()) >= 50:
+            return text[:MAX_TEXT_LEN]
+
+        # Kein verwertbarer Text -- dann ist das PDF vermutlich ein reiner
+        # Bild-Scan ohne OCR-Textschicht (haeufig bei gescannten Arzt- oder
+        # Behoerdenbriefen, 2-10 MB je Seite). pdf2image rendert die Seiten
+        # zu Bildern, Tesseract liest Text raus. Entdeckt 15.10.2026: Manuels
+        # MediClin_Entlassungsbericht war genau so ein Bild-PDF, lief daher
+        # frueher in den "Unbekanntes_Dokument"-Fallback.
+        try:
+            from pdf2image import convert_from_path
+            import pytesseract
+            ocr_texte = []
+            seiten = convert_from_path(filepath, dpi=200, first_page=1, last_page=8)
+            for seite in seiten:
+                ocr_texte.append(pytesseract.image_to_string(seite, lang="deu+eng"))
+            return ("\n".join(ocr_texte))[:MAX_TEXT_LEN]
+        except ImportError:
+            # pdf2image fehlt (Dependency) -- gib zurueck was wir haben
             return text[:MAX_TEXT_LEN]
         except Exception:
-            return ""
+            return text[:MAX_TEXT_LEN]
 
     if ext in (".docx",):
         try:

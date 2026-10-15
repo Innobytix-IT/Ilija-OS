@@ -51,7 +51,8 @@ pymupdf>=1.24.0        # PDF-Bearbeitung: Unterschrift einbetten
 
 # -- Bild-OCR (fuer Dokument-Scans) ----------------------------------
 Pillow>=10.0.0
-# pytesseract>=0.3.10  # Benoetigt Tesseract: sudo apt install tesseract-ocr tesseract-ocr-deu
+pytesseract>=0.3.10  # Benoetigt Tesseract: sudo apt install tesseract-ocr tesseract-ocr-deu
+pdf2image>=1.17.0    # Benoetigt poppler: sudo apt install poppler-utils (fuer PDF-OCR-Fallback bei Bild-Scans)
 
 # -- Optional: HEIC-Bilder (iPhone-Fotos) ----------------------------
 # pillow-heif>=0.13.0
