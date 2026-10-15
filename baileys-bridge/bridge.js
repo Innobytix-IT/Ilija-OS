@@ -22,9 +22,20 @@ const AUTH_DIR     = process.env.AUTH_DIR   || path.join(__dirname, 'auth_info')
 const LOG_LEVEL    = process.env.LOG_LEVEL  || 'silent'
 const GRUPPEN      = process.env.GRUPPEN === 'true'
 
+let lastStatus = { status: 'disconnected', extra: {} }
+
 async function reportStatus(status, extra = {}) {
+    lastStatus = { status, extra }
     try { await axios.post(ILIJA_STATUS, { status, ...extra }, { timeout: 3000 }) } catch (_) {}
 }
+
+// Heartbeat: Ilija haelt den Verbindungsstatus nur im Speicher. Nach einem
+// Neustart des Ilija-Dienstes zeigte die Oberflaeche sonst bis zum naechsten
+// Verbindungs-Event (bis zu ~50 Min) faelschlich "Nicht verbunden".
+setInterval(() => {
+    axios.post(ILIJA_STATUS, { status: lastStatus.status, ...lastStatus.extra },
+               { timeout: 3000 }).catch(() => {})
+}, 60_000)
 
 const logger = pino({ level: LOG_LEVEL })
 
