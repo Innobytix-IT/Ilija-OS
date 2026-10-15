@@ -13,6 +13,7 @@ import os
 import re
 import shutil
 import hashlib
+import threading
 import json
 from pathlib import Path
 from datetime import datetime
@@ -399,109 +400,132 @@ def dms_import_scan() -> str:
     return f"📥 {len(dateien)} Dokument(e) im Import-Ordner:\n{liste}"
 
 
+_DMS_EINSORTIEREN_LOCK = threading.Lock()
+
 def dms_einsortieren(provider=None) -> str:
-    """KI liest, benennt und archiviert alle Dokumente im Import-Ordner."""
-    _init_dirs()
-    import_dir = _get_import_dir()
-    archiv_dir = _get_archiv_dir()
+    """KI liest, benennt und archiviert alle Dokumente im Import-Ordner.
 
-    if provider is None:
-        try:
-            from providers import select_provider
-            _, provider = select_provider("auto")
-        except Exception as e:
-            return f"❌ Kein KI-Provider verfügbar: {e}"
+    Race-Condition-Schutz: Nur EIN Einsortier-Lauf gleichzeitig. Wenn
+    zwei parallele Calls (z.B. User triggert zweimal schnell nacheinander
+    oder ein Hintergrund-Prozess + manueller Chat-Call) sich ueberlappen,
+    kann shutil.move auf der ersten Datei schon fertig sein, waehrend der
+    zweite Call sie noch im Verzeichnis-Listing hat -- und dann crasht
+    mit FileNotFoundError, waehrend die Datei trotzdem korrekt verschoben
+    wurde. Entdeckt 15.10.2026: Ilijas 'raeum auf'-Workflow hat genau
+    das ausgeloest, mit visibler Konsequenz 'Datei weg' obwohl der erste
+    Lauf sauber war.
 
-    dateien = [
-        f for f in os.listdir(import_dir)
-        if os.path.isfile(os.path.join(import_dir, f))
-        and Path(f).suffix.lower() in SUPPORTED_EXTS
-    ]
+    Zweite Schranke: shutil.move wird in try/except gepackt --
+    FileNotFoundError bedeutet "Datei zwischendurch verschoben worden",
+    nicht "Datei verloren". Sauber durchreichen statt crashen.
+    """
+    if not _DMS_EINSORTIEREN_LOCK.acquire(blocking=False):
+        return "⏳ Einsortier-Lauf laeuft bereits -- bitte warten bis er fertig ist."
+    try:
+        _init_dirs()
+        import_dir = _get_import_dir()
+        archiv_dir = _get_archiv_dir()
 
-    if not dateien:
-        return "📂 Import-Ordner ist leer."
+        if provider is None:
+            try:
+                from providers import select_provider
+                _, provider = select_provider("auto")
+            except Exception as e:
+                return f"❌ Kein KI-Provider verfügbar: {e}"
 
-    meta    = _load_meta()
-    bericht = []
+        dateien = [
+            f for f in os.listdir(import_dir)
+            if os.path.isfile(os.path.join(import_dir, f))
+            and Path(f).suffix.lower() in SUPPORTED_EXTS
+        ]
+        if not dateien:
+            return "📂 Import-Ordner ist leer."
 
-    for dateiname in sorted(dateien):
-        quell_pfad = os.path.join(import_dir, dateiname)
-        endung     = Path(dateiname).suffix.lower()
-        datei_hash = _berechne_hash(quell_pfad)
+        meta    = _load_meta()
+        bericht = []
 
-        # Duplikat-Check -- aber nur wenn die als identisch erkannte
-        # Zieldatei physisch noch existiert. Fehlt sie (z.B. durch einen
-        # frueheren "aufraeumen"-Vorgang, der die Datei verloren hat), ist
-        # der Metadaten-Eintrag ein Phantom -- wir putzen ihn weg und
-        # behandeln das Dokument als neuen Import. Sonst wuerde die Datei
-        # abgelehnt und man kaeme nie wieder dran. Entdeckt am 15.10.2026
-        # bei Manuel: MediClin_Entlassungsbericht war in meta als
-        # Unsortiert/.../UnbekanntesDokument231715.pdf gelistet, Datei
-        # selbst physisch weg -> Re-Upload wurde endlos abgelehnt.
-        if datei_hash and datei_hash in meta.get("hashes", {}):
-            vorhandener = meta["hashes"][datei_hash]
-            vorhandener_full = os.path.join(archiv_dir, vorhandener)
-            if os.path.isfile(vorhandener_full):
-                os.remove(quell_pfad)
-                bericht.append(f"♻️ Duplikat: **{dateiname}** → identisch mit {vorhandener}")
+        for dateiname in sorted(dateien):
+            quell_pfad = os.path.join(import_dir, dateiname)
+            endung     = Path(dateiname).suffix.lower()
+            datei_hash = _berechne_hash(quell_pfad)
+
+            # Duplikat-Check -- aber nur wenn die als identisch erkannte
+            # Zieldatei physisch noch existiert. Fehlt sie (z.B. durch einen
+            # frueheren "aufraeumen"-Vorgang, der die Datei verloren hat), ist
+            # der Metadaten-Eintrag ein Phantom -- wir putzen ihn weg und
+            # behandeln das Dokument als neuen Import.
+            if datei_hash and datei_hash in meta.get("hashes", {}):
+                vorhandener = meta["hashes"][datei_hash]
+                vorhandener_full = os.path.join(archiv_dir, vorhandener)
+                if os.path.isfile(vorhandener_full):
+                    os.remove(quell_pfad)
+                    bericht.append(f"♻️ Duplikat: **{dateiname}** → identisch mit {vorhandener}")
+                    continue
+                # Phantom-Eintrag: Zieldatei weg, Metadaten noch da -> saeubern
+                meta["hashes"].pop(datei_hash, None)
+                meta.get("dokumente", {}).pop(vorhandener, None)
+                _save_meta(meta)
+                bericht.append(f"🧹 Phantom-Metadaten entfernt (Hash war fuer {vorhandener}, Datei physisch weg) -- Re-Import als neu")
+
+            text = _extrahiere_text(quell_pfad)
+            clean_text = text.replace('\n', ' ')
+            print(f"DEBUG: OCR-Text für {dateiname}: {clean_text[:120]}...")
+
+            ki_info    = _ki_kategorisiere(dateiname, text, provider)
+            neuer_name = ki_info["dateiname"]
+            if not neuer_name.lower().endswith(endung):
+                neuer_name = Path(neuer_name).stem + endung
+
+            ziel_ordner = os.path.join(
+                archiv_dir,
+                ki_info["kategorie"],
+                ki_info["unterkategorie"],
+                ki_info["jahr"]
+            )
+            if not os.path.abspath(ziel_ordner).startswith(os.path.abspath(archiv_dir)):
+                bericht.append(f"❌ Sicherheitswarnung: {dateiname} – ungültiger Zielpfad.")
                 continue
-            # Phantom-Eintrag: Zieldatei weg, Metadaten noch da -> saeubern
-            meta["hashes"].pop(datei_hash, None)
-            meta.get("dokumente", {}).pop(vorhandener, None)
-            _save_meta(meta)
-            bericht.append(f"🧹 Phantom-Metadaten entfernt (Hash war fuer {vorhandener}, Datei physisch weg) -- Re-Import als neu")
 
-        text = _extrahiere_text(quell_pfad)
-        clean_text = text.replace('\n', ' ')
-        print(f"DEBUG: OCR-Text für {dateiname}: {clean_text[:120]}...")
+            os.makedirs(ziel_ordner, exist_ok=True)
+            wunsch_ziel  = os.path.join(ziel_ordner, neuer_name)
+            finaler_pfad = _naechste_version(wunsch_ziel)
+            finaler_name = os.path.basename(finaler_pfad)
 
-        ki_info    = _ki_kategorisiere(dateiname, text, provider)
-        neuer_name = ki_info["dateiname"]
-        if not neuer_name.lower().endswith(endung):
-            neuer_name = Path(neuer_name).stem + endung
+            # Zweite Schranke gegen Race: shutil.move kann crashen wenn ein
+            # anderer paralleler Lauf die Datei schon weggeschoben hat.
+            # Dann sauber weitermachen statt die ganze Session abzubrechen.
+            try:
+                shutil.move(quell_pfad, finaler_pfad)
+            except FileNotFoundError:
+                bericht.append(f"⚠️ **{dateiname}** war beim Verschieben nicht mehr da (paralleler Prozess?)")
+                continue
 
-        ziel_ordner = os.path.join(
-            archiv_dir,
-            ki_info["kategorie"],
-            ki_info["unterkategorie"],
-            ki_info["jahr"]
-        )
+            rel_pfad = os.path.relpath(finaler_pfad, archiv_dir).replace("\\", "/")
 
-        if not os.path.abspath(ziel_ordner).startswith(os.path.abspath(archiv_dir)):
-            bericht.append(f"❌ Sicherheitswarnung: {dateiname} – ungültiger Zielpfad.")
-            continue
+            if "hashes"    not in meta: meta["hashes"]    = {}
+            if "dokumente" not in meta: meta["dokumente"]  = {}
 
-        os.makedirs(ziel_ordner, exist_ok=True)
-        wunsch_ziel  = os.path.join(ziel_ordner, neuer_name)
-        finaler_pfad = _naechste_version(wunsch_ziel)
-        finaler_name = os.path.basename(finaler_pfad)
+            if datei_hash:
+                meta["hashes"][datei_hash] = rel_pfad
+            meta["dokumente"][rel_pfad] = {
+                "original":   dateiname,
+                "kategorie":  ki_info["kategorie"],
+                "sub":        ki_info["unterkategorie"],
+                "jahr":       ki_info["jahr"],
+                "hash":       datei_hash,
+                "groesse":    os.path.getsize(finaler_pfad),
+                "archiviert": datetime.now().isoformat(),
+                "umbenannt":  ki_info.get("umbenannt", False),
+            }
 
-        shutil.move(quell_pfad, finaler_pfad)
+            umbenennt = f" ✏️ ← '{dateiname}'" if ki_info.get("umbenannt") and finaler_name != dateiname else ""
+            version   = " 🆙 (neue Version)" if finaler_pfad != wunsch_ziel else ""
+            bericht.append(f"✅ **{finaler_name}**{umbenennt}{version}\n   → {ki_info['kategorie']} / {ki_info['unterkategorie']} / {ki_info['jahr']}")
 
-        rel_pfad = os.path.relpath(finaler_pfad, archiv_dir).replace("\\", "/")
-
-        if "hashes"    not in meta: meta["hashes"]    = {}
-        if "dokumente" not in meta: meta["dokumente"]  = {}
-
-        if datei_hash:
-            meta["hashes"][datei_hash] = rel_pfad
-        meta["dokumente"][rel_pfad] = {
-            "original":   dateiname,
-            "kategorie":  ki_info["kategorie"],
-            "sub":        ki_info["unterkategorie"],
-            "jahr":       ki_info["jahr"],
-            "hash":       datei_hash,
-            "groesse":    os.path.getsize(finaler_pfad),
-            "archiviert": datetime.now().isoformat(),
-            "umbenannt":  ki_info.get("umbenannt", False),
-        }
-
-        umbenennt = f" ✏️ ← '{dateiname}'" if ki_info.get("umbenannt") and finaler_name != dateiname else ""
-        version   = " 🆙 (neue Version)" if finaler_pfad != wunsch_ziel else ""
-        bericht.append(f"✅ **{finaler_name}**{umbenennt}{version}\n   → {ki_info['kategorie']} / {ki_info['unterkategorie']} / {ki_info['jahr']}")
-
-    _save_meta(meta)
-    return f"📁 {len(bericht)} Dokument(e) verarbeitet:\n\n" + "\n\n".join(bericht)
+        _save_meta(meta)
+        return f"📁 {len(bericht)} Dokument(e) verarbeitet:\n\n" + "\n\n".join(bericht)
+    finally:
+        _DMS_EINSORTIEREN_LOCK.release()
 
 
 def dms_loeschen(pfad_relativ: str, passwort: str = "") -> str:
