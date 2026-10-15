@@ -105,6 +105,11 @@ button{font-family:var(--f)}
   color:var(--tx);width:150px;cursor:pointer;
 }
 .tb-wf-input:focus{cursor:text}
+.tb-wf-input.name-generic{
+  border-bottom:1px dashed #e0a84a;
+  padding-bottom:1px;
+}
+.tb-wf-input.name-generic::after{content:""}
 
 .tb-badge{
   padding:2px 8px;border-radius:100px;
@@ -922,7 +927,9 @@ button{font-family:var(--f)}
 
     <!-- Workflow name -->
     <div class="tb-wf">
-      <input id="wf-name-input" class="tb-wf-input" value="Neuer Workflow" spellcheck="false">
+      <input id="wf-name-input" class="tb-wf-input name-generic" value="Neuer Workflow" spellcheck="false"
+             title="Tipp: Workflow umbenennen, bevor du einen Zeitplan aktivierst – so bleibt er in der Liste wiederzufinden."
+             oninput="markWorkflowNameField()" onfocus="if(this.value==='Neuer Workflow')this.select()">
       <span id="wf-badge" class="tb-badge badge-inactive">Inaktiv</span>
     </div>
 
@@ -3035,7 +3042,7 @@ function buildPanelHtml(node, def) {
   // ── schedule_trigger ───────────────────────────────────────────────
   } else if (node.type === 'schedule_trigger') {
     const stType = node.config.interval_type || 'interval';
-    const stWf   = state.currentWorkflowId || '';
+    const stWf   = state.workflowId || '';
     const stCfg  = JSON.stringify(node.config||{}).replace(/"/g,'&quot;');
     h += `
       <div class="rp-field">
@@ -3570,8 +3577,28 @@ async function executeWorkflow() {
 }
 
 // ── Schedule Helpers ──────────────────────────────────────
+function markWorkflowNameField() {
+  const el = document.getElementById('wf-name-input');
+  if (!el) return;
+  const generic = !el.value.trim() || el.value.trim() === 'Neuer Workflow';
+  el.classList.toggle('name-generic', generic);
+}
+
 async function activateSchedule(wid, config) {
   if (!wid) { toast('Workflow zuerst speichern!', 'err'); return; }
+  const name = (state.workflowName || '').trim();
+  if (!name || name === 'Neuer Workflow') {
+    const nameInput = document.getElementById('wf-name-input');
+    if (!confirm(
+      'Dieser Workflow heißt noch "Neuer Workflow".\n\n' +
+      'Du findest ihn später in der Liste und in der Zeitplan-Übersicht nicht mehr wieder,\n' +
+      'wenn du ihm keinen eindeutigen Namen gibst.\n\n' +
+      'Trotzdem Zeitplan aktivieren?'
+    )) {
+      if (nameInput) { nameInput.focus(); nameInput.select(); }
+      return;
+    }
+  }
   const res = await api(`/api/schedules/${wid}`, {
     method: 'POST',
     body: JSON.stringify({ active: true, config: config || {} })
@@ -3757,6 +3784,7 @@ async function loadWorkflow(id) {
   state.workflowId   = wf.id;
   state.workflowName = wf.name;
   document.getElementById('wf-name-input').value = wf.name;
+  markWorkflowNameField();
   (wf.nodes||[]).forEach(n => { state.nodes[n.id] = n; renderNode(n.id); });
   (wf.connections||[]).forEach(c => { state.connections[c.id] = c; });
   renderConnections();
@@ -3775,7 +3803,9 @@ async function deleteWorkflowFile(id) {
 }
 
 function newWorkflow(clear=true) {
-  if (!clear) return;
+  // Canvas IMMER komplett leeren (sonst mischen sich geladene Workflows).
+  // "clear" steuert nur, ob danach der Default-Trigger und der Name-Reset
+  // erzeugt werden (true = echter neuer Workflow, false = vor dem Laden eines bestehenden).
   state.nodes       = {};
   state.connections = {};
   state.selected    = null;
@@ -3783,13 +3813,18 @@ function newWorkflow(clear=true) {
   state.execResults = {};
   document.getElementById('nodes-layer').innerHTML    = '';
   document.getElementById('connections-layer').innerHTML = '';
-  document.getElementById('wf-name-input').value = 'Neuer Workflow';
-  document.getElementById('wf-badge').textContent = 'Inaktiv';
-  document.getElementById('wf-badge').className   = 'tb-badge badge-inactive';
   closePanel();
   closeExecLog();
-  updateFooter();
-  addNode('trigger', 100, 120);
+  if (clear) {
+    document.getElementById('wf-name-input').value = 'Neuer Workflow';
+    markWorkflowNameField();
+    document.getElementById('wf-badge').textContent = 'Inaktiv';
+    document.getElementById('wf-badge').className   = 'tb-badge badge-inactive';
+    updateFooter();
+    addNode('trigger', 100, 120);
+  } else {
+    updateFooter();
+  }
 }
 
 // ── Import / Export ───────────────────────────────────────
@@ -3808,6 +3843,7 @@ function handleImportFile(e) {
       state.workflowId   = wf.id || null;
       state.workflowName = wf.name || 'Importiert';
       document.getElementById('wf-name-input').value = state.workflowName;
+      markWorkflowNameField();
       (wf.nodes||[]).forEach(n => { state.nodes[n.id] = n; renderNode(n.id); });
       (wf.connections||[]).forEach(c => { state.connections[c.id] = c; });
       renderConnections(); updateFooter(); fitView();
