@@ -273,12 +273,16 @@ def parse_datum(text: str) -> Optional[str]:
     m = re.search(r'(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?', text)
     if m:
         tag, mon = int(m.group(1)), int(m.group(2))
-        jahr = int(m.group(3)) if m.group(3) else heute.year
+        jahr_explizit = m.group(3) is not None
+        jahr = int(m.group(3)) if jahr_explizit else heute.year
         if len(str(jahr)) == 2:
             jahr += 2000
         try:
             dt = date(jahr, mon, tag)
-            if dt < heute:
+            # Nur OHNE explizite Jahresangabe aufs naechste Vorkommen springen.
+            # Ein ausdruecklich genanntes Jahr ("28.05.2026") darf nie
+            # stillschweigend zu 2027 werden.
+            if dt < heute and not jahr_explizit:
                 dt = date(dt.year + 1, dt.month, dt.day)
             return dt.strftime("%d.%m.%Y")
         except ValueError:

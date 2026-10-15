@@ -29,8 +29,11 @@ import subprocess
 from providers import select_provider
 
 # ── Workspace (Sandbox) ───────────────────────────────────────────────────────
-DEFAULT_WORKSPACE           = "/srv/ilija-ablage/Coding"
-DEFAULT_WORKSPACE_COWORKING = "/srv/ilija-ablage/Coworking"
+# Default unterm Home-Verzeichnis: funktioniert ohne Root-Rechte auf jeder
+# Installation. Ein eigener Pfad (z.B. externe Platte) laesst sich ueber die
+# Workspace-Einstellung setzen und landet in data/agent/workspace_*.txt.
+DEFAULT_WORKSPACE           = os.path.join(os.path.expanduser("~"), "Ilija-Ablage", "Coding")
+DEFAULT_WORKSPACE_COWORKING = os.path.join(os.path.expanduser("~"), "Ilija-Ablage", "Coworking")
 _MAX_STEPS        = 14
 _MAX_READ_BYTES   = 60_000
 _SHELL_TIMEOUT    = 60
@@ -123,7 +126,17 @@ def _workspace(mode: str = "coding") -> str:
           or (os.environ.get("ILIJA_CODING_WORKSPACE") if mode == "coding" else None)
           or _WS_DEFAULTS.get(mode, DEFAULT_WORKSPACE))
     ws = os.path.abspath(os.path.expanduser(ws))
-    os.makedirs(ws, exist_ok=True)
+    try:
+        os.makedirs(ws, exist_ok=True)
+    except OSError:
+        # Pfad nicht anlegbar (fehlende Rechte, Platte nicht gemountet):
+        # auf den Home-Default ausweichen statt die API mit 500 zu brechen.
+        fallback = os.path.abspath(os.path.expanduser(
+            _WS_DEFAULTS.get(mode, DEFAULT_WORKSPACE)))
+        if fallback != ws:
+            print(f"[Agent] Workspace '{ws}' nicht anlegbar - Fallback auf '{fallback}'")
+        os.makedirs(fallback, exist_ok=True)
+        ws = fallback
     return ws
 
 

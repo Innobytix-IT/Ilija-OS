@@ -57,6 +57,9 @@ class MockKernel:
         self.state         = MagicMock()
         self.state.status.value = "idle"
         self.manager       = _MockSkillManager()
+        # Der Chat-Node ruft k.provider.chat(messages=..., system=...) auf
+        self.provider      = MagicMock()
+        self.provider.chat = lambda *a, **kw: self._antwort
 
     def chat(self, nachricht: str, *args, **kwargs) -> str:
         return self._antwort

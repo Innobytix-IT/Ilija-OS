@@ -45,30 +45,24 @@ def _browser_oeffnen_mit_mock(url: str) -> str:
 class TestBrowserUrlValidierung:
 
     def test_gueltige_https_url_erlaubt(self, monkeypatch):
-        """https:// URLs werden akzeptiert."""
+        """https:// URLs werden akzeptiert (Driver gemockt, kein Browser-Start)."""
         import skills.browser_oeffnen as bo
-        # Selenium-Call mocken damit kein Browser startet
         mock_driver = MagicMock()
-        with patch("skills.browser_oeffnen.webdriver") as mock_wd, \
-             patch("skills.browser_oeffnen.ChromeDriverManager") as mock_cdm, \
-             patch("skills.browser_oeffnen.Service"):
-            mock_wd.Chrome.return_value = mock_driver
-            mock_wd.ChromeOptions.return_value = MagicMock()
-            mock_cdm.return_value.install.return_value = "/mock/driver"
-            result = bo.browser_oeffnen("https://www.google.de")
-        assert "❌" not in result or "Schema" not in result
+        monkeypatch.setattr(bo, "driver", mock_driver)
+        monkeypatch.setattr(bo, "_is_driver_alive", lambda: True)
+        result = bo.browser_oeffnen("https://www.google.de")
+        assert "✅" in result
+        mock_driver.get.assert_called_once_with("https://www.google.de")
 
-    def test_gueltige_http_url_erlaubt(self):
-        """http:// URLs werden akzeptiert."""
+    def test_gueltige_http_url_erlaubt(self, monkeypatch):
+        """http:// URLs werden akzeptiert (Driver gemockt, kein Browser-Start)."""
         import skills.browser_oeffnen as bo
-        with patch("skills.browser_oeffnen.webdriver") as mock_wd, \
-             patch("skills.browser_oeffnen.ChromeDriverManager") as mock_cdm, \
-             patch("skills.browser_oeffnen.Service"):
-            mock_wd.Chrome.return_value = MagicMock()
-            mock_wd.ChromeOptions.return_value = MagicMock()
-            mock_cdm.return_value.install.return_value = "/mock/driver"
-            result = bo.browser_oeffnen("http://localhost:8080")
+        mock_driver = MagicMock()
+        monkeypatch.setattr(bo, "driver", mock_driver)
+        monkeypatch.setattr(bo, "_is_driver_alive", lambda: True)
+        result = bo.browser_oeffnen("http://localhost:8080")
         assert "Schema" not in result
+        mock_driver.get.assert_called_once_with("http://localhost:8080")
 
     def test_javascript_schema_blockiert(self):
         """javascript: URLs werden blockiert."""
