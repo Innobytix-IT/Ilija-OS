@@ -404,12 +404,27 @@ def dms_einsortieren(provider=None) -> str:
         endung     = Path(dateiname).suffix.lower()
         datei_hash = _berechne_hash(quell_pfad)
 
-        # Duplikat-Check
+        # Duplikat-Check -- aber nur wenn die als identisch erkannte
+        # Zieldatei physisch noch existiert. Fehlt sie (z.B. durch einen
+        # frueheren "aufraeumen"-Vorgang, der die Datei verloren hat), ist
+        # der Metadaten-Eintrag ein Phantom -- wir putzen ihn weg und
+        # behandeln das Dokument als neuen Import. Sonst wuerde die Datei
+        # abgelehnt und man kaeme nie wieder dran. Entdeckt am 15.10.2026
+        # bei Manuel: MediClin_Entlassungsbericht war in meta als
+        # Unsortiert/.../UnbekanntesDokument231715.pdf gelistet, Datei
+        # selbst physisch weg -> Re-Upload wurde endlos abgelehnt.
         if datei_hash and datei_hash in meta.get("hashes", {}):
             vorhandener = meta["hashes"][datei_hash]
-            os.remove(quell_pfad)
-            bericht.append(f"♻️ Duplikat: **{dateiname}** → identisch mit {vorhandener}")
-            continue
+            vorhandener_full = os.path.join(archiv_dir, vorhandener)
+            if os.path.isfile(vorhandener_full):
+                os.remove(quell_pfad)
+                bericht.append(f"♻️ Duplikat: **{dateiname}** → identisch mit {vorhandener}")
+                continue
+            # Phantom-Eintrag: Zieldatei weg, Metadaten noch da -> saeubern
+            meta["hashes"].pop(datei_hash, None)
+            meta.get("dokumente", {}).pop(vorhandener, None)
+            _save_meta(meta)
+            bericht.append(f"🧹 Phantom-Metadaten entfernt (Hash war fuer {vorhandener}, Datei physisch weg) -- Re-Import als neu")
 
         text = _extrahiere_text(quell_pfad)
         clean_text = text.replace('\n', ' ')
