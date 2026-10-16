@@ -307,6 +307,30 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(workflow, f, ensure_ascii=False, indent=2)
 
+        # Aktiven Zeitplan mit der frischen Trigger-Config synchronisieren.
+        # Sonst aendert der Nutzer die Uhrzeit im Trigger-Node, speichert -
+        # und der Scheduler feuert weiter nach der alten Zeit.
+        try:
+            trigger_cfg = next((n.get("config", {}) for n in workflow["nodes"]
+                                if n.get("type") == "schedule_trigger"), None)
+            if trigger_cfg and trigger_cfg.get("interval_type"):
+                sf = os.path.join(SCHEDULES_DIR, "active.json")
+                with _schedules_lock:
+                    if os.path.exists(sf):
+                        with open(sf, "r", encoding="utf-8") as _f:
+                            scheds = json.load(_f)
+                        if wid in scheds:
+                            last_run = scheds[wid].get("config", {}).get("_last_run")
+                            new_cfg  = {k: v for k, v in trigger_cfg.items()
+                                        if not k.startswith("_")}
+                            if last_run:
+                                new_cfg["_last_run"] = last_run
+                            scheds[wid]["config"] = new_cfg
+                            with open(sf, "w", encoding="utf-8") as _f:
+                                json.dump(scheds, _f, ensure_ascii=False, indent=2)
+        except Exception as _sync_err:
+            print(f"[Workflow] Zeitplan-Sync fehlgeschlagen: {_sync_err}")
+
         return jsonify({"message": f"Workflow '{name}' gespeichert", "id": wid})
 
     # ── Alle Workflows auflisten ──────────────────────────────────────
@@ -345,6 +369,20 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
         if not os.path.exists(filepath):
             return jsonify({"error": "Workflow nicht gefunden"}), 404
         os.remove(filepath)
+        # Zugehoerigen Zeitplan mit entfernen, sonst bleibt ein verwaister
+        # Eintrag in active.json zurueck, den der Scheduler ewig mitprueft.
+        sf = os.path.join(SCHEDULES_DIR, "active.json")
+        with _schedules_lock:
+            if os.path.exists(sf):
+                try:
+                    with open(sf, "r", encoding="utf-8") as _f:
+                        scheds = json.load(_f)
+                    if wid in scheds:
+                        scheds.pop(wid)
+                        with open(sf, "w", encoding="utf-8") as _f:
+                            json.dump(scheds, _f, ensure_ascii=False, indent=2)
+                except Exception:
+                    pass
         return jsonify({"message": "Workflow gelöscht"})
 
     # ── Workflow ausführen ────────────────────────────────────────────
@@ -555,7 +593,7 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
 
                     elif ntype == "memory_window":
                         key  = config.get("memory_key", "default")
-                        size = max(1, int(config.get("window_size", 10)))
+                        size = max(1, _safe_int(config.get("window_size"), 10))
                         window = _mem_read(key, size)
                         output = _mem_format(window) if window else "── Gedächtnis noch leer ──"
                         memory_write_queue.append({
@@ -624,7 +662,7 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                                     output = f"❌ Sendefehler: {e}"
 
                         elif operation == "read":
-                            anzahl = max(1, int(config.get("anzahl", 5)))
+                            anzahl = max(1, _safe_int(config.get("anzahl"), 5))
                             # Offset-Datei: merkt sich den letzten verarbeiteten update_id
                             _tg_offset_dir  = os.path.join("data", "telegram")
                             _tg_offset_file = os.path.join(_tg_offset_dir, "last_update_id.json")
@@ -851,7 +889,7 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
 
                         elif operation == "read":
                             ordner       = config.get("ordner", "INBOX").strip() or "INBOX"
-                            anzahl       = max(1, int(config.get("anzahl", 5)))
+                            anzahl       = max(1, _safe_int(config.get("anzahl"), 5))
                             nur_ungelesen = config.get("nur_ungelesen", "nein").lower() == "ja"
                             try:
                                 imap = imaplib.IMAP4_SSL(imap_host, imap_port)
@@ -1055,9 +1093,9 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
 
                         # ── Operations ───────────────────────────────────────────────
                         if operation == "slots_lesen":
-                            dauer_min  = int(config.get("dauer_minuten", 60))
-                            arbeit_von = int(config.get("arbeit_von", 8))
-                            arbeit_bis = int(config.get("arbeit_bis", 18))
+                            dauer_min  = _safe_int(config.get("dauer_minuten"), 60)
+                            arbeit_von = _safe_int(config.get("arbeit_von"), 8)
+                            arbeit_bis = _safe_int(config.get("arbeit_bis"), 18)
 
                             tag_start_rfc = _rfc(datum_dt.replace(hour=0,  minute=0,  second=0))
                             tag_ende_rfc  = _rfc(datum_dt.replace(hour=23, minute=59, second=59))
@@ -1209,7 +1247,7 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                         if operation == "termine_lesen":
                             output = lokaler_kalender_lesen(datum_raw)
                         elif operation == "slots_finden":
-                            dauer = int(config.get("dauer_minuten", 60))
+                            dauer = _safe_int(config.get("dauer_minuten"), 60)
                             output = lokaler_kalender_freie_slots_finden(datum_raw, dauer)
                         elif operation == "termin_eintragen":
                             titel = config.get("titel", "").strip()
@@ -1293,7 +1331,7 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
 
                         # ── Operations ───────────────────────────────────────────────
                         if operation == "read":
-                            anzahl        = max(1, int(config.get("anzahl", 5)))
+                            anzahl        = max(1, _safe_int(config.get("anzahl"), 5))
                             label         = config.get("label", "INBOX").strip() or "INBOX"
                             nur_ungelesen = config.get("nur_ungelesen", "nein").lower() == "ja"
 
@@ -1366,7 +1404,7 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                             query  = config.get("query", "").strip()
                             if "{{input}}" in query and context:
                                 query = query.replace("{{input}}", context.strip())
-                            anzahl = max(1, int(config.get("anzahl", 5)))
+                            anzahl = max(1, _safe_int(config.get("anzahl"), 5))
                             if not query:
                                 output = "❌ Kein Suchbegriff angegeben."
                             else:
@@ -1493,7 +1531,7 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                             url_raw    = config.get("dokument_url", "").strip()
                             if "{{input}}" in url_raw and context:
                                 url_raw = url_raw.replace("{{input}}", context.strip())
-                            max_zeichen = int(config.get("max_zeichen", 5000))
+                            max_zeichen = _safe_int(config.get("max_zeichen"), 5000)
                             if not url_raw:
                                 output = "❌ Keine Dokument-URL angegeben."
                             else:
@@ -1840,8 +1878,8 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
 
                         # ── Operations ───────────────────────────────────────────────
                         if operation == "docs_lesen":
-                            anzahl           = max(1, int(config.get("anzahl", 10)))
-                            max_z_pro_doc    = int(config.get("max_zeichen_pro_doc", 2000))
+                            anzahl           = max(1, _safe_int(config.get("anzahl"), 10))
+                            max_z_pro_doc    = _safe_int(config.get("max_zeichen_pro_doc"), 2000)
                             suche            = config.get("suche", "").strip()
 
                             _q = "mimeType='application/vnd.google-apps.document' and trashed=false"
@@ -1888,7 +1926,7 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                                 output = "\n".join(teile)
 
                         elif operation == "dateien_auflisten":
-                            anzahl    = max(1, int(config.get("anzahl", 20)))
+                            anzahl    = max(1, _safe_int(config.get("anzahl"), 20))
                             dateityp  = config.get("dateityp", "docs")
                             suche     = config.get("suche", "").strip()
 
@@ -2097,7 +2135,7 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                         try:
                             _params = {"formId": formular_id}
                             if operation == "alle_antworten":
-                                _params["pageSize"] = max(1, int(config.get("anzahl", 50)))
+                                _params["pageSize"] = max(1, _safe_int(config.get("anzahl"), 50))
                             _resp_list = _gfsvc.forms().responses().list(**_params).execute()
                             _responses = _resp_list.get("responses", [])
                         except Exception as _e:
@@ -2269,7 +2307,7 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                             items_list = [x.strip() for x in items_src.split("\n") if x.strip()]
                             if len(items_list) == 1 and "," in items_list[0]:
                                 items_list = [x.strip() for x in items_list[0].split(",") if x.strip()]
-                        items_list = items_list[:int(config.get("max_items", 50))]
+                        items_list = items_list[:_safe_int(config.get("max_items"), 50)]
 
                         successors_loop = adj.get(nid, [])
                         if not items_list:
@@ -2384,7 +2422,7 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
 
                     # ── wait ─────────────────────────────────────────────────
                     elif ntype == "wait":
-                        sek = max(0, min(int(config.get("sekunden", 5)), 300))
+                        sek = max(0, min(_safe_int(config.get("sekunden"), 5), 300))
                         _sched_time.sleep(sek)
                         output = f"⏱️ {sek} Sekunde(n) gewartet. Weiter: {datetime.now().strftime('%H:%M:%S')}"
 
@@ -2477,7 +2515,7 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                             feed_url = feed_url.replace("{{input}}", context)
                         elif not feed_url and context:
                             feed_url = context.strip()
-                        anzahl_rss = max(1, min(int(config.get("anzahl", 5)), 30))
+                        anzahl_rss = max(1, min(_safe_int(config.get("anzahl"), 5), 30))
                         if not feed_url:
                             output = "⚠️ Keine RSS-URL angegeben."
                         else:

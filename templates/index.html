@@ -3596,7 +3596,9 @@ function markWorkflowNameField() {
 }
 
 async function activateSchedule(wid, config) {
-  if (!wid) { toast('Workflow zuerst speichern!', 'err'); return; }
+  // Der Button heisst "Zeitplan aktivieren (Workflow speichern!)" - also
+  // speichern wir hier wirklich: sonst aktiviert man einen Zeitplan, dessen
+  // Trigger-Config im Workflow-File veraltet oder gar nicht vorhanden ist.
   const name = (state.workflowName || '').trim();
   if (!name || name === 'Neuer Workflow') {
     const nameInput = document.getElementById('wf-name-input');
@@ -3610,6 +3612,10 @@ async function activateSchedule(wid, config) {
       return;
     }
   }
+  // Workflow automatisch speichern (legt bei Bedarf eine neue ID an)
+  await saveWorkflow();
+  wid = state.workflowId;
+  if (!wid) { toast('Workflow konnte nicht gespeichert werden', 'err'); return; }
   // Config normalisieren: leere Strings in Zahlen umwandeln, interval_type
   // immer setzen - sonst lehnt der Backend-Guard mit 400 ab.
   const cfg = {...(config || {})};
