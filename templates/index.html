@@ -3622,6 +3622,11 @@ async function activateSchedule(wid, config) {
   if (!cfg.interval_type) cfg.interval_type = 'interval';
   if (cfg.minuten  === '' || cfg.minuten  === undefined || cfg.minuten  === null) cfg.minuten  = 0;
   if (cfg.sekunden === '' || cfg.sekunden === undefined || cfg.sekunden === null) cfg.sekunden = 30;
+  // Nur die zum Modus gehoerenden Felder speichern - Reste anderer Modi
+  // (z.B. alte Minuten-Werte bei "taeglich") stiften sonst nur Verwirrung.
+  if (cfg.interval_type === 'taglich')           { delete cfg.minuten; delete cfg.sekunden; delete cfg.wochentag; }
+  else if (cfg.interval_type === 'woechentlich') { delete cfg.minuten; delete cfg.sekunden; }
+  else                                           { delete cfg.zeit;    delete cfg.wochentag; }
   // Direkt fetch verwenden damit wir die Backend-Fehlermeldung sehen koennen
   try {
     const r = await fetch(`/api/schedules/${wid}`, {
@@ -3692,7 +3697,7 @@ async function renderSchedulesModal() {
     const isOn    = !!entry.active;
     const cfg     = entry.config || {};
     const name    = names[wid] || wid;
-    const itype   = cfg.intervalType || 'interval';
+    const itype   = cfg.interval_type || 'interval';
     const lastRun = cfg._last_run ? new Date(cfg._last_run).toLocaleString('de-DE', {dateStyle:'short',timeStyle:'short'}) : '—';
 
     let interval = '';

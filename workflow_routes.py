@@ -323,6 +323,17 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                             last_run = scheds[wid].get("config", {}).get("_last_run")
                             new_cfg  = {k: v for k, v in trigger_cfg.items()
                                         if not k.startswith("_")}
+                            # Nur die zum Modus passenden Felder behalten
+                            _it = new_cfg.get("interval_type")
+                            if _it == "taglich":
+                                for _k in ("minuten", "sekunden", "wochentag"):
+                                    new_cfg.pop(_k, None)
+                            elif _it == "woechentlich":
+                                for _k in ("minuten", "sekunden"):
+                                    new_cfg.pop(_k, None)
+                            else:
+                                for _k in ("zeit", "wochentag"):
+                                    new_cfg.pop(_k, None)
                             if last_run:
                                 new_cfg["_last_run"] = last_run
                             scheds[wid]["config"] = new_cfg
