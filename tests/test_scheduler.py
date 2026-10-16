@@ -172,7 +172,9 @@ class TestScheduleUnbekannt:
         assert _schedule_should_fire(config, datetime.now()) is False
 
     def test_kein_typ_feuert_nicht(self):
-        # Standard-Typ ist "interval" laut Code
+        # Ohne interval_type NICHT feuern. Frueher fiel das auf "interval"
+        # mit minuten=0, sekunden=0 → 5s-Minimum zurueck, was Zeitplaene mit
+        # verlorener Config in eine 5s-Flut verwandelte. Jetzt haertet
+        # _schedule_should_fire ab, siehe commit "Rapport-Flut".
         config = {}
-        # Ohne _last_run → feuert (erster Lauf)
-        assert _schedule_should_fire(config, datetime.now()) is True
+        assert _schedule_should_fire(config, datetime.now()) is False

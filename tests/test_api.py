@@ -204,8 +204,12 @@ class TestScheduleAPI:
 
     def test_schedule_in_liste_sichtbar(self, api_client):
         client, _ = api_client
+        # Vollstaendige Trigger-Config inkl. interval_type - sonst lehnt die
+        # API seit dem Rapport-Flut-Fix zu Recht ab (ohne interval_type faellt
+        # der Scheduler sonst in einen 5s-Takt zurueck).
         client.post("/api/schedules/wf-vis",
-                    json={"active": True, "config": {"minuten": 10}},
+                    json={"active": True,
+                          "config": {"interval_type": "interval", "minuten": 10}},
                     content_type="application/json")
         resp = client.get("/api/schedules")
         assert "wf-vis" in resp.get_json()

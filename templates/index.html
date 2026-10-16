@@ -3715,11 +3715,24 @@ async function toggleSchedule(wid, currentlyActive) {
   const btn = row?.querySelector('.sched-toggle');
   if (btn) btn.textContent = '…';
 
-  await api(`/api/schedules/${wid}`, {
+  // Bestehende Config aus der aktuellen Zeitplan-Liste mitschicken.
+  // Ohne das wird die Config im Backend ueberschrieben und der Scheduler
+  // feuert mit leerer Config im 5-Sekunden-Takt (Rapport-Flut).
+  let existingCfg = {};
+  try {
+    const scheds = await fetch('/api/schedules').then(r => r.json());
+    existingCfg = scheds?.[wid]?.config || {};
+  } catch {}
+
+  const res = await api(`/api/schedules/${wid}`, {
     method: 'POST',
-    body: JSON.stringify({ active: !currentlyActive })
+    body: JSON.stringify({ active: !currentlyActive, config: existingCfg })
   });
-  toast(currentlyActive ? '⏹ Zeitplan deaktiviert' : '⏰ Zeitplan aktiviert', currentlyActive ? 'warn' : 'ok');
+  if (res === null && !currentlyActive) {
+    toast('Zeitplan braucht gültige Trigger-Konfiguration (Workflow öffnen, Trigger-Node anpassen)', 'err');
+  } else {
+    toast(currentlyActive ? '⏹ Zeitplan deaktiviert' : '⏰ Zeitplan aktiviert', currentlyActive ? 'warn' : 'ok');
+  }
   await renderSchedulesModal();
 }
 

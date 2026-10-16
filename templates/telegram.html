@@ -167,6 +167,12 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);height:100vh;disp
       <div style="font-size:.82rem;color:var(--tx2);line-height:1.6;margin-bottom:20px" id="stopped-hint">
         Der Telegram-Bot ist nicht aktiv.<br>
         Klicke auf <strong>Bot starten</strong> um Ilija über Telegram erreichbar zu machen.
+        <div style="margin-top:14px;padding:10px 12px;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.35);border-radius:8px;font-size:.85rem;color:#eab308;text-align:left">
+          <strong>⚠ Hinweis:</strong> „Bot gestoppt" betrifft nur <em>eingehende</em> Nachrichten.
+          Workflows mit Telegram-Node (z.B. Morgen-Rapport) senden weiterhin ausgehende Nachrichten,
+          solange ihr Zeitplan aktiv ist. Zum Stoppen den Zeitplan unter
+          <a href="/#zeitplaene" style="color:#eab308;text-decoration:underline">Workflow → Zeitpläne</a> deaktivieren.
+        </div>
       </div>
       <div class="btn-row">
         <button class="btn btn-prim" id="btnStart" onclick="startBot()">▶ Bot starten</button>

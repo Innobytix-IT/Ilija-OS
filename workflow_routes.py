@@ -41,7 +41,12 @@ def _safe_int(val, default=0):
 
 def _schedule_should_fire(config: dict, now: datetime) -> bool:
     """Prüft ob ein Zeitplan jetzt feuern soll."""
-    itype = config.get("interval_type", "interval")
+    # Ohne explizit gesetzten interval_type NICHT feuern. Frueher fiel das auf
+    # "interval" mit minuten=0, sekunden=0 zurueck -> 5s-Minimum, was einen
+    # Zeitplan mit korrupter Config in eine 5-Sekunden-Flut verwandelt hat.
+    itype = config.get("interval_type")
+    if not itype:
+        return False
     last  = config.get("_last_run", "")
     try:
         last_dt = datetime.fromisoformat(last) if last else None
@@ -2696,7 +2701,12 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
     def set_schedule_route(wid):
         data    = request.get_json() or {}
         active  = data.get("active", True)
-        cfg     = data.get("config", {})
+        # Config nur uebernehmen wenn der Client eine mitschickt UND sie nicht
+        # leer ist. Sonst die bestehende Config behalten - sonst ging bei
+        # jedem Toggle im Zeitplan-Modal die Konfiguration verloren und der
+        # Scheduler fiel auf 5s-Intervall-Default zurueck (Rapport-Flut).
+        incoming_cfg = data.get("config")
+        has_meaningful_cfg = isinstance(incoming_cfg, dict) and incoming_cfg
         os.makedirs(SCHEDULES_DIR, exist_ok=True)
         sf      = os.path.join(SCHEDULES_DIR, "active.json")
         with _schedules_lock:
@@ -2705,7 +2715,19 @@ def register_workflow_routes(app, get_kernel_func, kernel_lock):
                 with open(sf, "r", encoding="utf-8") as _f:
                     scheds = json.load(_f)
             if active:
-                scheds[wid] = {"active": True, "config": cfg,
+                existing = scheds.get(wid, {})
+                existing_cfg = existing.get("config", {}) if isinstance(existing, dict) else {}
+                final_cfg = incoming_cfg if has_meaningful_cfg else existing_cfg
+                # Zusaetzliche Sicherung: wenn ueberhaupt keine sinnvolle Config
+                # vorliegt (interval_type fehlt), lehnen wir das Aktivieren ab -
+                # sonst feuert der Scheduler blind alle 5s.
+                if not final_cfg.get("interval_type"):
+                    return jsonify({
+                        "error": "Zeitplan hat keine gültige Konfiguration. "
+                                 "Bitte zuerst den Schedule-Trigger-Node des "
+                                 "Workflows oeffnen und Intervall/Uhrzeit setzen.",
+                    }), 400
+                scheds[wid] = {"active": True, "config": final_cfg,
                                "enabled_at": datetime.now().isoformat()}
                 msg = f"Zeitplan für '{wid}' aktiviert"
             else:
