@@ -3044,7 +3044,15 @@ function buildPanelHtml(node, def) {
 
   // ── schedule_trigger ───────────────────────────────────────────────
   } else if (node.type === 'schedule_trigger') {
-    const stType = node.config.interval_type || 'interval';
+    // Defaults in node.config persistieren statt nur im UI anzeigen.
+    // Sonst sendet activateSchedule eine Config ohne interval_type und
+    // der Backend-Guard lehnt zu Recht ab.
+    if (!node.config.interval_type) node.config.interval_type = 'interval';
+    if (node.config.sekunden === undefined || node.config.sekunden === '') node.config.sekunden = 30;
+    if (node.config.minuten  === undefined || node.config.minuten  === '') node.config.minuten  = 0;
+    if (!node.config.zeit)      node.config.zeit = '08:00';
+    if (node.config.wochentag === undefined) node.config.wochentag = 0;
+    const stType = node.config.interval_type;
     const stWf   = state.workflowId || '';
     const stCfg  = JSON.stringify(node.config||{}).replace(/"/g,'&quot;');
     h += `
@@ -3602,12 +3610,29 @@ async function activateSchedule(wid, config) {
       return;
     }
   }
-  const res = await api(`/api/schedules/${wid}`, {
-    method: 'POST',
-    body: JSON.stringify({ active: true, config: config || {} })
-  });
-  if (res) { toast(`⏰ Zeitplan aktiviert für "${state.workflowName||wid}"`, 'ok'); refreshSchedulesBadge(); }
-  else toast('Aktivierung fehlgeschlagen', 'err');
+  // Config normalisieren: leere Strings in Zahlen umwandeln, interval_type
+  // immer setzen - sonst lehnt der Backend-Guard mit 400 ab.
+  const cfg = {...(config || {})};
+  if (!cfg.interval_type) cfg.interval_type = 'interval';
+  if (cfg.minuten  === '' || cfg.minuten  === undefined || cfg.minuten  === null) cfg.minuten  = 0;
+  if (cfg.sekunden === '' || cfg.sekunden === undefined || cfg.sekunden === null) cfg.sekunden = 30;
+  // Direkt fetch verwenden damit wir die Backend-Fehlermeldung sehen koennen
+  try {
+    const r = await fetch(`/api/schedules/${wid}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ active: true, config: cfg })
+    });
+    const body = await r.json().catch(() => ({}));
+    if (r.ok) {
+      toast(`⏰ Zeitplan aktiviert für "${state.workflowName||wid}"`, 'ok');
+      refreshSchedulesBadge();
+    } else {
+      toast('⚠ ' + (body.error || `Aktivierung fehlgeschlagen (HTTP ${r.status})`), 'err');
+    }
+  } catch (e) {
+    toast('Netzwerkfehler: ' + e.message, 'err');
+  }
 }
 async function deactivateSchedule(wid) {
   if (!wid) { toast('Kein Workflow-ID', 'err'); return; }
