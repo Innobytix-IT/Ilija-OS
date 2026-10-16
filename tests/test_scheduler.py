@@ -101,14 +101,25 @@ class TestScheduleTaeglich:
         config = {"interval_type": "taglich", "zeit": "08:00"}
         assert _schedule_should_fire(config, now) is True
 
-    def test_falsche_minute_feuert_nicht(self):
+    def test_nach_der_zeit_ohne_lauf_wird_nachgeholt(self):
+        # Faelligkeits-Logik: 08:01 und noch nicht gelaufen -> nachholen
+        # (frueher fiel der Lauf bei einem Neustart um 08:00 still aus)
         now = datetime(2026, 4, 19, 8, 1, 0)
         config = {"interval_type": "taglich", "zeit": "08:00"}
+        assert _schedule_should_fire(config, now) is True
+
+    def test_nach_der_zeit_mit_heutigem_lauf_feuert_nicht(self):
+        now  = datetime(2026, 4, 19, 9, 0, 0)
+        last = datetime(2026, 4, 19, 8, 0, 2)
+        config = {"interval_type": "taglich", "zeit": "08:00",
+                  "_last_run": last.isoformat()}
         assert _schedule_should_fire(config, now) is False
 
-    def test_falsche_stunde_feuert_nicht(self):
-        now = datetime(2026, 4, 19, 9, 0, 0)
-        config = {"interval_type": "taglich", "zeit": "08:00"}
+    def test_vor_der_zeit_feuert_nicht(self):
+        now  = datetime(2026, 4, 19, 7, 59, 0)
+        last = datetime(2026, 4, 18, 8, 0, 1)  # gestern gelaufen
+        config = {"interval_type": "taglich", "zeit": "08:00",
+                  "_last_run": last.isoformat()}
         assert _schedule_should_fire(config, now) is False
 
     def test_heute_bereits_gefeuert_feuert_nicht(self):
@@ -147,20 +158,65 @@ class TestScheduleWoechentlich:
         config = {"interval_type": "woechentlich", "wochentag": 6, "zeit": "10:00"}
         assert _schedule_should_fire(config, now) is True
 
-    def test_falscher_wochentag_feuert_nicht(self):
-        now = datetime(2026, 4, 19, 10, 0, 0)  # Sonntag = 6
-        config = {"interval_type": "woechentlich", "wochentag": 0, "zeit": "10:00"}  # Montag
+    def test_falscher_wochentag_mit_lauf_diese_woche_feuert_nicht(self):
+        now  = datetime(2026, 4, 19, 10, 0, 0)  # Sonntag = 6
+        last = datetime(2026, 4, 13, 10, 0, 1)  # Montag dieser Woche, gelaufen
+        config = {"interval_type": "woechentlich", "wochentag": 0, "zeit": "10:00",
+                  "_last_run": last.isoformat()}
         assert _schedule_should_fire(config, now) is False
 
-    def test_bereits_diese_woche_gefeuert(self):
+    def test_verpasster_wochentag_wird_nachgeholt(self):
+        # Montag-Zeitplan, Lauf letzte Woche, jetzt ist Sonntag und der
+        # Montag dieser Woche wurde verpasst (Server war aus) -> nachholen
         now  = datetime(2026, 4, 19, 10, 0, 0)  # Sonntag
-        last = datetime(2026, 4, 19,  9, 0, 0)  # heute, vor 1 Stunde
+        last = datetime(2026, 4,  6, 10, 0, 1)  # Montag VORLETZTE Woche
+        config = {"interval_type": "woechentlich", "wochentag": 0, "zeit": "10:00",
+                  "_last_run": last.isoformat()}
+        assert _schedule_should_fire(config, now) is True
+
+    def test_zur_faelligkeit_bereits_gelaufen_feuert_nicht(self):
+        now  = datetime(2026, 4, 19, 10, 0, 30)  # Sonntag 10:00:30
+        last = datetime(2026, 4, 19, 10, 0, 5)   # vor 25 Sekunden gelaufen
         config = {
             "interval_type": "woechentlich", "wochentag": 6, "zeit": "10:00",
             "_last_run": last.isoformat(),
         }
-        # Weniger als 604700s (7 Tage) vergangen → nicht feuern
         assert _schedule_should_fire(config, now) is False
+
+
+# ── Nachhol-Logik & Aktivierungs-Schutz ──────────────────────────────────────
+
+class TestScheduleNachholer:
+
+    def test_neustart_um_die_triggerzeit_holt_nach(self):
+        # Szenario: Server startete 06:59 neu, Kernel kalt, Scheduler-Loop
+        # kommt erst 07:01:30 wieder - Lauf darf nicht ausfallen.
+        now  = datetime(2026, 4, 19, 7, 1, 30)
+        last = datetime(2026, 4, 18, 7, 0, 3)  # gestern
+        config = {"interval_type": "taglich", "zeit": "07:00",
+                  "_last_run": last.isoformat()}
+        assert _schedule_should_fire(config, now) is True
+
+    def test_nach_dem_nachholen_kein_doppelfeuern(self):
+        now  = datetime(2026, 4, 19, 7, 1, 40)
+        last = datetime(2026, 4, 19, 7, 1, 35)  # gerade nachgeholt
+        config = {"interval_type": "taglich", "zeit": "07:00",
+                  "_last_run": last.isoformat()}
+        assert _schedule_should_fire(config, now) is False
+
+    def test_frisch_aktivierter_plan_feuert_nicht_fuer_vergangene_zeit(self):
+        # Nutzer aktiviert um 20:00 einen 07:00-Plan -> NICHT sofort feuern
+        now     = datetime(2026, 4, 19, 20, 0, 10)
+        enabled = datetime(2026, 4, 19, 20, 0, 0)
+        config  = {"interval_type": "taglich", "zeit": "07:00"}
+        assert _schedule_should_fire(config, now, enabled.isoformat()) is False
+
+    def test_frisch_aktivierter_plan_feuert_zur_naechsten_faelligkeit(self):
+        # Aktiviert 06:50, um 07:00 soll er feuern
+        now     = datetime(2026, 4, 19, 7, 0, 5)
+        enabled = datetime(2026, 4, 19, 6, 50, 0)
+        config  = {"interval_type": "taglich", "zeit": "07:00"}
+        assert _schedule_should_fire(config, now, enabled.isoformat()) is True
 
 
 # ── Unbekannter Typ ───────────────────────────────────────────────────────────

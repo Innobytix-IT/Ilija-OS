@@ -34,6 +34,31 @@ echo "--- Ilija OS Update (GitHub) ---"
 git config --global --add safe.directory "$ILIJA_DIR" 2>/dev/null || true
 cd "$ILIJA_DIR"
 
+# ---- Backup der Nutzerdaten (VOR jeder Update-Aktion) ---------------
+# data/ enthaelt Workflows, Zeitplaene, DMS-Metadaten, Tokens, Configs;
+# memory/ das Langzeitgedaechtnis. Taeglich rotierend, 7 Staende.
+# Ziel: externe Ablage falls wirklich gemountet, sonst ~/ilija-backups.
+# Ein fehlgeschlagenes Backup bricht das Update nicht ab.
+BACKUP_BASE="$HOME/ilija-backups"
+if mountpoint -q /mnt/ilija-ablage 2>/dev/null; then
+    BACKUP_BASE="/mnt/ilija-ablage/IlijaBackups"
+fi
+if mkdir -p "$BACKUP_BASE" 2>/dev/null; then
+    BACKUP_FILE="$BACKUP_BASE/ilija-data-$(date +%Y%m%d_%H%M%S).tar.gz"
+    BACKUP_DIRS="data"
+    [ -d "$ILIJA_DIR/memory" ] && BACKUP_DIRS="data memory"
+    if tar -czf "$BACKUP_FILE" -C "$ILIJA_DIR" $BACKUP_DIRS 2>/dev/null; then
+        echo "--- Backup: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1)) ---"
+        # Rotation: nur die 7 neuesten Staende behalten
+        ls -1t "$BACKUP_BASE"/ilija-data-*.tar.gz 2>/dev/null | tail -n +8 | xargs -r rm -f
+    else
+        echo "WARNUNG: Backup fehlgeschlagen -- Update laeuft trotzdem weiter"
+        rm -f "$BACKUP_FILE" 2>/dev/null
+    fi
+else
+    echo "WARNUNG: Backup-Ziel nicht anlegbar -- Backup uebersprungen"
+fi
+
 # User-spezifische Config-Dateien vor einem Pull schuetzen. Sie liegen pro
 # Installation (DMS-Pfad, SMTP-Passwort, Telegram-Token, WhatsApp-Prompt).
 # Mit skip-worktree ignoriert git lokale Modifikationen UND zieht eine

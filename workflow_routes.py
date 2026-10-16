@@ -14,7 +14,7 @@ import uuid
 import inspect
 import threading as _sched_threading
 import time as _sched_time
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 
 WORKFLOWS_DIR  = os.path.join("data", "workflows")
@@ -39,8 +39,16 @@ def _safe_int(val, default=0):
         return default
 
 
-def _schedule_should_fire(config: dict, now: datetime) -> bool:
-    """Prüft ob ein Zeitplan jetzt feuern soll."""
+def _schedule_should_fire(config: dict, now: datetime, enabled_at: str = "") -> bool:
+    """Prüft ob ein Zeitplan jetzt feuern soll.
+
+    Taeglich/woechentlich arbeiten nach Faelligkeit statt Minuten-Gleichheit:
+    "juengster faelliger Zeitpunkt erreicht UND seitdem weder gelaufen noch
+    erst danach aktiviert". Dadurch wird eine verpasste Minute (Neustart,
+    Kernel-Kaltstart, Stromausfall) nachgeholt statt stillschweigend bis zum
+    naechsten Tag auszufallen - aber ein frisch aktivierter Plan feuert nicht
+    ueberraschend sofort fuer eine Uhrzeit, die vor der Aktivierung lag.
+    """
     # Ohne explizit gesetzten interval_type NICHT feuern. Frueher fiel das auf
     # "interval" mit minuten=0, sekunden=0 zurueck -> 5s-Minimum, was einen
     # Zeitplan mit korrupter Config in eine 5-Sekunden-Flut verwandelt hat.
@@ -52,6 +60,10 @@ def _schedule_should_fire(config: dict, now: datetime) -> bool:
         last_dt = datetime.fromisoformat(last) if last else None
     except Exception:
         last_dt = None
+    try:
+        enabled_dt = datetime.fromisoformat(enabled_at) if enabled_at else None
+    except Exception:
+        enabled_dt = None
 
     if itype == "interval":
         minuten  = _safe_int(config.get("minuten"),  0)
@@ -69,10 +81,14 @@ def _schedule_should_fire(config: dict, now: datetime) -> bool:
             h, m = map(int, zeit.split(":"))
         except Exception:
             return False
-        if now.hour != h or now.minute != m:
-            return False
-        if last_dt is None or last_dt.date() < now.date():
-            return True
+        due = now.replace(hour=h, minute=m, second=0, microsecond=0)
+        if due > now:
+            due -= timedelta(days=1)
+        if last_dt is not None and last_dt >= due:
+            return False  # seit der Faelligkeit schon gelaufen
+        if enabled_dt is not None and enabled_dt > due:
+            return False  # Plan wurde erst nach der Faelligkeit aktiviert
+        return True
 
     elif itype == "woechentlich":
         wochentag = _safe_int(config.get("wochentag"), 0)
@@ -81,10 +97,15 @@ def _schedule_should_fire(config: dict, now: datetime) -> bool:
             h, m = map(int, zeit.split(":"))
         except Exception:
             return False
-        if now.weekday() != wochentag or now.hour != h or now.minute != m:
+        due = now.replace(hour=h, minute=m, second=0, microsecond=0)
+        due -= timedelta(days=(now.weekday() - wochentag) % 7)
+        if due > now:
+            due -= timedelta(days=7)
+        if last_dt is not None and last_dt >= due:
             return False
-        if last_dt is None or (now - last_dt).total_seconds() >= 604700:
-            return True
+        if enabled_dt is not None and enabled_dt > due:
+            return False
+        return True
 
     return False
 
@@ -114,7 +135,8 @@ def _start_scheduler(port: int):
                         continue
                     cfg = entry.get("config", {})
                     try:
-                        fire_now = _schedule_should_fire(cfg, now)
+                        fire_now = _schedule_should_fire(cfg, now,
+                                                         entry.get("enabled_at", ""))
                     except Exception as _ce:
                         print(f"[Scheduler] Config-Fehler bei '{wid}': {_ce}")
                         continue

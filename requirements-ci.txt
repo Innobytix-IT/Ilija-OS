@@ -1,0 +1,17 @@
+# ===================================================================
+#  Ilija Public Edition - Minimale Abhaengigkeiten fuer die Testsuite
+#  Wird von GitHub Actions (.github/workflows/tests.yml) verwendet.
+#
+#  Bewusst NICHT enthalten (zu schwer fuer CI, von Tests gemockt oder
+#  per Import-Skip ausgelassen): torch/whisper, chromadb,
+#  sentence-transformers, google-api-Pakete, telegram-Pakete, pyaudio.
+#  Empirisch ermittelt: frisches venv + frischer Checkout, Suite gruen.
+# ===================================================================
+pytest>=7.0.0
+flask>=3.0.0
+flask-cors>=4.0.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+selenium>=4.0.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
