@@ -142,6 +142,84 @@ class TestTerminEintragen:
             assert "10:00 –" not in slots and "10:00 –" not in slots
 
 
+# ── Doppelbuchungs-Schutz ────────────────────────────────────────────────────
+
+class TestDoppelbuchung:
+    """Ilija hat Slots doppelt vergeben: termin_eintragen pruefte nicht auf
+    Ueberschneidungen. Besonders ueber Telegram, weil telebot Nachrichten in
+    mehreren Worker-Threads parallel verarbeitet."""
+
+    def _buchen(self, von, bis, titel="Termin"):
+        return ks.lokaler_kalender_termin_eintragen(
+            titel=titel, datum="12.05.2026", uhrzeit_von=von,
+            uhrzeit_bis=bis, kontaktinfos="Test", beschreibung="",
+            caller_id="+49123",
+        )
+
+    def test_exakt_gleicher_slot_wird_abgelehnt(self, tmp_path):
+        cal = _patch_calendar(tmp_path, [])
+        with patch.object(ks, 'CALENDAR_FILE', cal):
+            assert "✅" in self._buchen("10:00", "11:00", "Erster")
+            zweiter = self._buchen("10:00", "11:00", "Zweiter")
+            assert "❌" in zweiter
+            assert len(json.loads(open(cal, encoding="utf-8").read())) == 1
+
+    def test_teilweise_ueberlappung_wird_abgelehnt(self, tmp_path):
+        cal = _patch_calendar(tmp_path, [])
+        with patch.object(ks, 'CALENDAR_FILE', cal):
+            self._buchen("10:00", "11:00", "Erster")
+            # ragt 30 Min in den bestehenden Termin hinein
+            assert "❌" in self._buchen("10:30", "11:30", "Ueberlappend")
+            # umschliesst den bestehenden Termin komplett
+            assert "❌" in self._buchen("09:00", "12:00", "Umschliessend")
+            assert len(json.loads(open(cal, encoding="utf-8").read())) == 1
+
+    def test_direkt_angrenzender_slot_ist_erlaubt(self, tmp_path):
+        """11:00-12:00 direkt nach 10:00-11:00 ist KEINE Ueberschneidung."""
+        cal = _patch_calendar(tmp_path, [])
+        with patch.object(ks, 'CALENDAR_FILE', cal):
+            self._buchen("10:00", "11:00", "Erster")
+            assert "✅" in self._buchen("11:00", "12:00", "Anschluss")
+            assert len(json.loads(open(cal, encoding="utf-8").read())) == 2
+
+    def test_blocker_verhindert_buchung(self, tmp_path):
+        cal = _patch_calendar(tmp_path, [{
+            "id": "b1", "title": "Mittagspause", "category": "blocker",
+            "start": "2026-05-12T12:00:00", "end": "2026-05-12T13:00:00",
+            "recurrence": "none", "display": "background",
+        }])
+        with patch.object(ks, 'CALENDAR_FILE', cal):
+            assert "❌" in self._buchen("12:00", "13:00", "Waehrend Blocker")
+
+    def test_endzeit_vor_startzeit_wird_abgelehnt(self, tmp_path):
+        cal = _patch_calendar(tmp_path, [])
+        with patch.object(ks, 'CALENDAR_FILE', cal):
+            assert "❌" in self._buchen("14:00", "13:00", "Rueckwaerts")
+            assert json.loads(open(cal, encoding="utf-8").read()) == []
+
+    def test_parallele_buchungen_vergeben_slot_nur_einmal(self, tmp_path):
+        """Telegram-Szenario: mehrere Worker-Threads buchen gleichzeitig
+        denselben Slot. Genau einer darf gewinnen."""
+        import threading
+        cal = _patch_calendar(tmp_path, [])
+        ergebnisse = []
+        barriere = threading.Barrier(8)
+
+        def versuch(n):
+            barriere.wait()  # alle Threads gleichzeitig loslassen
+            ergebnisse.append(self._buchen("10:00", "11:00", f"Parallel-{n}"))
+
+        with patch.object(ks, 'CALENDAR_FILE', cal):
+            threads = [threading.Thread(target=versuch, args=(i,)) for i in range(8)]
+            for t in threads: t.start()
+            for t in threads: t.join(timeout=15)
+
+            erfolge = [r for r in ergebnisse if "✅" in r]
+            gespeichert = json.loads(open(cal, encoding="utf-8").read())
+            assert len(erfolge) == 1, f"{len(erfolge)} Buchungen statt 1 akzeptiert"
+            assert len(gespeichert) == 1, f"{len(gespeichert)} Termine in der Datei"
+
+
 # ── 3-Faktor-Auth für Terminabfrage ──────────────────────────────────────────
 
 class TestDreiFactorAuth:

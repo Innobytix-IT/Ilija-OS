@@ -2,9 +2,19 @@ import os
 import re
 import json
 import uuid
+import threading
 from datetime import datetime, timedelta, time as dtime
 
 CALENDAR_FILE = os.path.join("data", "local_calendar_events.json")
+
+# Prozessweites Lock fuer die Kalenderdatei. Lesen-Aendern-Schreiben ist
+# sonst nicht atomar: Telegram verarbeitet Nachrichten in mehreren
+# Worker-Threads (telebot), die Web-Oberflaeche kommt ueber Flask-Threads.
+# Ohne Lock koennen zwei parallele Buchungen denselben Stand laden und
+# der zweite Schreibvorgang den ersten Termin spurlos ueberschreiben.
+# local_calendar_routes.py importiert dieses Lock, damit UI und Skills
+# sich gegenseitig sehen.
+KALENDER_LOCK = threading.RLock()
 
 def _load_events():
     if not os.path.exists(CALENDAR_FILE):
@@ -16,9 +26,16 @@ def _load_events():
         return []
 
 def _save_events(events):
+    """Atomar schreiben: erst in eine Temp-Datei, dann umbenennen.
+    Verhindert eine zerstoerte JSON, wenn der Prozess mitten im
+    Schreiben abbricht (Stromausfall, Dienst-Neustart)."""
     os.makedirs(os.path.dirname(CALENDAR_FILE), exist_ok=True)
-    with open(CALENDAR_FILE, "w", encoding="utf-8") as f:
+    tmp = CALENDAR_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(events, f, ensure_ascii=False, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, CALENDAR_FILE)
 
 def _parse_iso(iso_str):
     """Parst ISO-Datum/Zeit-String und gibt immer ein timezone-NAHES (naive) datetime zurück."""
@@ -252,29 +269,57 @@ def lokaler_kalender_termin_eintragen(titel: str, datum: str, uhrzeit_von: str, 
         start_dt = datetime.strptime(f"{datum.strip()} {uhrzeit_von.strip()}", "%d.%m.%Y %H:%M")
         end_dt = datetime.strptime(f"{datum.strip()} {uhrzeit_bis.strip()}", "%d.%m.%Y %H:%M")
 
+        if end_dt <= start_dt:
+            return (f"❌ Endzeit muss nach der Startzeit liegen "
+                    f"({uhrzeit_von} – {uhrzeit_bis}).")
+
         # caller_id in kontaktinfos einbetten falls vorhanden und noch nicht drin
         if caller_id and caller_id not in kontaktinfos:
             kontaktinfos = f"{kontaktinfos} [{caller_id}]".strip() if kontaktinfos else caller_id
 
-        events = _load_events()
-        new_event = {
-            "id": str(uuid.uuid4()),
-            "title": titel,
-            "start": start_dt.isoformat(),
-            "end": end_dt.isoformat(),
-            "description": beschreibung,
-            "contactInfo": kontaktinfos,
-            "caller_id": caller_id,          # für Datenisolation
-            "category": "standard",
-            "recurrence": "none",
-            # Kategoriefarbe (gruen). Die Kalender-Oberflaeche leitet die
-            # Farbe beim Rendern ohnehin aus der Kategorie ab -- hier nur
-            # mitgeschrieben, damit die JSON fuer sich schluessig bleibt.
-            "backgroundColor": "var(--std)",
-            "borderColor": "var(--std2)"
-        }
-        events.append(new_event)
-        _save_events(events)
+        # Pruefung UND Schreiben unter einem Lock: sonst koennen zwei
+        # parallele Buchungen (Telegram-Worker-Threads) beide "frei"
+        # sehen und denselben Slot doppelt vergeben.
+        with KALENDER_LOCK:
+            # ── Doppelbuchung verhindern ────────────────────────────────
+            # _get_events_for_date liefert alle belegten Zeitfenster des
+            # Tages inklusive Serienterminen, Blockern und Mehrtagesterminen.
+            belegte, _ = _get_events_for_date(start_dt.date())
+            for b_start, b_end in belegte:
+                if start_dt < b_end and b_start < end_dt:
+                    konflikt = f"{b_start.strftime('%H:%M')} – {b_end.strftime('%H:%M')}"
+                    _, tagesliste = _get_events_for_date(start_dt.date())
+                    details = ""
+                    for eintrag in tagesliste:
+                        if eintrag.startswith(f"[{b_start.strftime('%H:%M')}"):
+                            details = eintrag.split("\n")[0]
+                            break
+                    return (f"❌ Dieser Termin überschneidet sich mit einem bestehenden "
+                            f"Eintrag am {datum} von {konflikt}."
+                            + (f"\n   Bestehend: {details}" if details else "")
+                            + f"\n\nBitte einen anderen Zeitpunkt wählen. "
+                              f"Freie Zeitfenster findest du mit "
+                              f"lokaler_kalender_freie_slots_finden(datum='{datum}').")
+
+            events = _load_events()
+            new_event = {
+                "id": str(uuid.uuid4()),
+                "title": titel,
+                "start": start_dt.isoformat(),
+                "end": end_dt.isoformat(),
+                "description": beschreibung,
+                "contactInfo": kontaktinfos,
+                "caller_id": caller_id,          # für Datenisolation
+                "category": "standard",
+                "recurrence": "none",
+                # Kategoriefarbe (gruen). Die Kalender-Oberflaeche leitet die
+                # Farbe beim Rendern ohnehin aus der Kategorie ab -- hier nur
+                # mitgeschrieben, damit die JSON fuer sich schluessig bleibt.
+                "backgroundColor": "var(--std)",
+                "borderColor": "var(--std2)"
+            }
+            events.append(new_event)
+            _save_events(events)
 
         ausgabe = f"✅ Termin eingetragen!\n📅 {titel}\n🕐 {datum}, {uhrzeit_von} – {uhrzeit_bis} Uhr"
         if kontaktinfos:
@@ -293,33 +338,36 @@ def lokaler_kalender_termin_loeschen(titel: str, datum: str) -> str:
         ziel_datum = datetime.strptime(datum.strip(), "%d.%m.%Y").date()
         titel_lower = titel.lower()
 
-        events = _load_events()
-        behalten = []
-        geloescht = None
+        with KALENDER_LOCK:
+            events = _load_events()
+            behalten = []
+            geloescht = None
 
-        js_weekday = (ziel_datum.weekday() + 1) % 7
+            js_weekday = (ziel_datum.weekday() + 1) % 7
 
-        for ev in events:
-            is_match = False
-            if ev.get("recurrence", "none") != "none":
-                start_recur_dt = datetime.strptime(ev.get("startRecur"), "%Y-%m-%d").date()
-                if ziel_datum >= start_recur_dt:
-                    if ev.get("recurrence") == "daily" or (ev.get("recurrence") == "weekly" and js_weekday in ev.get("daysOfWeek", [])):
+            for ev in events:
+                is_match = False
+                if ev.get("recurrence", "none") != "none":
+                    start_recur_dt = datetime.strptime(ev.get("startRecur"), "%Y-%m-%d").date()
+                    if ziel_datum >= start_recur_dt:
+                        if ev.get("recurrence") == "daily" or (ev.get("recurrence") == "weekly" and js_weekday in ev.get("daysOfWeek", [])):
+                            is_match = True
+                else:
+                    start_dt = _parse_iso(ev.get("start"))
+                    if start_dt and start_dt.date() == ziel_datum:
                         is_match = True
-            else:
-                start_dt = _parse_iso(ev.get("start"))
-                if start_dt and start_dt.date() == ziel_datum:
-                    is_match = True
 
-            if is_match and titel_lower in ev.get("title", "").lower():
-                if not geloescht:
-                    geloescht = ev
-                    continue
+                if is_match and titel_lower in ev.get("title", "").lower():
+                    if not geloescht:
+                        geloescht = ev
+                        continue
 
-            behalten.append(ev)
+                behalten.append(ev)
+
+            if geloescht:
+                _save_events(behalten)
 
         if geloescht:
-            _save_events(behalten)
             info = " (Ganze Serie)" if geloescht.get("recurrence") != "none" else ""
             return f"✅ Termin '{geloescht.get('title')}' am {datum} wurde erfolgreich gelöscht{info}."
         else:
@@ -404,42 +452,45 @@ def kunde_termin_stornieren(caller_id: str, datum: str, uhrzeit_von: str,
     except ValueError:
         return "❌ Ungültiges Datum oder Uhrzeit. Bitte Format TT.MM.JJJJ und HH:MM verwenden."
 
-    events  = _load_events()
-    behalten = []
-    geloescht = None
+    with KALENDER_LOCK:
+        events  = _load_events()
+        behalten = []
+        geloescht = None
 
-    for ev in events:
-        # Faktor 1: Rufnummer
-        ist_eigen = (
-            caller_id in ev.get("caller_id", "") or
-            caller_id in ev.get("contactInfo", "")
-        )
-        if not ist_eigen:
-            behalten.append(ev)
-            continue
-
-        # Faktor 2+3: Name
-        if vorname_l or nachname_l:
-            contact_lower = ev.get("contactInfo", "").lower()
-            name_stimmt = True
-            if vorname_l and vorname_l not in contact_lower:
-                name_stimmt = False
-            if nachname_l and nachname_l not in contact_lower:
-                name_stimmt = False
-            if not name_stimmt:
+        for ev in events:
+            # Faktor 1: Rufnummer
+            ist_eigen = (
+                caller_id in ev.get("caller_id", "") or
+                caller_id in ev.get("contactInfo", "")
+            )
+            if not ist_eigen:
                 behalten.append(ev)
                 continue
 
-        start_dt = _parse_iso(ev.get("start"))
-        if start_dt and start_dt.date() == ziel_datum and start_dt.strftime("%H:%M") == ziel_uhrzeit:
-            if not geloescht:
-                geloescht = ev
-                continue  # nicht in behalten = löschen
+            # Faktor 2+3: Name
+            if vorname_l or nachname_l:
+                contact_lower = ev.get("contactInfo", "").lower()
+                name_stimmt = True
+                if vorname_l and vorname_l not in contact_lower:
+                    name_stimmt = False
+                if nachname_l and nachname_l not in contact_lower:
+                    name_stimmt = False
+                if not name_stimmt:
+                    behalten.append(ev)
+                    continue
 
-        behalten.append(ev)
+            start_dt = _parse_iso(ev.get("start"))
+            if start_dt and start_dt.date() == ziel_datum and start_dt.strftime("%H:%M") == ziel_uhrzeit:
+                if not geloescht:
+                    geloescht = ev
+                    continue  # nicht in behalten = löschen
+
+            behalten.append(ev)
+
+        if geloescht:
+            _save_events(behalten)
 
     if geloescht:
-        _save_events(behalten)
         return (f"✅ Ihr Termin '{geloescht.get('title')}' am {datum} um {uhrzeit_von} Uhr "
                 f"wurde erfolgreich storniert.")
     else:

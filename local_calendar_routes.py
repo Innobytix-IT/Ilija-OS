@@ -52,6 +52,15 @@ VERFUEGBARKEIT_DEFAULT = """\
 # [HINWEIS]  Kurzfristige Terminanfragen bitte mindestens 24h im Voraus.
 """
 
+# Dasselbe Lock wie die Kalender-Skills verwenden: UI und Ilija schreiben
+# dieselbe Datei. Ohne gemeinsames Lock kann ein im Browser gespeicherter
+# Termin einen zeitgleich von Ilija gebuchten ueberschreiben.
+try:
+    from skills.lokaler_kalender_skill import KALENDER_LOCK
+except Exception:  # Skill nicht ladbar -> eigenes Lock, besser als keins
+    import threading
+    KALENDER_LOCK = threading.RLock()
+
 def load_local_events():
     if not os.path.exists(LOCAL_CALENDAR_FILE):
         return []
@@ -62,9 +71,15 @@ def load_local_events():
         return []
 
 def save_local_events(events):
+    """Atomar schreiben (Temp-Datei + os.replace), damit ein Abbruch
+    mitten im Schreiben die Kalenderdatei nicht zerstoert."""
     os.makedirs(os.path.dirname(LOCAL_CALENDAR_FILE), exist_ok=True)
-    with open(LOCAL_CALENDAR_FILE, "w", encoding="utf-8") as f:
+    tmp = LOCAL_CALENDAR_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(events, f, ensure_ascii=False, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, LOCAL_CALENDAR_FILE)
 
 def register_local_calendar_routes(app):
     @app.route("/local_calendar")
@@ -78,30 +93,34 @@ def register_local_calendar_routes(app):
     @app.route("/api/local_calendar/events", methods=["POST"])
     def save_local_event():
         data = request.get_json()
-        events = load_local_events()
-        
-        event_id = data.get("id")
-        
-        # Update: Das ganze Objekt überschreiben (um Wechsel zwischen Serie <-> Normal sauber zu halten)
-        if event_id:
-            for i, ev in enumerate(events):
-                if ev["id"] == event_id:
-                    data["id"] = event_id
-                    events[i] = data
-                    save_local_events(events)
-                    return jsonify({"status": "updated", "event": data})
-        
-        # Neu
-        data["id"] = str(uuid.uuid4())
-        events.append(data)
-        save_local_events(events)
+        # Lesen-Aendern-Schreiben unter Lock, sonst gehen parallele
+        # Aenderungen (UI + Ilija) verloren.
+        with KALENDER_LOCK:
+            events = load_local_events()
+
+            event_id = data.get("id")
+
+            # Update: Das ganze Objekt überschreiben (um Wechsel zwischen Serie <-> Normal sauber zu halten)
+            if event_id:
+                for i, ev in enumerate(events):
+                    if ev["id"] == event_id:
+                        data["id"] = event_id
+                        events[i] = data
+                        save_local_events(events)
+                        return jsonify({"status": "updated", "event": data})
+
+            # Neu
+            data["id"] = str(uuid.uuid4())
+            events.append(data)
+            save_local_events(events)
         return jsonify({"status": "created", "event": data})
 
     @app.route("/api/local_calendar/events/<event_id>", methods=["DELETE"])
     def delete_local_event(event_id):
-        events = load_local_events()
-        events = [ev for ev in events if ev["id"] != event_id]
-        save_local_events(events)
+        with KALENDER_LOCK:
+            events = load_local_events()
+            events = [ev for ev in events if ev["id"] != event_id]
+            save_local_events(events)
         return jsonify({"status": "deleted"})
 
     # ── Verfügbarkeit / Öffnungszeiten ───────────────────────────────────────
