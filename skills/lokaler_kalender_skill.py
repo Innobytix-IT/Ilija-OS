@@ -267,8 +267,11 @@ def lokaler_kalender_termin_eintragen(titel: str, datum: str, uhrzeit_von: str, 
             "caller_id": caller_id,          # für Datenisolation
             "category": "standard",
             "recurrence": "none",
-            "backgroundColor": "var(--g)",
-            "borderColor": "var(--g2)"
+            # Kategoriefarbe (gruen). Die Kalender-Oberflaeche leitet die
+            # Farbe beim Rendern ohnehin aus der Kategorie ab -- hier nur
+            # mitgeschrieben, damit die JSON fuer sich schluessig bleibt.
+            "backgroundColor": "var(--std)",
+            "borderColor": "var(--std2)"
         }
         events.append(new_event)
         _save_events(events)

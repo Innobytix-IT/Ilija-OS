@@ -182,8 +182,8 @@ def _google_events_zu_lokal(tage_voraus: int = 90) -> list:
             "caller_id":   "",
             "category":    "standard",
             "recurrence":  "none",
-            "backgroundColor": "var(--g)",
-            "borderColor":     "var(--g2)",
+            "backgroundColor": "var(--std)",
+            "borderColor":     "var(--std2)",
             "_sync_quelle":    "google",
         })
     return events
